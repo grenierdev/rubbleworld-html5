@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "konstellio-disposable": "^0.0.4",
-    "konstellio-eventemitter": "^0.0.4"
+    "immutable": "^3.8.1",
+    "konstellio-disposable": "^0.0.5",
+    "konstellio-eventemitter": "^0.0.4",
+    "redux": "^3.7.2"
   },
   "devDependencies": {
     "ts-node": "^3.3.0",
