@@ -4,14 +4,15 @@
 		"declaration": true,
 		"module": "commonjs",
 		"moduleResolution": "node",
-		"outDir": "./dist",
+		"outDir": "./tmp",
 		"rootDir": "./src",
 		"sourceMap": true,
 		"strictNullChecks": true,
-        "target": "es6",
+		"target": "es6",
+		"allowSyntheticDefaultImports": true,
         "lib": [
             "esnext",
             "webworker"
         ]
-    }
+	}
 }

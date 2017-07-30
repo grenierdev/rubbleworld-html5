@@ -4,18 +4,26 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "express": "^4.15.3",
     "immutable": "^3.8.1",
     "konstellio-disposable": "^0.0.5",
     "konstellio-eventemitter": "^0.0.4",
     "redux": "^3.7.2"
   },
   "devDependencies": {
+    "@types/node": "^8.0.17",
+    "awesome-typescript-loader": "^3.2.2",
+    "rimraf": "^2.6.1",
+    "source-map-loader": "^0.2.1",
     "ts-node": "^3.3.0",
     "typescript": "^2.4.2",
-    "webpack": "^3.4.0"
+    "webpack": "^3.4.1"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "serve": "node dist/httpserver.js",
+    "compile": "tsc --outDir dist/ src/nodeserver.ts",
+    "webpack": "webpack --config webpack.config.js --progress --colors --watch",
+    "postwebpack": "rimraf ./tmp"
   },
   "repository": {
     "type": "git",
