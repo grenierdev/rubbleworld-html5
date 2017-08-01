@@ -6,10 +6,10 @@ import {
 	CloseEventListener,
 	ClientConnectEventListener,
 	ClientDisconnectEventListener,
-	MessageReceiveEventListener,
-	MessagePayload
-} from './ATransport';
+	MessageReceiveEventListener
+} from './Transport/ATransport';
 
+import { MessagePayload } from '../Message';
 import { Client } from './Client';
 
 

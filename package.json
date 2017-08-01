@@ -22,8 +22,8 @@
   "scripts": {
     "serve": "node dist/httpserver.js",
     "compile": "tsc --outDir dist/ src/nodeserver.ts",
-    "webpack": "webpack --config webpack.config.js --progress --colors --watch",
-    "postwebpack": "rimraf ./tmp"
+    "compile:http": "tsc --outDir dist/ src/httpserver.ts",
+    "webpack": "webpack --config webpack.config.js --progress --colors --watch"
   },
   "repository": {
     "type": "git",

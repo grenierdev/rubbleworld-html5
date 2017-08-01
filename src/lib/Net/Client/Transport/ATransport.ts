@@ -1,26 +1,19 @@
 import { EventEmitter } from 'konstellio-eventemitter';
 import { Disposable, IDisposable } from 'konstellio-disposable';
+import { Message, MessagePayload } from '../../Message';
 
 export type CloseEventListener = (error?: Error) => void;
 export type ClientConnectEventListener = () => void;
 export type ClientDisconnectEventListener = () => void;
 export type MessageReceiveEventListener = (message: Message) => void;
 
-export interface Message {
-	type: string
-	ts: number
-}
-
-export interface MessagePayload {
-	type: string
-	[payload: string]: any;
-};
-
 export abstract class ATransport extends EventEmitter {
 
 	constructor () {
 		super();
 	}
+
+	abstract send (payload: MessagePayload): void;
 
 	onClose (listener: CloseEventListener): Disposable {
 		return this.on('onClose', listener);
@@ -38,6 +31,5 @@ export abstract class ATransport extends EventEmitter {
 		return this.on('onMessageReceive', listener);
 	}
 
-	abstract send (payload: MessagePayload): void;
 
 }

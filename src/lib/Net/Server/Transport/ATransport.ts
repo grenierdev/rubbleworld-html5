@@ -1,22 +1,13 @@
 import { EventEmitter } from 'konstellio-eventemitter';
 import { Disposable, IDisposable } from 'konstellio-disposable';
 
-import { Client } from './Client';
+import { Client } from '../Client';
+import { Message, MessagePayload } from '../../Message';
 
 export type CloseEventListener = (error?: Error) => void;
 export type ClientConnectEventListener = (client: Client) => void;
 export type ClientDisconnectEventListener = (client: Client) => void;
 export type MessageReceiveEventListener = (client: Client, message: Message) => void;
-
-export interface Message {
-	type: string
-	ts: number
-}
-
-export interface MessagePayload {
-	type: string
-	[payload: string]: any;
-};
 
 export abstract class ATransport extends EventEmitter {
 
@@ -27,6 +18,9 @@ export abstract class ATransport extends EventEmitter {
 
 		this.clients = new Map<string, Client>();
 	}
+
+	abstract sendTo (client: Client, payload: MessagePayload): void;
+	abstract sendToAll (payload: MessagePayload): void;
 
 	getClientById (id: string): Client {
 		if (this.clients.has(id)) {
@@ -54,8 +48,4 @@ export abstract class ATransport extends EventEmitter {
 	onMessageReceive (listener: MessageReceiveEventListener): Disposable {
 		return this.on('onMessageReceive', listener);
 	}
-
-	abstract sendTo (client: Client, payload: MessagePayload): void;
-	abstract sendToAll (payload: MessagePayload): void;
-
 }

@@ -6,9 +6,10 @@ import {
 	CloseEventListener,
 	ClientConnectEventListener,
 	ClientDisconnectEventListener,
-	MessageReceiveEventListener,
-	MessagePayload
-} from './ATransport';
+	MessageReceiveEventListener
+} from './Transport/ATransport';
+
+import { MessagePayload } from '../Message';
 
 
 export class Client extends EventEmitter {

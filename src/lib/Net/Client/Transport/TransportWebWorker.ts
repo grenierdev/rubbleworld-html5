@@ -1,5 +1,5 @@
-import { ATransport, MessagePayload } from './ATransport';
-
+import { ATransport } from './ATransport';
+import { MessagePayload } from '../../Message';
 
 export class TransportWebWorker extends ATransport {
 

@@ -1,16 +1,25 @@
-import { Server } from './lib/Server/Server';
-import { TransportWebWorker } from './lib/Server/TransportWebWorker';
+import { Server } from './lib/Net/Server/Server';
+import { TransportWebWorker } from './lib/Net/Server/Transport/TransportWebWorker';
+import { GameModeLobby } from './lib/GameMode/GameModeLobby';
 
 
 const transport = new TransportWebWorker();
+
 const server = new Server(transport);
-
 server.onMessageReceive((client, msg) => {
-	if (msg.type === 'PING') {
-		server.sendTo(client, { type: 'PONG', latency: Date.now() - msg.ts });
-	}
+	console.debug('[SRV]', '=>', msg);
+});
+server.onClientConnect((client) => {
+	console.log('[SRV]', 'Client connected', client.id);
+});
+server.onClientDisconnect((client) => {
+	console.log('[SRV]', 'Client disconnected', client.id);
+});
 
-	else {
-		console.log('Unkown msg from client', client.id, msg);
-	}
+const mode = new GameModeLobby(server);
+mode.onPlayerJoined((player) => {
+	console.log('[SRV]', 'Player joined', player.id, player.name);
+});
+mode.onPlayerLeft((player) => {
+	console.log('[SRV]', 'Player left', player.id, player.name);
 });

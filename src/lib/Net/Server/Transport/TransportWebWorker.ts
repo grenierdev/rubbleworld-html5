@@ -1,12 +1,6 @@
-import {
-	ATransport,
-	Message,
-	MessagePayload
-} from './ATransport';
-
-import {
-	Client
-} from './Client';
+import { ATransport } from './ATransport';
+import { Message, MessagePayload } from '../../Message';
+import { Client } from '../Client';
 
 export class TransportWebWorker extends ATransport {
 
@@ -31,7 +25,6 @@ export class TransportWebWorker extends ATransport {
 		super.dispose();
 		close();
 	}
-
 	
 	sendTo (client: Client, payload: MessagePayload): void {
 		postMessage(Object.assign({ ts: Date.now() }, payload));

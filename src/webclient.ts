@@ -1,20 +1,26 @@
-import { Client } from './lib/Client/Client';
-import { TransportWebWorker } from './lib/Client/TransportWebWorker';
+import { Client } from './lib/Net/Client/Client';
+import { TransportWebWorker } from './lib/Net/Client/Transport/TransportWebWorker';
+import { GameModeLobby } from './lib/GameMode/GameModeLobby';
 
 const serverWorker = new Worker('js/webserver.js');
+
 const transport = new TransportWebWorker(serverWorker);
+
 const client = new Client(transport);
-
 client.onMessageReceive((msg) => {
-
-	console.log('From server', msg);
-
+	console.debug('[CLI]', '<=', msg);
 });
 
-setInterval(() => {
+const mode = new GameModeLobby(client);
+mode.onPlayerJoined((player) => {
+	console.log('[CLI]', 'Player joined', player.id, player.name);
+});
 
-	client.send({
-		type: 'PING'
-	});
+mode.onPlayerLeft((player) => {
+	console.log('[CLI]', 'Player left', player.id, player.name);
+});
 
-}, 1000);
+
+declare var window: any;
+window.client = client;
+window.mode = mode;
