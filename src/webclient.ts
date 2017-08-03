@@ -8,8 +8,8 @@ const serverWorker = new Worker('js/webserver.js');
 const transport = new TransportWebWorker(serverWorker);
 
 const client = new Client(transport);
-client.onMessageReceive((msg) => {
-	console.debug('[CLI]', '<=', msg);
+client.onMessageReceive((message) => {
+	console.debug('[CLI]', message);
 });
 
 // const mode = new GameModeLobby(client);
@@ -24,6 +24,6 @@ client.onMessageReceive((msg) => {
 const mode = new GameModeRedux(client);
 
 
-// declare var window: any;
-// window.client = client;
-// window.mode = mode;
+declare var window: any;
+window.client = client;
+window.mode = mode;

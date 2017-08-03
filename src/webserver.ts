@@ -7,8 +7,8 @@ import { GameModeRedux } from './lib/GameMode/GameModeRedux';
 const transport = new TransportWebWorker();
 
 const server = new Server(transport);
-server.onMessageReceive((client, msg) => {
-	console.debug('[SRV]', '=>', msg);
+server.onMessageReceive((client, message) => {
+	console.debug('[SRV]', '=>', message);
 });
 server.onClientConnect((client) => {
 	console.log('[SRV]', 'Client connected', client.id);
