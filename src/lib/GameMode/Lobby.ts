@@ -9,6 +9,12 @@ export interface LobbyClient extends ClientInterface {
 	playerId: string
 }
 
+export interface LobbyPlayer {
+	id: string,
+	name: string,
+	ready: boolean
+}
+
 export class Lobby extends Redux {
 
 
@@ -29,7 +35,7 @@ export class Lobby extends Redux {
 			})));
 			client.playerId = nextId;
 		});
-		this.reduceAction<{player: any}>('PLAYER_JOINED', (state, { player }) => {
+		this.reduceAction<{player: LobbyPlayer}>('PLAYER_JOINED', (state, { player }) => {
 			state.updateIn(['players'], players => players.set(player.id, Immutable.Map(player)));
 		});
 		this.reduceAction<{client: LobbyClient, name: string}>('CLIENT_PLAYER_RENAME', (state, { client, name }) => {
