@@ -1,36 +1,29 @@
 import { EventEmitter } from 'konstellio-eventemitter';
 import { Disposable, IDisposable } from 'konstellio-disposable';
 
-import { Client } from '../Client';
+import { ClientInterface } from '../ClientInterface';
 import { Message, MessagePayload } from '../../Message';
 
 export type CloseEventListener = (error?: Error) => void;
-export type ClientConnectEventListener = (client: Client) => void;
-export type ClientDisconnectEventListener = (client: Client) => void;
-export type MessageReceiveEventListener = (client: Client, message: Message) => void;
+export type ClientConnectEventListener = (client: ClientInterface) => void;
+export type ClientDisconnectEventListener = (client: ClientInterface) => void;
+export type MessageReceiveEventListener = (client: ClientInterface, message: Message) => void;
 
 export abstract class ATransport extends EventEmitter {
 
-	protected clients: Map<string, Client>;
+	protected clients: ClientInterface[];
 
 	constructor () {
 		super();
 
-		this.clients = new Map<string, Client>();
+		this.clients = [];
 	}
 
-	abstract sendTo (client: Client, payload: MessagePayload): void;
+	abstract sendTo (client: ClientInterface, payload: MessagePayload): void;
 	abstract sendToAll (payload: MessagePayload): void;
 
-	getClientById (id: string): Client {
-		if (this.clients.has(id)) {
-			return this.clients.get(id)!;
-		}
-		throw new ReferenceError(`Unknown client ID ${id}.`);
-	}
-
-	getClients (): Client[] {
-		return Array.from(this.clients.values());
+	getClients (): ClientInterface[] {
+		return this.clients.concat();
 	}
 
 	onClose (listener: CloseEventListener): Disposable {

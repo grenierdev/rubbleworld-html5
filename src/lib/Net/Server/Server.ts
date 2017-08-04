@@ -10,8 +10,8 @@ import {
 } from './Transport/ATransport';
 
 import { MessagePayload } from '../Message';
-import { Client } from './Client';
 
+import { ClientInterface } from './ClientInterface';
 
 export class Server extends EventEmitter {
 
@@ -23,11 +23,7 @@ export class Server extends EventEmitter {
 		this.transport = transport;
 	}
 
-	getClientById (id: string): Client {
-		return this.transport.getClientById(id);
-	}
-
-	getClients (): Client[] {
+	getClients (): ClientInterface[] {
 		return this.transport.getClients();
 	}
 
@@ -47,7 +43,7 @@ export class Server extends EventEmitter {
 		return this.transport.on('onMessageReceive', listener);
 	}
 
-	sendTo (client: Client, payload: MessagePayload): void {
+	sendTo (client: ClientInterface, payload: MessagePayload): void {
 		this.transport.sendTo(client, payload);
 	}
 

@@ -1,18 +1,18 @@
 import { ATransport } from './ATransport';
 import { Message, MessagePayload } from '../../Message';
-import { Client } from '../Client';
+import { ClientInterface } from '../ClientInterface';
 
 export class TransportWebWorker extends ATransport {
 
 	constructor () {
 		super();
 
-		const webclient = new Client();
-		this.clients.set(webclient.id, webclient);
+		const webclient: ClientInterface = {};
+		this.clients.push(webclient);
 		this.emit('onConnect', webclient);
 
 		onerror = (e: ErrorEvent) => {
-			this.emit('onClose', e.error);
+			this.emit('onClose', e.message);
 			this.dispose();
 		}
 
@@ -21,9 +21,9 @@ export class TransportWebWorker extends ATransport {
 		}
 	}
 
-	dispose (): void {
-		super.dispose();
+	disposeAsync (): Promise<void> {
 		close();
+		return super.disposeAsync();
 	}
 	
 	sendTo (client: Client, payload: MessagePayload): void {

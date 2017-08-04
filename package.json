@@ -9,6 +9,7 @@
     "immutablediff": "^0.4.4",
     "konstellio-disposable": "^0.0.5",
     "konstellio-eventemitter": "^0.0.4",
+    "path-to-regexp": "^1.7.0",
     "redux": "^3.7.2"
   },
   "devDependencies": {
