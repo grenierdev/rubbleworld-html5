@@ -52,7 +52,7 @@ export class Lobby extends Redux {
 				server.sendToAll({ type: 'PLAYER_JOINED', player: value.toJS() });
 			});
 			this.dispatchState('remove/players/:id', (params, value, previousState, state) => {
-				server.sendToAll({ type: 'PLAYER_LEFT', player: params.id });
+				server.sendToAll({ type: 'PLAYER_LEFT', playerId: params.id });
 			});
 			this.dispatchState('replace/players/:id/name', (params, value, previousState, state) => {
 				server.sendToAll({ type: 'PLAYER_RENAME', playerId: params.id, name: value });
