@@ -4,7 +4,7 @@ export interface Message {
 	ts: number
 }
 
-export interface MessagePayload {
+export interface Payload {
 	type: string
 	[payload: string]: any;
 };

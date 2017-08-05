@@ -1,28 +1,19 @@
-import { Client } from './lib/Net/Client/Client';
-import { TransportWebWorker } from './lib/Net/Client/Transport/TransportWebWorker';
-import { Lobby } from './lib/GameMode/Lobby';
+import { ClientWebWorker } from './lib/ClientWebWorker';
+import { GameModeLobby } from './lib/GameModeLobby';
 
 const serverWorker = new Worker('js/webserver.js');
 
-const transport = new TransportWebWorker(serverWorker);
-transport.onClose(e => console.error(e));
+const client = new ClientWebWorker(serverWorker);
+client.onClose(e => console.error(e));
+client.onMessage((message) => console.debug('[CLI]', message));
 
-const client = new Client(transport);
-client.onMessageReceive((message) => {
-	console.debug('[CLI]', message);
-});
+setInterval(() => {
+	client.sendPayload({
+		type: 'PING'
+	});
+}, 10000);
 
-// const mode = new GameModeLobby(client);
-// mode.onPlayerJoined((player) => {
-// 	console.log('[CLI]', 'Player joined', player.id, player.name);
-// });
-
-// mode.onPlayerLeft((player) => {
-// 	console.log('[CLI]', 'Player left', player.id, player.name);
-// });
-
-const mode = new Lobby(client);
-
+const mode = new GameModeLobby(client);
 
 declare var window: any;
 window.client = client;
