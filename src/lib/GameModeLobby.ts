@@ -24,7 +24,7 @@ export class GameModeLobby extends GameMode {
 
 		else {
 			const client: Client = this.adapter as Client;
-			
+
 			client.onMessage((message) => this.onAction(message));
 		}
 	}
@@ -47,7 +47,7 @@ export class GameModeLobby extends GameMode {
 			};
 			from.player = player;
 
-			this.onAction({ type: 'JOIN', ts: Date.now(), player: player });
+			this.onAction({ type: 'JOIN', ts: action.ts, player: player });
 			server.broadcastExceptPayload([from], { type: 'JOIN', player: player });
 			from.sendPayload({
 				type: 'STATE',
@@ -57,7 +57,7 @@ export class GameModeLobby extends GameMode {
 		}
 
 		else if (action.type === 'DISCONNECTED' && from) {
-			this.onAction({ type: 'LEFT', ts: Date.now(), playerId: from!.player.id });
+			this.onAction({ type: 'LEFT', ts: action.ts, playerId: from!.player.id });
 			server.broadcastAllPayload({ type: 'LEFT', playerId: from!.player.id });
 		}
 
