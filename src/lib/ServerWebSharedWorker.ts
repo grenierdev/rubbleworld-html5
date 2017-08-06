@@ -13,19 +13,23 @@ export class ServerWebSharedWorker extends Server {
 			const client = new ServerWebSharedWorkerClient(e.ports[0]);
 			this.clients.push(client);
 
-			client.onClose((err) => this.emit('onClientDisconnect', client));
-			client.onDisconnect(() => this.emit('onClientDisconnect', client));
+			client.onClose((err) => {
+				this.emit('onClientDisconnect', client);
+				this.clients = [...this.clients.filter(cl => cl !== client)];
+			});
+			client.onDisconnect(() => {
+				this.emit('onClientDisconnect', client);
+				this.clients = [...this.clients.filter(cl => cl !== client)];
+			});
 			client.onMessage((message) => this.emit('onMessage', client, message));
 
-			this.emit('onClientConnect', client)
+			this.emit('onClientConnect', client);
 		};
 
 		onerror = (e: ErrorEvent) => {
 			this.emit('onClose', e.message);
 			this.dispose();
 		}
-
-		console.log('ServerWebSharedWorker');
 	}
 
 }
