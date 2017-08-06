@@ -14,12 +14,12 @@ export class ServerWebSharedWorker extends Server {
 			this.clients.push(client);
 
 			client.onClose((err) => {
-				this.emit('onClientDisconnect', client);
 				this.clients = [...this.clients.filter(cl => cl !== client)];
+				this.emit('onClientDisconnect', client);
 			});
 			client.onDisconnect(() => {
-				this.emit('onClientDisconnect', client);
 				this.clients = [...this.clients.filter(cl => cl !== client)];
+				this.emit('onClientDisconnect', client);
 			});
 			client.onMessage((message) => this.emit('onMessage', client, message));
 

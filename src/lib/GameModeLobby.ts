@@ -17,13 +17,14 @@ export class GameModeLobby extends GameMode {
 		if (this.isServer) {
 			const server: Server = this.adapter as Server;
 
-			server.onClientConnect((client) => this.onAction({ type: 'CL_CONNECTED', ts: Date.now() }, client as LobbyClient));
-			server.onClientDisconnect((client) => this.onAction({ type: 'CL_DISCONNECTED', ts: Date.now() }, client as LobbyClient));
-			server.onMessage((client, message) => this.onAction({ ...message, type: `CL_${message.type}` }, client as LobbyClient));
+			server.onClientConnect((client) => this.onServerAction({ type: 'CONNECTED', ts: Date.now() }, client as LobbyClient));
+			server.onClientDisconnect((client) => this.onServerAction({ type: 'DISCONNECTED', ts: Date.now() }, client as LobbyClient));
+			server.onMessage((client, message) => this.onServerAction(message, client as LobbyClient));
 		}
 
 		else {
 			const client: Client = this.adapter as Client;
+			
 			client.onMessage((message) => this.onAction(message));
 		}
 	}
@@ -35,33 +36,39 @@ export class GameModeLobby extends GameMode {
 		};
 	}
 
-	onAction(action: Message, from?: LobbyClient): void {
+	onServerAction(action: Message, from: LobbyClient): void {
 		const server = this.adapter as Server;
 
-		if (action.type === 'CL_CONNECTED' && from) {
+		if (action.type === 'CONNECTED' && from) {
 			const player: LobbyPlayer = {
 				id: (++nextPlayerId).toString(),
 				name: '',
-				ready: false,
-				color: ''
+				ready: false
 			};
 			from.player = player;
 
-			this.players.set(player.id, player);
+			this.onAction({ type: 'JOIN', ts: Date.now(), player: player });
+			server.broadcastExceptPayload([from], { type: 'JOIN', player: player });
 			from.sendPayload({
 				type: 'STATE',
 				...this.getState(),
 				clientPlayerId: player.id
 			});
-			server.broadcastExceptPayload([from], { type: 'JOIN', player: player });
 		}
 
-		else if (action.type === 'CL_DISCONNECTED' && from) {
+		else if (action.type === 'DISCONNECTED' && from) {
+			this.onAction({ type: 'LEFT', ts: Date.now(), playerId: from!.player.id });
 			server.broadcastAllPayload({ type: 'LEFT', playerId: from!.player.id });
-			this.players.delete(from!.player.id);
 		}
 
-		else if (action.type === 'STATE') {
+		else if (action.type === 'MSG') {
+			server.broadcastAllPayload({ type: 'MSG', playerId: from!.player.id, body: action.body });
+		}
+	}
+
+	onAction(action: Message): void {
+		
+		if (action.type === 'STATE') {
 			this.clientPlayerId = action.clientPlayerId;
 			this.players = new Map<string, LobbyPlayer>();
 			action.players.forEach((player: LobbyPlayer) => this.players.set(player.id, player));
@@ -73,10 +80,6 @@ export class GameModeLobby extends GameMode {
 
 		else if (action.type === 'LEFT') {
 			this.players.delete(action.playerId);
-		}
-
-		else if (action.type === 'CL_MSG') {
-			server.broadcastAllPayload({ type: 'MSG', playerId: from!.player.id, body: action.body });
 		}
 
 		else if (action.type === 'MSG') {
@@ -95,6 +98,5 @@ export interface LobbyClient extends Client {
 export interface LobbyPlayer {
 	id: string,
 	name: string,
-	ready: boolean,
-	color: string
+	ready: boolean
 }
