@@ -39,7 +39,7 @@ export class GameModeLobby extends GameMode {
 	onServerAction(action: Message, client: LobbyClient): void {
 		const server = this.adapter as Server;
 
-		if (action.type === 'CONNECTED' && client) {
+		if (action.type === 'CONNECTED') {
 			const player: LobbyPlayer = {
 				id: (++nextPlayerId).toString(),
 				name: '',
@@ -56,7 +56,7 @@ export class GameModeLobby extends GameMode {
 			});
 		}
 
-		else if (action.type === 'DISCONNECTED' && client) {
+		else if (action.type === 'DISCONNECTED') {
 			this.onAction({ type: 'LEFT', ts: action.ts, playerId: client!.player.id });
 			server.broadcastAllPayload({ type: 'LEFT', playerId: client!.player.id });
 		}
