@@ -36,33 +36,33 @@ export class GameModeLobby extends GameMode {
 		};
 	}
 
-	onServerAction(action: Message, from: LobbyClient): void {
+	onServerAction(action: Message, client: LobbyClient): void {
 		const server = this.adapter as Server;
 
-		if (action.type === 'CONNECTED' && from) {
+		if (action.type === 'CONNECTED' && client) {
 			const player: LobbyPlayer = {
 				id: (++nextPlayerId).toString(),
 				name: '',
 				ready: false
 			};
-			from.player = player;
+			client.player = player;
 
 			this.onAction({ type: 'JOIN', ts: action.ts, player: player });
-			server.broadcastExceptPayload([from], { type: 'JOIN', player: player });
-			from.sendPayload({
+			server.broadcastExceptPayload([client], { type: 'JOIN', player: player });
+			client.sendPayload({
 				type: 'STATE',
 				...this.getState(),
 				clientPlayerId: player.id
 			});
 		}
 
-		else if (action.type === 'DISCONNECTED' && from) {
-			this.onAction({ type: 'LEFT', ts: action.ts, playerId: from!.player.id });
-			server.broadcastAllPayload({ type: 'LEFT', playerId: from!.player.id });
+		else if (action.type === 'DISCONNECTED' && client) {
+			this.onAction({ type: 'LEFT', ts: action.ts, playerId: client!.player.id });
+			server.broadcastAllPayload({ type: 'LEFT', playerId: client!.player.id });
 		}
 
 		else if (action.type === 'MSG') {
-			server.broadcastAllPayload({ type: 'MSG', playerId: from!.player.id, body: action.body });
+			server.broadcastAllPayload({ type: 'MSG', playerId: client!.player.id, body: action.body });
 		}
 	}
 
