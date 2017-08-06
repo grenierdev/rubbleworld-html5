@@ -33,8 +33,16 @@ export class ServerCombiner extends Server {
 		}, []);
 	}
 
-	broadcastPayload(payload: Payload): void {
-		this.servers.forEach(server => server.broadcastPayload(payload));
+	broadcastAllPayload(payload: Payload): void {
+		this.servers.forEach(server => server.broadcastAllPayload(payload));
+	}
+
+	broadcastToPayload(clients: Client[], payload: Payload): void {
+		this.servers.forEach(server => server.broadcastToPayload(clients, payload));
+	}
+
+	broadcastExceptPayload(clients: Client[], payload: Payload): void {
+		this.servers.forEach(server => server.broadcastExceptPayload(clients, payload));
 	}
 
 	disposeAsync(): Promise<void> {

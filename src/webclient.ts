@@ -1,9 +1,9 @@
-import { ClientWebWorker } from './lib/ClientWebWorker';
+import { ClientWebSharedWorker } from './lib/ClientWebSharedWorker';
 import { GameModeLobby } from './lib/GameModeLobby';
 
-const serverWorker = new Worker('js/webserver.js');
+const serverWorker = new SharedWorker('js/webserver.js');
 
-const client = new ClientWebWorker(serverWorker);
+const client = new ClientWebSharedWorker(serverWorker);
 client.onClose(e => console.error(e));
 client.onMessage((message) => console.debug('[CLI]', message));
 
@@ -11,7 +11,7 @@ setInterval(() => {
 	client.sendPayload({
 		type: 'PING'
 	});
-}, 10000);
+}, 3000);
 
 const mode = new GameModeLobby(client);
 

@@ -1,8 +1,8 @@
 import { ServerCombiner } from './lib/ServerCombiner';
-import { ServerWebWorker } from './lib/ServerWebWorker';
+import { ServerWebSharedWorker } from './lib/ServerWebSharedWorker';
 import { GameModeLobby } from './lib/GameModeLobby';
 
-const server = new ServerCombiner([new ServerWebWorker()]);
+const server = new ServerCombiner([new ServerWebSharedWorker()]);
 server.onClose(e => console.error(e));
 server.onMessage((client, message) => console.debug('[SRV]', message, 'from', client.id));
 

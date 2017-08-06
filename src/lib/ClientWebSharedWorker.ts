@@ -1,11 +1,11 @@
 import { Client } from './Client';
 import { Payload } from './Message';
 
-export class ClientWebWorker extends Client {
+export class ClientWebSharedWorker extends Client {
 
-	protected worker: Worker;
+	protected worker: SharedWorker.SharedWorker;
 
-	constructor(worker: Worker) {
+	constructor(worker: SharedWorker.SharedWorker) {
 		super();
 
 		this.worker = worker;
@@ -14,17 +14,18 @@ export class ClientWebWorker extends Client {
 			this.emit('onClose', e.error);
 			this.dispose();
 		}
-		this.worker.onmessage = (e: MessageEvent) => {
+		this.worker.port.addEventListener('message', (e: MessageEvent) => {
 			this.emit('onMessage', { ...e.data });
-		}
+		});
+		this.worker.port.start();
 
 		setTimeout(() => this.emit('onConnect'));
 
-		console.log('ClientWebWorker');
+		console.log('ClientWebSharedWorker');
 	}
 
 	sendPayload(payload: Payload): void {
-		this.worker.postMessage({
+		this.worker.port.postMessage({
 			ts: Date.now(),
 			...payload
 		});
@@ -32,7 +33,7 @@ export class ClientWebWorker extends Client {
 
 	disposeAsync(): Promise<void> {
 		try {
-			this.worker.terminate();
+			this.worker.port.close();
 			(this.worker as any) = undefined;
 		} catch (e) { }
 		return super.disposeAsync();

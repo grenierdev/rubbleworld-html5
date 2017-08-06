@@ -6,6 +6,10 @@
   version "8.0.17"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-8.0.17.tgz#677bc8c118cfb76013febb62ede1f31d2c7222a1"
 
+"@types/sharedworker@^0.0.27":
+  version "0.0.27"
+  resolved "https://registry.yarnpkg.com/@types/sharedworker/-/sharedworker-0.0.27.tgz#ff6499046da5316a2a6e38a1c86acfcb4ddf52ca"
+
 abbrev@1:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.0.tgz#d0554c2256636e2f56e7c2e5ad183f859428d81f"

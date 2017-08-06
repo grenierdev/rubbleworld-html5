@@ -10,9 +10,9 @@
 		"strictNullChecks": true,
 		"target": "es6",
 		"allowSyntheticDefaultImports": true,
-        "lib": [
-            "esnext",
+		"lib": [
+			"esnext",
 			"webworker"
-        ]
+		]
 	}
 }

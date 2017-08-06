@@ -24,8 +24,24 @@ export abstract class Server extends EventEmitter {
 		return this.clients.concat();
 	}
 
-	broadcastPayload(payload: Payload): void {
+	broadcastAllPayload(payload: Payload): void {
 		this.clients.forEach(client => client.sendPayload(payload));
+	}
+
+	broadcastToPayload(clients: Client[], payload: Payload): void {
+		this.clients.forEach(client => {
+			if (clients.indexOf(client) > -1) {
+				client.sendPayload(payload)
+			}
+		});
+	}
+
+	broadcastExceptPayload(clients: Client[], payload: Payload): void {
+		this.clients.forEach(client => {
+			if (clients.indexOf(client) === -1) {
+				client.sendPayload(payload)
+			}
+		});
 	}
 
 	onClose(listener: CloseEventListener): Disposable {
