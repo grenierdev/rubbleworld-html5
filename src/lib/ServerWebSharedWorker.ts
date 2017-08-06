@@ -13,11 +13,8 @@ export class ServerWebSharedWorker extends Server {
 			const client = new ServerWebSharedWorkerClient(e.ports[0]);
 			this.clients.push(client);
 
-			client.onClose((err) => {
-				this.emit('onClientDisconnect', client);
-				this.emit('onClose', new Error(`WebWorker got an error : ${err.message}.`));
-				this.dispose();
-			});
+			client.onClose((err) => this.emit('onClientDisconnect', client));
+			client.onDisconnect(() => this.emit('onClientDisconnect', client));
 			client.onMessage((message) => this.emit('onMessage', client, message));
 
 			this.emit('onClientConnect', client)
@@ -41,8 +38,16 @@ export class ServerWebSharedWorkerClient extends Client {
 		super();
 
 		this.port = port;
+		this.port.addEventListener('error', (e: any) => {
+			console.log('SharedWorker.Port had an error', e);
+		});
 		this.port.addEventListener('message', (e: MessageEvent) => {
-			this.emit('onMessage', { ...e.data });
+			e.stopPropagation();
+			if (e.data === 'hack:close') {
+				this.emit('onDisconnect');
+			} else {
+				this.emit('onMessage', { ...e.data });
+			}
 		});
 		this.port.start();
 	}
@@ -52,6 +57,14 @@ export class ServerWebSharedWorkerClient extends Client {
 			ts: Date.now(),
 			...payload
 		});
+	}
+
+	disposeAsync (): Promise<void> {
+		this.port.removeEventListener('message');
+		try {
+			(this as any).port = undefined;
+		} catch (e) {}
+		return super.disposeAsync();
 	}
 
 }

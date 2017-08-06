@@ -1,6 +1,8 @@
 import { Client } from './Client';
 import { Payload } from './Message';
 
+declare var window: any;
+
 export class ClientWebSharedWorker extends Client {
 
 	protected worker: SharedWorker.SharedWorker;
@@ -15,13 +17,15 @@ export class ClientWebSharedWorker extends Client {
 			this.dispose();
 		}
 		this.worker.port.addEventListener('message', (e: MessageEvent) => {
+			e.stopPropagation();
 			this.emit('onMessage', { ...e.data });
+		});
+		window.addEventListener('beforeunload', (e) => {
+			this.worker.port.postMessage('hack:close');
 		});
 		this.worker.port.start();
 
 		setTimeout(() => this.emit('onConnect'));
-
-		console.log('ClientWebSharedWorker');
 	}
 
 	sendPayload(payload: Payload): void {

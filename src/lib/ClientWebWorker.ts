@@ -19,8 +19,6 @@ export class ClientWebWorker extends Client {
 		}
 
 		setTimeout(() => this.emit('onConnect'));
-
-		console.log('ClientWebWorker');
 	}
 
 	sendPayload(payload: Payload): void {

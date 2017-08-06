@@ -18,8 +18,6 @@ export class ServerWebWorker extends Server {
 		client.onMessage((message) => this.emit('onMessage', client, message));
 
 		setTimeout(() => this.emit('onClientConnect', client));
-
-		console.log('ServiceWebWorker');
 	}
 
 }

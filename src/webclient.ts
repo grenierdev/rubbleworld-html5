@@ -11,7 +11,7 @@ setInterval(() => {
 	client.sendPayload({
 		type: 'PING'
 	});
-}, 3000);
+}, 10000);
 
 const mode = new GameModeLobby(client);
 
