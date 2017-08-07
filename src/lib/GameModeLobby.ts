@@ -12,7 +12,10 @@ export class GameModeLobby extends GameMode {
 	constructor(adapter: Client | Server) {
 		super(adapter);
 
-		this.state = Immutable.Map();
+		this.state = Immutable.Map({
+			clientPlayerId: 0,
+			players: Immutable.Map()
+		});
 
 		if (this.isServer) {
 			const server: Server = this.adapter as Server;
@@ -30,15 +33,20 @@ export class GameModeLobby extends GameMode {
 	}
 
 	getState (): any {
-		return this.state.toJS();
+		return {
+			clientPlayerId: this.state.get('clientPlayerId'),
+			players: Object.values(this.state.get('players').toJS())
+		};
 	}
 
-	onServerAction(action: Message, client: LobbyClient): void {
+	protected nextPlayerId = 0;
+
+	protected onServerAction(action: Message, client: LobbyClient): void {
 		const server = this.adapter as Server;
 
 		if (action.type === 'CONNECTED') {
 			const player: LobbyPlayer = {
-				id: (++nextPlayerId).toString(),
+				id: (++this.nextPlayerId).toString(),
 				name: '',
 				ready: false
 			};
@@ -58,27 +66,45 @@ export class GameModeLobby extends GameMode {
 			server.broadcastAllPayload({ type: 'LEFT', playerId: client!.player.id });
 		}
 
+		else if (action.type === 'NAME') {
+			this.onAction({ type: 'NAME', ts: action.ts, playerId: client!.player.id, name: action.name });
+			server.broadcastAllPayload({ type: 'NAME', playerId: client!.player.id, name: action.name });
+		}
+
+		else if (action.type === 'READY') {
+			this.onAction({ type: 'READY', ts: action.ts, playerId: client!.player.id, ready: action.ready });
+			server.broadcastAllPayload({ type: 'READY', playerId: client!.player.id, ready: action.ready });
+		}
+
 		else if (action.type === 'MSG') {
 			server.broadcastAllPayload({ type: 'MSG', playerId: client!.player.id, body: action.body });
 		}
 	}
 
-	onAction(action: Message): void {
+	protected onAction(action: Message): void {
 		if (action.type === 'STATE') {
 			this.state = this.state.withMutations(state => {
-				state.set('clientPlayerId', action.clientPlayerId);
 				const players = Immutable.Map<string, any>().asMutable();
 				action.players.forEach((player: LobbyPlayer) => players.set(player.id, Immutable.Map(player)));
-				state.set('players', players);
+				state.set('players', players.asImmutable());
+				state.set('clientPlayerId', action.clientPlayerId);
 			});
 		}
 
 		else if (action.type === 'JOIN') {
-			this.state = this.state.update('players', (players) => players.set(action.player.id, Immutable.Map(action.player)));
+			this.state = this.state.setIn(['players', action.player.id], Immutable.Map(action.player));
 		}
 
 		else if (action.type === 'LEFT') {
 			this.state = this.state.deleteIn(['players', action.playerId]);
+		}
+
+		else if (action.type === 'NAME') {
+			this.state = this.state.setIn(['players', action.playerId, 'name'], action.name);
+		}
+
+		else if (action.type === 'READY') {
+			this.state = this.state.setIn(['players', action.playerId, 'ready'], !!action.ready);
 		}
 
 		else if (action.type === 'MSG') {
@@ -87,8 +113,6 @@ export class GameModeLobby extends GameMode {
 	}
 
 }
-
-let nextPlayerId = 0;
 
 export interface LobbyClient extends Client {
 	player: LobbyPlayer
