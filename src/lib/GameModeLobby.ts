@@ -72,8 +72,8 @@ export class GameModeLobby extends GameMode {
 		}
 
 		else if (action.type === 'READY') {
-			this.onAction({ type: 'READY', ts: action.ts, playerId: client!.player.id, ready: action.ready });
-			server.broadcastAllPayload({ type: 'READY', playerId: client!.player.id, ready: action.ready });
+			this.onAction({ type: 'READY', ts: action.ts, playerId: client!.player.id, ready: !!action.ready });
+			server.broadcastAllPayload({ type: 'READY', playerId: client!.player.id, ready: !!action.ready });
 		}
 
 		else if (action.type === 'MSG') {
