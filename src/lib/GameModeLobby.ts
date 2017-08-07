@@ -62,22 +62,22 @@ export class GameModeLobby extends GameMode {
 		}
 
 		else if (action.type === 'DISCONNECTED') {
-			this.onAction({ type: 'LEFT', ts: action.ts, playerId: client!.player.id });
-			server.broadcastAllPayload({ type: 'LEFT', playerId: client!.player.id });
+			this.onAction({ type: 'LEFT', ts: action.ts, playerId: client.player.id });
+			server.broadcastAllPayload({ type: 'LEFT', playerId: client.player.id });
 		}
 
 		else if (action.type === 'NAME') {
-			this.onAction({ type: 'NAME', ts: action.ts, playerId: client!.player.id, name: action.name });
-			server.broadcastAllPayload({ type: 'NAME', playerId: client!.player.id, name: action.name });
+			this.onAction({ type: 'NAME', ts: action.ts, playerId: client.player.id, name: action.name });
+			server.broadcastAllPayload({ type: 'NAME', playerId: client.player.id, name: action.name });
 		}
 
 		else if (action.type === 'READY') {
-			this.onAction({ type: 'READY', ts: action.ts, playerId: client!.player.id, ready: !!action.ready });
-			server.broadcastAllPayload({ type: 'READY', playerId: client!.player.id, ready: !!action.ready });
+			this.onAction({ type: 'READY', ts: action.ts, playerId: client.player.id, ready: !!action.ready });
+			server.broadcastAllPayload({ type: 'READY', playerId: client.player.id, ready: !!action.ready });
 		}
 
 		else if (action.type === 'MSG') {
-			server.broadcastAllPayload({ type: 'MSG', playerId: client!.player.id, body: action.body });
+			server.broadcastAllPayload({ type: 'MSG', playerId: client.player.id, body: action.body });
 		}
 	}
 
