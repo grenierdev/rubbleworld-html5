@@ -27,7 +27,8 @@ export class ServerWebWorkerClient extends Client {
 	constructor() {
 		super();
 
-		onerror = (e: ErrorEvent) => {
+		// onerror = (e: ErrorEvent) => {
+		onerror = (e: any) => {
 			this.emit('onClose', e.message);
 			this.dispose();
 		}

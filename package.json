@@ -8,10 +8,14 @@
     "immutable": "^3.8.1",
     "konstellio-disposable": "^0.0.5",
     "konstellio-eventemitter": "^0.0.4",
+    "react": "^15.6.1",
+    "react-dom": "^15.6.1",
     "redux": "^3.7.2"
   },
   "devDependencies": {
     "@types/node": "^8.0.17",
+    "@types/react": "^16.0.1",
+    "@types/react-dom": "^15.5.2",
     "@types/sharedworker": "^0.0.27",
     "awesome-typescript-loader": "^3.2.2",
     "rimraf": "^2.6.1",

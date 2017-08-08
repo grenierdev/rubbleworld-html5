@@ -1,9 +1,12 @@
+import { Disposable } from 'konstellio-disposable';
 import * as Immutable from 'immutable';
 
 import { GameMode } from './GameMode';
-import { Client } from './Client';
-import { Server } from './Server';
-import { Message } from './Message';
+import { Client } from '../net/Client';
+import { Server } from '../net/Server';
+import { Message } from '../net/Message';
+
+export type ChangeEventListener = (state: Immutable.Map<string, any>, action: Message) => void;
 
 export class GameModeLobby extends GameMode {
 
@@ -81,34 +84,53 @@ export class GameModeLobby extends GameMode {
 		}
 	}
 
-	protected onAction(action: Message): void {
-		if (action.type === 'STATE') {
+	protected onAction(message: Message): void {
+		const previousState = this.state;
+
+		if (message.type === 'STATE') {
 			this.state = this.state.withMutations(state => {
 				const players = Immutable.Map<string, any>().asMutable();
-				action.players.forEach((player: LobbyPlayer) => players.set(player.id, Immutable.Map(player)));
+				message.players.forEach((player: LobbyPlayer) => players.set(player.id, Immutable.Map(player)));
 				state.set('players', players.asImmutable());
-				state.set('clientPlayerId', action.clientPlayerId);
+				state.set('clientPlayerId', message.clientPlayerId);
 			});
 		}
 
-		else if (action.type === 'JOIN') {
-			this.state = this.state.setIn(['players', action.player.id], Immutable.Map(action.player));
+		else if (message.type === 'JOIN') {
+			this.state = this.state.setIn(['players', message.player.id], Immutable.Map(message.player));
 		}
 
-		else if (action.type === 'LEFT') {
-			this.state = this.state.deleteIn(['players', action.playerId]);
+		else if (message.type === 'LEFT') {
+			this.state = this.state.deleteIn(['players', message.playerId]);
 		}
 
-		else if (action.type === 'NAME') {
-			this.state = this.state.setIn(['players', action.playerId, 'name'], action.name);
+		else if (message.type === 'NAME') {
+			this.state = this.state.setIn(['players', message.playerId, 'name'], message.name);
 		}
 
-		else if (action.type === 'READY') {
-			this.state = this.state.setIn(['players', action.playerId, 'ready'], !!action.ready);
+		else if (message.type === 'READY') {
+			this.state = this.state.setIn(['players', message.playerId, 'ready'], !!message.ready);
 		}
 
-		else if (action.type === 'MSG') {
-			console.log('MSG', action);
+		else if (message.type === 'MSG') {
+			console.log('MSG', message);
+		}
+
+		if (previousState !== this.state) {
+			this.emit('onChange', this.state, message);
+		}
+	}
+
+	onChange(listener: ChangeEventListener): Disposable {
+		return this.on('onChange', listener);
+	}
+
+	dispatch(message: Message): void {
+		if (this.isServer) {
+			this.onAction(message);
+		}
+		else {
+			(this.adapter as Client).sendPayload(message);
 		}
 	}
 

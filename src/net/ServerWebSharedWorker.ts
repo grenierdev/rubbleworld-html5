@@ -26,7 +26,8 @@ export class ServerWebSharedWorker extends Server {
 			this.emit('onClientConnect', client);
 		};
 
-		onerror = (e: ErrorEvent) => {
+		// onerror = (e: ErrorEvent) => {
+		onerror = (e: any) => {
 			this.emit('onClose', e.message);
 			this.dispose();
 		}

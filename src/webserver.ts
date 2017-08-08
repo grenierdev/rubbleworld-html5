@@ -1,6 +1,6 @@
-import { ServerCombiner } from './lib/ServerCombiner';
-import { ServerWebSharedWorker } from './lib/ServerWebSharedWorker';
-import { GameModeLobby } from './lib/GameModeLobby';
+import { ServerCombiner } from './net/ServerCombiner';
+import { ServerWebSharedWorker } from './net/ServerWebSharedWorker';
+import { GameModeLobby } from './gamemode/GameModeLobby';
 
 const server = new ServerCombiner([new ServerWebSharedWorker()]);
 server.onClose(e => console.error(e));

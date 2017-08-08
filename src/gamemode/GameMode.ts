@@ -1,8 +1,8 @@
 import { EventEmitter } from 'konstellio-eventemitter';
 import { Disposable } from 'konstellio-disposable';
 
-import { Client } from './Client';
-import { Server } from './Server';
+import { Client } from '../net/Client';
+import { Server } from '../net/Server';
 
 export abstract class GameMode extends EventEmitter {
 

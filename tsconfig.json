@@ -9,10 +9,15 @@
 		"sourceMap": true,
 		"strictNullChecks": true,
 		"target": "es6",
+		"jsx": "react",
 		"allowSyntheticDefaultImports": true,
 		"lib": [
+			"dom",
 			"esnext",
 			"webworker"
 		]
-	}
+	},
+	"exclude": [
+		"node_modules"
+	]
 }
