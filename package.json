@@ -28,7 +28,7 @@
     "serve": "node dist/httpserver.js",
     "compile": "tsc --outDir dist/ src/nodeserver.ts",
     "compile:http": "tsc --outDir dist/ src/httpserver.ts",
-    "webpack": "webpack --config webpack.config.js --progress --colors --watch"
+    "webpack": "webpack --config webpack.config.js --watch"
   },
   "repository": {
     "type": "git",
