@@ -145,3 +145,11 @@ export interface LobbyPlayer {
 	name: string,
 	ready: boolean
 }
+
+export function payloadName(name: string) {
+	return { type: 'NAME', name: name };
+}
+
+export function payloadReady(ready: boolean) {
+	return { type: 'READY', ready: !!ready };
+}
