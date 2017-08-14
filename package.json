@@ -8,10 +8,8 @@
     "immutable": "^3.8.1",
     "konstellio-disposable": "^0.0.5",
     "konstellio-eventemitter": "^0.0.4",
-    "material-ui": "^0.18.7",
     "react": "^15.6.1",
     "react-dom": "^15.6.1",
-    "react-tap-event-plugin": "^2.0.1",
     "redux": "^3.7.2"
   },
   "devDependencies": {
@@ -30,7 +28,8 @@
     "serve": "node dist/httpserver.js",
     "compile": "tsc --outDir dist/ src/nodeserver.ts",
     "compile:http": "tsc --outDir dist/ src/httpserver.ts",
-    "webpack": "webpack --config webpack.config.js --watch"
+    "webpack:client": "webpack --config webpack.client.js --watch",
+    "webpack:server": "webpack --config webpack.server.js --watch"
   },
   "repository": {
     "type": "git",

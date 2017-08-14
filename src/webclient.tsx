@@ -1,13 +1,10 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import * as injectTapEventPlugin from 'react-tap-event-plugin';
-injectTapEventPlugin();
 
 import { ClientWebSharedWorker } from './net/ClientWebSharedWorker';
 import { GameModeLobby } from './gamemode/GameModeLobby';
 
-import { Lobby } from './container/Lobby';
+import { Lobby } from './ui/Lobby';
 
 declare var window: any;
 
@@ -29,9 +26,7 @@ const game = document.getElementById('game');
 
 
 mode.onChange((state, action) => {
-	ReactDOM.render(<MuiThemeProvider>
-		<Lobby state={state} client={client} />
-	</MuiThemeProvider>, game);
+	ReactDOM.render(<Lobby state={state} client={client} />, game);
 });
 
 window.client = client;

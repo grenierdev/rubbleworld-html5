@@ -4,7 +4,7 @@ const path = require('path');
 module.exports = {
 	entry: {
 		"js/webclient": "./src/webclient.tsx",
-		"js/webserver": "./src/webserver.ts",
+		"js/vendor": ["react", "react-dom"]
 	},
 	output: {
 		path: path.join(__dirname, "dist"),
@@ -35,6 +35,10 @@ module.exports = {
 			'process.env': {
 				NODE_ENV: JSON.stringify('production')
 			}
+		}),
+		new webpack.optimize.CommonsChunkPlugin({
+			name: 'js/vendor',
+			minChunks: Infinity,
 		})
 	]
 };
