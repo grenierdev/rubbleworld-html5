@@ -1,20 +1,36 @@
-import { Entity, SimpleGridFOV } from './gamemode/GameModeEntity';
+import { EventEmitter } from 'konstellio-eventemitter';
+import { Disposable, CompositeDisposable } from 'konstellio-disposable';
+import * as Immutable from 'immutable';
 
-class MyEntity extends Entity {
+class GameState extends EventEmitter {
+    title: string;
+    players: Immutable.Map<string, PlayerState>;
+    tiles: Immutable.List<TileState>;
+}
+
+class PlayerState extends EventEmitter {
+    name: string;
+}
+
+class TileState extends EventEmitter {
 
 }
 
+const game = new GameState();
 
-const playerA = new MyEntity();
-const playerB = new MyEntity();
-const playerC = new MyEntity();
+// Game Client
+{
+    
+}
 
-const grid = new SimpleGridFOV(20, 20);
-
-grid.addEntity(playerA, 10, 10, 5);
-grid.addEntity(playerB, 14, 10, 2);
-
-console.log(grid.isEntityVisibleTo(playerA, playerB));
-console.log(grid.isEntityVisibleTo(playerB, playerA));
-console.log(grid.isEntityVisibleTo(playerA, playerC));
-console.log(grid.isEntityVisibleTo(playerB, playerC));
+// Client
+{
+    const client = new CompositeDisposable();
+    
+    client.add(game.on('playerChangedName', (player: PlayerState) => {
+        // signal client
+    }));
+    client.add(game.on('playerJoined', (player: PlayerState) => {
+        // signal client
+    }))
+}
