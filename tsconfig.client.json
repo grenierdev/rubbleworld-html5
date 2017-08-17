@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"alwaysStrict": true,
+		"declaration": false,
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"sourceMap": true,
+		"strictNullChecks": true,
+		"target": "es5",
+		"jsx": "react",
+		"allowSyntheticDefaultImports": true,
+		"lib": [
+			"dom",
+			"esnext",
+			"webworker"
+		]
+	},
+	"exclude": [
+		"node_modules"
+	]
+}
