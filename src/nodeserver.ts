@@ -181,7 +181,6 @@ w.addEntity(e2);
 w.addViewer(v1);
 w.addViewer(v2);
 
-
 console.log(w.toJSON());
 w.dispatchAction({ type: 'HELLO', name: 'Bob' });
 console.log(w.toJSON());
