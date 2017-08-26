@@ -4,172 +4,184 @@ import * as Immutable from 'immutable';
 
 import { Message } from './net/Message';
 
-
-interface Position {}
 interface Action {
 	type: string;
 	[payload: string]: any;
 }
 
-class World<T extends Position> {
-	entities: Set<Entity<T>>;
-	viewers: Set<Viewer<T>>;
+let nextId = 0;
+export function generateId(): string {
+	return (++nextId).toString();
+}
+
+export class World {
+
+	viewers: Immutable.List<Viewer>;
+	entities: Immutable.List<Entity>;
 
 	constructor() {
-		this.entities = new Set<Entity<T>>();
-		this.viewers = new Set<Viewer<T>>();
+		this.viewers = Immutable.List<Viewer>();
+		this.entities = Immutable.List<Entity>();
+	}
+
+	toJSON(): any {
+		return {
+			entities: Array.from(this.entities.toArray()).map(entity => entity.toJSON())
+		};
+	}
+
+	addEntity(entity: Entity): void {
+		if (this.entities.indexOf(entity) === -1) {
+			this.entities = this.entities.push(entity);
+			entity.setWorld(this);
+			// TODO this.onEntityAdded
+		}
+	}
+
+	removeEntity(entity: Entity): void {
+		const idx = this.entities.indexOf(entity);
+		if (idx > -1) {
+			entity.unsetWorld();
+			this.entities = this.entities.delete(idx);
+			// TODO this.onEntityRemoved
+		}
+	}
+
+	addViewer(viewer: Viewer): void {
+		if (this.viewers.indexOf(viewer) === -1) {
+			this.viewers = this.viewers.push(viewer);
+			viewer.setWorld(this);
+			// TODO this.onViewerAdded
+		}
+	}
+
+	removeViewer(viewer: Viewer): void {
+		const idx = this.viewers.indexOf(viewer);
+		if (idx > -1) {
+			viewer.unsetWorld();
+			this.viewers = this.viewers.delete(idx);
+			// TODO this.onViewerRemoved
+		}
 	}
 
 	dispatchAction(action: Action): void {
-		this.entities.forEach(entity => {
-			const newEntity = entity.dispatchAction(action);
-
-			// Only when entity has changed,
-			if (newEntity !== entity) {
-				// signal each viewer 
-				this.viewers.forEach(viewer => {
-					// that could see the entity
-					if (viewer.entityInView(entity) || viewer.entityInView(newEntity)) {
-						// signal viewer that entity has changed
-						viewer.dispatchActionInView(action, newEntity)
-					}
-				});
-			}
+		this.entities = this.entities.withMutations(entities => {
+			entities.forEach((entity: Entity, idx: number) => {
+				const newEntity = entity.doAction(action);
+				if (newEntity !== entity) {
+					entities.set(idx, newEntity);
+				}
+			});
 		});
 	}
 }
 
-let nextId = 0;
+export abstract class Entity {
 
-class Entity<T extends Position> implements IDisposable {
-	private _disposed: boolean;
-	readonly id: number;
-	readonly world: World<T>;
-	readonly position: T;
+	readonly id: string;
+	protected world?: World;
 
+	constructor(id?: string) {
+		this.id = id || generateId();
+	}
 
-	constructor(world: World<T>, position: T)
-	constructor(world: World<T>, position: T, id?: number) {
-		this.id = id || ++nextId;
-		this._disposed = false;
+	toJSON(): any {
+		return {
+			id: this.id
+		};
+	}
+
+	setWorld(world: World): void {
 		this.world = world;
-		this.position = position;
-
-		this.world.entities.add(this);
+		// TODO entity.onSpawned
 	}
 
-	isDisposed(): boolean {
-		return this._disposed;
+	unsetWorld(): void {
+		// TODO entity.onDespawned
+		this.world = undefined;
 	}
 
-	dispose(): void {
-		if (this._disposed === false) {
-			this.world.entities.delete(this);
-			(this.world as any) = undefined;
-			(this.position as any) = undefined;
+	abstract doAction(action: Action): Entity;
+}
+
+export abstract class Viewer {
+
+	readonly id: string;
+	protected world?: World;
+
+	pawns: Immutable.Set<Entity>;
+
+	constructor(id?: string) {
+		this.id = id || generateId();
+		this.pawns = Immutable.Set<Entity>();
+	}
+
+	addPawn(entity: Entity): void {
+		if (this.pawns.has(entity) === false) {
+			this.pawns = this.pawns.add(entity);
+			// TODO this.onPawnAdded
 		}
-		this._disposed = true;
 	}
 
-	dispatchAction(action: Action): Entity<T> {
+	removePawn(entity: Entity): void {
+		if (this.pawns.has(entity) === false) {
+			this.pawns = this.pawns.delete(entity);
+			// TODO this.onPawnRemoved
+		}
+	}
+
+	setWorld(world: World): void {
+		this.world = world;
+		// TODO entity.onSpawned
+	}
+
+	unsetWorld(): void {
+		// TODO entity.onDespawned
+		this.world = undefined;
+	}
+}
+
+class PlayerViewer extends Viewer {
+
+}
+
+class PlayerEntity extends Entity {
+
+	readonly name: string;
+
+	constructor(name: string, id?: string) {
+		super(id);
+		this.name = name;
+	}
+
+	toJSON(): any {
+		return Object.assign(super.toJSON(), {
+			name: this.name
+		});
+	}
+
+	doAction(action: Action): Entity {
+		if (action.type === 'HELLO' && action.name === this.name) {
+			return new PlayerEntity(`Hello${this.name}`, this.id);
+		}
 		return this;
 	}
 }
 
-class Viewer<T extends Position> implements IDisposable {
-	private _disposed: boolean;
-	readonly id: number;
-	readonly world: World<T>;
-	readonly fov: FieldOfView<T>;
-	readonly position: T;
+const w = new World();
+const v1 = new PlayerViewer();
+const v2 = new PlayerViewer();
+const e1 = new PlayerEntity('Bob');
+const e2 = new PlayerEntity('George');
 
-	constructor(world: World<T>, fov: FieldOfView<T>, position: T)
-	constructor(world: World<T>, fov: FieldOfView<T>, position: T, id?: number) {
-		this.id = id || ++nextId;
-		this._disposed = false;
-		this.world = world;
-		this.fov = fov;
-		this.position = position;
-
-		this.world.viewers.add(this);
-	}
-
-	isDisposed(): boolean {
-		return this._disposed;
-	}
-
-	dispose(): void {
-		if (this._disposed === false) {
-			this.world.viewers.delete(this);
-			(this.world as any) = undefined;
-			(this.fov as any) = undefined;
-			(this.position as any) = undefined;
-		}
-		this._disposed = true;
-	}
-
-	entityInView(entity: Entity<T>): boolean {
-		if (this.isDisposed()) {
-			throw new Error(`Viewer is disposed.`);
-		}
-		return this.fov.entityInView(this, entity);
-	}
-
-	dispatchActionInView(action: Action, entity: Entity<T>): void {
-
-	}
-}
-
-class FieldOfView<T extends Position> {
-	entityInView(viewer: Viewer<T>, entity: Entity<T>): boolean {
-		return true;
-	}
-}
+v1.addPawn(e1);
+v2.addPawn(e2);
+w.addEntity(e1);
+w.addEntity(e2);
+w.addViewer(v1);
+w.addViewer(v2);
 
 
-const lobby = new World<Position>();
-const godfov = new FieldOfView<Position>();
-
-const p1 = new Entity<Position>(lobby, {});
-const p2 = new Entity<Position>(lobby, {});
-const p3 = new Entity<Position>(lobby, {});
-
-const c1 = new Viewer<Position>(lobby, godfov, {});
-const c2 = new Viewer<Position>(lobby, godfov, {});
-const c3 = new Viewer<Position>(lobby, godfov, {});
-
-
-// interface GridPosition extends Position {
-// 	x: number;
-// 	y: number;
-// }
-
-// class GridFOV implements FieldOfView<GridPosition> {
-
-// 	distance: number;
-
-// 	constructor(distance: number) {
-// 		this.distance = distance;
-// 	}
-
-// 	entityInView(viewer: Viewer<GridPosition>, entity: Entity<GridPosition>): boolean {
-// 		if (viewer.world === entity.world) {
-// 			return Math.abs(viewer.position.x - entity.position.x) + Math.abs(viewer.position.y - entity.position.y) <= this.distance;
-// 		}
-
-// 		return false;
-// 	}
-// }
-
-// const w = new World<GridPosition>();
-
-// const v = new Viewer<GridPosition>(
-// 	w,
-// 	new GridFOV(2),
-// 	{ x: 0, y: 0 }
-// );
-
-// const e1 = new Entity<GridPosition>(w, { x: 1, y: 0 });
-// const e2 = new Entity<GridPosition>(w, { x: -4, y: 0 });
-
-
+console.log(w.toJSON());
+w.dispatchAction({ type: 'HELLO', name: 'Bob' });
+console.log(w.toJSON());
