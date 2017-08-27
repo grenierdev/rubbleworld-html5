@@ -1,19 +1,31 @@
 import { EventEmitter } from 'konstellio-eventemitter';
 import { Disposable, CompositeDisposable, IDisposable } from 'konstellio-disposable';
-import * as Immutable from 'immutable';
-
-import "reflect-metadata";
 
 interface Action {
 	type: string;
 	[payload: string]: any;
 }
 
-export function Replicated(type: typeof String | typeof Number | typeof Boolean) {
+export enum Type {
+	Int8,
+	Int16,
+	Int32,
+	UInt8,
+	UInt16,
+	UInt32,
+	Float,
+	Double,
+	String,
+	Boolean
+}
+
+export function Replicated(type: Type) {
 	return function (entity: Entity, key: string) {
 		(entity.constructor as typeof Entity).replications.push([key, type]);
 	}
 }
+
+export type EntityChanges = Map<string, any> | undefined | true;
 
 
 let nextId = 0;
@@ -23,25 +35,30 @@ export function generateId(): string {
 
 export class Scene extends EventEmitter {
 
-	private entities: Immutable.Map<string, Entity>;
-	private types: Immutable.Map<string, new(...args) => Entity>;
+	private entities: Map<string, Entity>;
+	private types: Map<string, new(...args) => Entity>;
 
 	constructor()
-	constructor(entities: Immutable.Map<string, Entity>, types: Immutable.Map<string, new(...args) => Entity>)
-	constructor(entities?: Immutable.Map<string, Entity>, types?: Immutable.Map<string, new(...args) => Entity>) {
+	constructor(entities: Map<string, Entity>, types: Map<string, new(...args) => Entity>)
+	constructor(entities?: Map<string, Entity>, types?: Map<string, new(...args) => Entity>) {
 		super();
 
-		this.entities = entities || Immutable.Map<string, Entity>();
-		this.types = types || Immutable.Map<string, typeof Entity>();
+		this.entities = entities || new Map<string, Entity>();
+		this.types = types || new Map<string, typeof Entity>();
 	}
 
 	registerEntity(...entities: (new(...args) => Entity)[]): void {
-		const types = this.types.withMutations(types => {
-			entities.forEach(entity => types.set((entity as typeof Entity).handle, entity));
+		const types = this.types;
+		const newTypes: (new (...args) => Entity)[] = [];
+		entities.forEach(entity => {
+			const handle = (entity as typeof Entity).name;
+			if (types.has(handle) === false) {
+				types.set(handle, entity);
+				newTypes.push(entity);
+			}
 		});
-		if (types !== this.types) {
-			this.types = types;
-			this.emit('onNewEntityRegistered', entities);
+		if (newTypes.length) {
+			this.emit('onNewEntityRegistered', newTypes);
 		}
 	}
 
@@ -49,19 +66,19 @@ export class Scene extends EventEmitter {
 		if (this.types.has(handle) === false) {
 			throw new ReferenceError(`Entity ${handle} is not registered.`);
 		}
-		const type = this.types.get(handle);
+		const type = this.types.get(handle)!;
 		const entity = new type(...args) as E;
 
-		this.entities = this.entities.set(entity.id, entity);
+		this.entities.set(entity.id, entity);
 		this.emit('onEntitySpawned', entity);
-		this.emit('onSceneChanged', [[undefined, entity]]);
+		this.emit('onSceneChanged', [[entity, true]]);
 
 		return entity;
 	}
 
 	removeEntity(entity: Entity): void {
 		if (this.entities.has(entity.id) === true) {
-			this.entities = this.entities.delete(entity.id);
+			this.entities.delete(entity.id);
 			this.emit('onEntityRemoved', entity);
 			this.emit('onSceneChanged', [[entity, undefined]]);
 		}
@@ -75,37 +92,29 @@ export class Scene extends EventEmitter {
 	}
 
 	tick(): void {
-		const entitiesChanged: [Entity, Entity][] = [];
-		const newEntities = this.entities.withMutations(entities => {
-			entities.forEach((entity: Entity, id: string) => {
-				const newEntity = entity.onTick();
-				if (newEntity !== entity) {
-					entitiesChanged.push([entity, newEntity]);
-					entities.set(id, newEntity);
-				}
-			});
+		const entitiesChanged: [Entity, EntityChanges][] = [];
+		this.entities.forEach((entity: Entity, id: string) => {
+			const changes = entity.onTick();
+			if (changes) {
+				entitiesChanged.push([entity, changes]);
+			}
 		});
 
-		if (newEntities !== this.entities) {
-			this.entities = newEntities;
+		if (entitiesChanged.length) {
 			this.emit('onSceneChanged', entitiesChanged);
 		}
 	}
 
 	dispatchAction(action: Action): void {
-		const entitiesChanged: [Entity, Entity][] = [];
-		const newEntities = this.entities.withMutations(entities => {
-			entities.forEach((entity: Entity, id: string) => {
-				const newEntity = entity.onAction(action);
-				if (newEntity !== entity) {
-					entitiesChanged.push([entity, newEntity]);
-					entities.set(id, newEntity);
-				}
-			});
+		const entitiesChanged: [Entity, EntityChanges][] = [];
+		this.entities.forEach((entity: Entity, id: string) => {
+			const changes = entity.onAction(action);
+			if (changes) {
+				entitiesChanged.push([entity, changes]);
+			}
 		});
 
-		if (newEntities !== this.entities) {
-			this.entities = newEntities;
+		if (entitiesChanged.length) {
 			this.emit('onSceneChanged', entitiesChanged);
 		}
 	}
@@ -113,8 +122,7 @@ export class Scene extends EventEmitter {
 }
 
 export class Entity {
-	static handle: string = 'Entity';
-	static replications: [string, typeof String | typeof Number | typeof Boolean][] = [];
+	static replications: [string, Type][] = [];
 
 	readonly id: string;
 
@@ -124,25 +132,23 @@ export class Entity {
 		this.id = id || generateId();
 	}
 
-	onTick(): Entity {
-		return this;
-	}
-
-	onAction(action: Action): Entity {
-		return this;
-	}
-
-	getDiff(previous?: Entity): Map<string, any> {
+	getState(): EntityChanges {
+		const changes = new Map<string, any>();
 		const replications = (this.constructor as typeof Entity).replications;
-		const diff: Map<string, any> = new Map<string, any>();
 
 		replications.forEach(([key, type]) => {
-			if (previous === undefined || this[key] !== previous[key]) {
-				diff.set(key, this[key]);
-			}
+			changes.set(key, this[key]);
 		});
 
-		return diff;
+		return changes;
+	}
+
+	onTick(): EntityChanges {
+		return undefined;
+	}
+
+	onAction(action: Action): EntityChanges {
+		return undefined;
 	}
 }
 
@@ -158,11 +164,11 @@ export class Observer {
 export class PlayerEntity extends Entity {
 	static handle: string = 'PlayerEntity';
 
-	@Replicated(String)
-	readonly name: string;
+	@Replicated(Type.String)
+	name: string;
 
-	@Replicated(Boolean)
-	readonly ready: boolean;
+	@Replicated(Type.String)
+	ready: boolean;
 
 	constructor(name: string, ready: boolean, id?: string) {
 		super(id);
@@ -171,11 +177,11 @@ export class PlayerEntity extends Entity {
 		this.ready = !!ready;
 	}
 
-	onAction(action: Action): PlayerEntity {
+	onAction(action: Action): EntityChanges {
 		if (action.type === 'READY' && action.id === this.id) {
-			return new PlayerEntity(this.name, action.ready, this.id);
+			this.ready = action.ready;
+			return new Map<string, any>([['ready', action.ready]]);
 		}
-		return this;
 	}
 }
 
@@ -183,16 +189,16 @@ export class PlayerEntity extends Entity {
 const s = new Scene();
 s.registerEntity(PlayerEntity);
 
-s.on('onSceneChanged', (changes: [Entity, Entity][]) => {
-	changes.forEach(([previous, next]) => {
-		if (previous === undefined) {
-			console.log('Added', (next.constructor as typeof Entity).handle, next.id, next.getDiff(previous));
+s.on('onSceneChanged', (changes: [Entity, EntityChanges][]) => {
+	changes.forEach(([entity, changes]) => {
+		if (changes === true) {
+			console.log('Added', (entity.constructor as typeof Entity).name, entity.id, entity.getState());
 		}
-		else if (next === undefined) {
-			console.log('Removed', previous.id);
+		else if (changes === undefined) {
+			console.log('Removed', entity.id);
 		}
 		else {
-			console.log('Updated', next.id, next.getDiff(previous));
+			console.log('Updated', entity.id, changes);
 		}
 	})
 })
