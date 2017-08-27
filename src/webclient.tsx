@@ -25,8 +25,8 @@ const mode = new GameModeLobby(client);
 const game = document.getElementById('game');
 
 
-mode.onChange((state, action) => {
-	ReactDOM.render(<Lobby state={state} client={client} />, game);
+mode.onChange(() => {
+	ReactDOM.render(<Lobby scene={mode.scene} client={client} />, game);
 });
 
 window.client = client;

@@ -2,16 +2,41 @@ import * as React from 'react';
 import * as Immutable from 'immutable';
 
 import { Client } from '../net/Client';
-import { LobbyPlayer, payloadName, payloadReady } from '../gamemode/GameModeLobby';
+import { Scene } from '../net/Scene';
+import { PlayerEntity, PlayerActor } from '../gamemode/GameModeLobby';
 
-export class Lobby extends React.Component<{state: Immutable.Map<string, any>, client: Client}, {name: string}> {
+export class Lobby extends React.Component<{ scene: Scene, client: Client }, { name: string }> {
 
 	render(): any {
-		const currentPlayerId: string = this.props.state.get('clientPlayerId');
-		const players: LobbyPlayer[] = Object.values(this.props.state.get('players').toJS());
+		const scene = this.props.scene;
+		const players = scene.getEntityByType<PlayerEntity>('PlayerEntity');
+		const actor = scene.getActorByType<PlayerActor>('PlayerActor')[0];
+		// const currentPlayerId: string = this.props.state.get('clientPlayerId');
+		// const players: LobbyPlayer[] = Object.values(this.props.state.get('players').toJS());
 		return (
-			<ul>
-			</ul>
+			<div>
+				{players.map(player => {
+					if (actor && actor.canControl(player)) {
+						return (
+							<div>
+								<input
+									type="text"
+									value={player.name}
+									onChange={(e) => this.setState({ name: e.target.value })}
+									onBlur={(e) => player.setName(this.state.name)}
+								/>
+							</div>
+						)
+					}
+					else {
+						return (
+							<div>
+								{player.name}
+							</div>
+						);
+					}
+				})}
+			</div>
 		)
 	}
 

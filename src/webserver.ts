@@ -14,3 +14,5 @@ server.onMessage((client, message) => {
 });
 
 const mode = new GameModeLobby(server);
+
+(self as any).mode = mode;
