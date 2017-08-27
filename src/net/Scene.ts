@@ -22,19 +22,13 @@ export enum Type {
 
 export type EntityChanges = Map<string, any> | undefined | true;
 
-export type ClientConnectEventListener = (client: SceneClient) => void;
-export type ClientDisconnectEventListener = (client: SceneClient) => void;
-export type EntitySpawnedEventListener = (entity: Entity) => void;
-export type EntityRemovedEventListener = (entity: Entity) => void;
-export type ActorSpawnedEventListener = (actor: Actor) => void;
-export type ActorRemovedEventListener = (actor: Actor) => void;
+export type ClientConnectEventListener = (client: Client, actor: Actor) => void;
+export type ClientDisconnectEventListener = (client: Client, actor: Actor) => void;
+export type EntitySpawnedEventListener<A extends Actor> = (entity: Entity) => void;
+export type EntityRemovedEventListener<A extends Actor> = (entity: Entity) => void;
 export type SceneChangedEventListener = () => void;
 
-export interface SceneClient extends Client {
-	actor: Actor;
-}
-
-export class Scene extends EventEmitter {
+export class Scene<A extends Actor> extends EventEmitter {
 
 	protected nextId: number;
 	protected janitor: CompositeDisposable;
@@ -42,12 +36,12 @@ export class Scene extends EventEmitter {
 	protected entities: Map<string, Entity>;
 	protected entityTypes: Map<string, new (...args) => Entity>;
 
-	protected actors: Map<string, Actor>;
-	protected actorTypes: Map<string, new (...args) => Actor>;
+	protected actorType: new (...args) => Actor;
+	protected actors: Map<Client, A>;
 
 	readonly client: Client | Server;
 
-	constructor(client: Client | Server) {
+	constructor(client: Client | Server, actor: typeof Actor) {
 		super();
 
 		this.nextId = 0;
@@ -56,8 +50,8 @@ export class Scene extends EventEmitter {
 		this.entities = new Map<string, Entity>();
 		this.entityTypes = new Map<string, typeof Entity>();
 
-		this.actors = new Map<string, Actor>();
-		this.actorTypes = new Map<string, typeof Actor>();
+		this.actorType = actor;
+		this.actors = new Map<Client, A>();
 
 		this.client = client;
 
@@ -66,33 +60,39 @@ export class Scene extends EventEmitter {
 			const server = this.client as Server;
 
 			// New client receives the scene on connect
-			this.janitor.add(server.onClientConnect((client: SceneClient) => {
+			this.janitor.add(server.onClientConnect((client) => {
 				const defs: any[] = [];
 				this.entities.forEach((entity) => {
 					defs.push({ kind: entity.constructor.name, id: entity.id, state: entity.serialize() });
 				});
 				client.sendPayload({ type: 'SCNSTE', entities: defs });
-				this.emit('onClientConnect', client);
+				
+				const type = this.actorType;
+				const actor = new type(this, client) as A;
+				this.actors.set(client, actor);
+				this.emit('onClientConnect', client, actor);
 			}));
 
 			// 
-			this.janitor.add(server.onClientDisconnect((client: SceneClient) => {
-				this.emit('onClientDisconnect', client);
+			this.janitor.add(server.onClientDisconnect((client) => {
+				if (this.actors.has(client)) {
+					const actor = this.actors.get(client)!;
+					this.emit('onClientDisconnect', client, actor);
+					this.actors.delete(client);
+				}
 			}))
 
 			// Transmit the RPC call to the entity only if the client can control the entity
-			this.janitor.add(server.onMessage((from: SceneClient, message) => {
+			this.janitor.add(server.onMessage((client, message) => {
 				if (message.type === 'SCNRPC') {
-					const entity = this.getEntityById(message.entity);
-					if (entity && typeof entity[message.method] === 'function' && from.actor.canControl(entity)) {
-						entity[message.method].call(entity, ...message.args);
+					const actor = this.actors.get(client);
+					if (actor) {
+						const entity = this.getEntityById(message.entity);
+						if (entity && typeof entity[message.method] === 'function' && actor.canControl(entity.id)) {
+							entity[message.method].call(entity, ...message.args);
+						}
 					}
 				}
-			}));
-
-			// Spawn actor only on his client
-			this.janitor.add(this.onActorSpawned((actor) => {
-				actor.client.sendPayload({ type: 'SCNACT', kind: actor.constructor.name, id: actor.id, state: actor.serialize() });
 			}));
 
 			// Spawn entity on clients when spawned on server
@@ -107,6 +107,12 @@ export class Scene extends EventEmitter {
 		}
 		else {
 			const client = this.client as Client;
+
+			this.janitor.add(client.onConnect(() => {
+				const type = this.actorType;
+				const actor = new type(this, client) as A;
+				this.actors.set(client, actor);
+			}));
 
 			this.janitor.add(client.onMessage((message) => {
 
@@ -126,12 +132,6 @@ export class Scene extends EventEmitter {
 					}
 				}
 
-				// Spawn actor in scene
-				else if (message.type === 'SCNACT') {
-					const actor = this.createActor(message.kind, message.id, ...message.state);
-					this.addActorToScene(actor);
-				}
-
 				// Spawn entity in scene
 				else if (message.type === 'SCNSPW') {
 					const entity = this.createEntity(message.kind, message.id, ...message.state);
@@ -147,6 +147,10 @@ export class Scene extends EventEmitter {
 				}
 			}));
 		}
+	}
+
+	disposeAsync(): Promise<void> {
+		return this.janitor.disposeAsync().then(super.disposeAsync);
 	}
 
 	get isServer(): boolean {
@@ -166,22 +170,6 @@ export class Scene extends EventEmitter {
 		});
 		if (newTypes.length) {
 			this.emit('onNewEntityRegistered', newTypes);
-		}
-	}
-
-	// Register new Actor class (not replicated)
-	registerActor(...actors: (new (...args) => Actor)[]): void {
-		const types = this.actorTypes;
-		const newTypes: (new (...args) => Actor)[] = [];
-		actors.forEach(actor => {
-			const kind = (actor as typeof Actor).name;
-			if (types.has(kind) === false) {
-				types.set(kind, actor);
-				newTypes.push(actor);
-			}
-		});
-		if (newTypes.length) {
-			this.emit('onNewActorRegistered', newTypes);
 		}
 	}
 
@@ -213,48 +201,11 @@ export class Scene extends EventEmitter {
 		return entity;
 	}
 
-	protected createActor<A extends Actor>(kind: string, id: string, ...args: any[]): A {
-		const type = this.actorTypes.get(kind)!;
-		console.log('Creating actor', id, args);
-		const actor = new type(...[id].concat(args)) as A;
-		(actor as any).scene = this; // bypass readonly
-
-		return actor;
-	}
-
-	protected addActorToScene(actor: Actor): void {
-		this.actors.set(actor.id, actor);
-		this.emit('onActorSpawned', actor);
-	}
-
-	// Spawn an Actor in the scene
-	spawnActor<A extends Actor>(kind: string, client: Client, ...args: any[]): A {
-		if (this.actorTypes.has(kind) === false) {
-			throw new ReferenceError(`Actor ${kind} is not registered.`);
-		}
-
-		const id = (++this.nextId).toString();
-		const actor = this.createActor<A>(kind, id, ...args);
-		(actor as any).client = client as SceneClient; // bypass readonly
-		(client as SceneClient).actor = actor;
-
-		this.addActorToScene(actor);
-
-		return actor;
-	}
-
 	removeEntity(entity: Entity): void {
 		if (this.entities.has(entity.id) === true) {
 			this.entities.delete(entity.id);
 			this.emit('onEntityRemoved', entity);
 			this.emit('onSceneChanged');
-		}
-	}
-
-	removeActor(actor: Actor): void {
-		if (this.actors.has(actor.id) === true) {
-			this.actors.delete(actor.id);
-			this.emit('onActorRemoved', actor);
 		}
 	}
 
@@ -266,12 +217,8 @@ export class Scene extends EventEmitter {
 		return Array.from<Entity>(this.entities.values()).filter((entity) => entity.constructor.name === kind) as E[];
 	}
 
-	getActorById<A extends Actor>(id: string): A | undefined {
-		return this.actors.get(id) as A;
-	}
-
-	getActorByType<A extends Actor>(kind: string): A[] {
-		return Array.from<Actor>(this.actors.values()).filter((actor) => actor.constructor.name === kind) as A[];
+	getActors(): A[] {
+		return Array.from(this.actors.values());
 	}
 
 	tick(): void {
@@ -293,20 +240,12 @@ export class Scene extends EventEmitter {
 		return this.on('onClientDisconnect', listener);
 	}
 
-	onEntitySpawned(listener: EntitySpawnedEventListener): Disposable {
+	onEntitySpawned(listener: EntitySpawnedEventListener<A>): Disposable {
 		return this.on('onEntitySpawned', listener);
 	}
 
-	onEntityRemoved(listener: EntityRemovedEventListener): Disposable {
+	onEntityRemoved(listener: EntityRemovedEventListener<A>): Disposable {
 		return this.on('onEntityRemoved', listener);
-	}
-
-	onActorSpawned(listener: ActorSpawnedEventListener): Disposable {
-		return this.on('onActorSpawned', listener);
-	}
-
-	onActorRemoved(listener: ActorRemovedEventListener): Disposable {
-		return this.on('onActorRemoved', listener);
 	}
 
 	onSceneChanged(listener: SceneChangedEventListener): Disposable {
@@ -315,24 +254,34 @@ export class Scene extends EventEmitter {
 
 }
 
-export class Entity {
-	static replications: [string, Type][] = [];
+export class Entity implements IDisposable {
+	static replications: [string, Type][];
 
 	readonly id: string;
-	readonly scene: Scene;
+	readonly scene: Scene<Actor>;
+	protected janitor: CompositeDisposable;
 
 	constructor(id: string) {
 		this.id = id;
+		this.janitor = new CompositeDisposable();
+	}
+
+	dispose(): void {
+		return this.janitor.dispose();
+	}
+
+	isDisposed(): boolean {
+		return this.janitor.isDisposed();
 	}
 
 	serialize(): any[] {
 		const changes: any[] = [];
-		const replications = (this.constructor as typeof Entity).replications;
+		const replications = (this.constructor as typeof Entity).replications || [];
 
 		replications.forEach(([key, type]) => {
 			changes.push(this[key]);
 		});
-
+		
 		return changes;
 	}
 
@@ -341,37 +290,70 @@ export class Entity {
 	}
 }
 
-export class Actor extends Entity {
+export class Actor implements IDisposable {
 
-	readonly client: SceneClient;
+	readonly scene: Scene<Actor>;
+	readonly client: Client;
 
-	@Replicated(Type.String)
-	inControlOf: string[];
+	protected inControlOf: string[];
+	protected janitor: CompositeDisposable;
 
-	constructor(id: string, controls: string[]) {
-		super(id);
-		this.inControlOf = controls;
+	constructor(scene: Scene<Actor>, client: Client) {
+		this.scene = scene;
+		this.client = client;
+		this.inControlOf = [];
+		this.janitor = new CompositeDisposable();
+
+		if (this.scene.isServer === false) {
+			this.janitor.add(client.onMessage((message) => {
+				if (message.type === 'ACTGRT') {
+					this.inControlOf.push(message.id);
+					this.scene.emit('onSceneChanged');
+				}
+				else if (message.type === 'ACTGRT') {
+					this.inControlOf.splice(this.inControlOf.indexOf(message.id), 1);
+					this.scene.emit('onSceneChanged');
+				}
+			}));
+		}
 	}
 
-	@RPC()
+	dispose(): void {
+		return this.janitor.dispose();
+	}
+
+	isDisposed(): boolean {
+		return this.janitor.isDisposed();
+	}
+
 	grantControl(entityId: string): void {
+		if (this.scene.isServer === false) {
+			throw new SyntaxError(`Only the server can grant control over an Entity.`);
+		}
+
 		this.inControlOf.push(entityId);
+		this.client.sendPayload({ type: 'ACTGRT', id: entityId });
+		this.scene.emit('onSceneChanged');
 	}
 
-	@RPC()
 	revokeControl(entityId: string): void {
+		if (this.scene.isServer) {
+			throw new SyntaxError(`Only the server can revoke control over an Entity.`);
+		}
 		this.inControlOf = this.inControlOf.splice(this.inControlOf.indexOf(entityId), 1);
+		this.client.sendPayload({ type: 'ACTREV', id: entityId });
+		this.scene.emit('onSceneChanged');
 	}
 
-	canControl(entity: Entity): boolean {
-		return this.inControlOf.indexOf(entity.id) > -1;
+	canControl(entityId: string): boolean {
+		return this.inControlOf.indexOf(entityId) > -1;
 	}
 
-	getInControl(): Entity[] {
-		return Array.from(this.inControlOf.values()).map<Entity>((id: string) => this.scene.getEntityById(id)!);
+	getInControl(): string[] {
+		return Array.from(this.inControlOf);
 	}
 
-	canSee(entity: Entity): boolean {
+	canSee(entityId: string): boolean {
 		return false;
 	}
 }
@@ -382,7 +364,9 @@ export function Replicated(type: Type) {
 			throw new SyntaxError(`Decorator @Replicated can only be used on Entity.`);
 		}
 
-		(target.constructor as typeof Entity).replications.push([key, type]);
+		const entityConstructor = target.constructor as typeof Entity;
+		entityConstructor.replications = entityConstructor.replications || [];
+		entityConstructor.replications.push([key, type]);
 	}
 }
 
@@ -396,9 +380,10 @@ export function RPC() {
 
 			if (this.scene.isServer) {
 				originalMethod.call(this, ...args);
-				const server = this.scene.client as Server;
-				server.getClients().forEach((client: SceneClient) => {
-					if (client.actor && client.actor.canSee(this)) {
+				const scene = this.scene;
+
+				(scene.actors as Map<Client, Actor>).forEach((actor, client) => {
+					if (actor.canSee(this)) {
 						client.sendPayload({ type: 'SCNRPC', entity: this.id, method: key, args });
 					}
 				});

@@ -12,26 +12,33 @@ export type ChangeEventListener = () => void;
 
 export class GameModeLobby extends GameMode {
 
-	readonly scene: Scene;
+	readonly scene: Scene<PlayerActor>;
 
 	constructor(adapter: Client | Server) {
 		super(adapter);
 
-		this.scene = new Scene(adapter);
-		this.scene.registerActor(PlayerActor);
+		this.scene = new Scene<PlayerActor>(adapter, PlayerActor);
+		this.scene.onSceneChanged(() => this.emit('onChange'));
+		this.scene.registerEntity(PickupEntity);
 		this.scene.registerEntity(PlayerEntity);
 
-		this.scene.onClientConnect((client) => {
-			const actor = this.scene.spawnActor('PlayerActor', client);
-			const entity = this.scene.spawnEntity('PlayerEntity', 'Unannounced', false);
-			actor.grantControl(entity.id);
-		});
-		this.scene.onClientDisconnect((client) => {
-			if (client.actor) {
-				client.actor.getInControl().forEach(entity => this.scene.removeEntity(entity));
-			}
-		});
-		this.scene.onSceneChanged(() => this.emit('onChange'));
+		if (this.isServer) {
+
+			this.scene.spawnEntity('PickupEntity', 'Health pack');
+
+			this.scene.onClientConnect((client, actor) => {
+				const entity = this.scene.spawnEntity('PlayerEntity', 'Unannounced', false);
+				actor.grantControl(entity.id);
+			});
+			this.scene.onClientDisconnect((client, actor) => {
+				actor.getInControl().forEach(entityId => {
+					const entity = this.scene.getEntityById(entityId);
+					if (entity) {
+						this.scene.removeEntity(entity);
+					}
+				});
+			});
+		}
 	}
 
 	onChange(listener: ChangeEventListener): Disposable {
@@ -41,7 +48,7 @@ export class GameModeLobby extends GameMode {
 }
 
 export class PlayerActor extends Actor {
-	canSee(entity: Entity): boolean {
+	canSee(entityId: string): boolean {
 		return true;
 	}
 }
@@ -72,4 +79,17 @@ export class PlayerEntity extends Entity {
 		this.name = name;
 		this.scene.emit('onSceneChanged');
 	}
+}
+
+export class PickupEntity extends Entity {
+
+	@Replicated(Type.String)
+	name: string;
+
+	constructor(id: string, name: string) {
+		super(id);
+
+		this.name = name;
+	}
+
 }
