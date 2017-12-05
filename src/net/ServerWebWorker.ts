@@ -39,7 +39,7 @@ export class ServerWebWorkerClient extends Client {
 	}
 
 	sendPayload(payload: Payload): void {
-		postMessage({
+		(postMessage as any)({
 			ts: Date.now(),
 			...payload
 		});

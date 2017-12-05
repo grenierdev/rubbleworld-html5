@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = {
 	entry: {
-		'js/webclient': './src/webclient.tsx',
+		'js/webclient': './src/main/webclient.tsx',
 		'js/vendor': ['react', 'react-dom']
 	},
 	output: {

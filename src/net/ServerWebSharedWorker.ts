@@ -64,11 +64,11 @@ export class ServerWebSharedWorkerClient extends Client {
 		});
 	}
 
-	disposeAsync (): Promise<void> {
-		this.port.removeEventListener('message');
+	disposeAsync(): Promise<void> {
+		// this.port.removeEventListener('message');
 		try {
 			(this as any).port = undefined;
-		} catch (e) {}
+		} catch (e) { }
 		return super.disposeAsync();
 	}
 

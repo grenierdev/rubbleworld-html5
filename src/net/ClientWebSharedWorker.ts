@@ -5,9 +5,9 @@ declare var window: any;
 
 export class ClientWebSharedWorker extends Client {
 
-	protected worker: SharedWorker.SharedWorker;
+	protected worker: any; //SharedWorker.SharedWorker;
 
-	constructor(worker: SharedWorker.SharedWorker) {
+	constructor(worker: any) {
 		super();
 
 		this.worker = worker;
