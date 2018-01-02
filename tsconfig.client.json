@@ -41,6 +41,6 @@
 	},
 	"exclude": [
 		"node_modules",
-		"src/main/httpserver.ts"
+		"src/httpserver.ts"
 	]
 }

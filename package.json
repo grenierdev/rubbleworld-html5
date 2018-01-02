@@ -26,8 +26,8 @@
   },
   "scripts": {
     "serve": "node dist/httpserver.js",
-    "compile": "tsc --outDir dist/ src/main/nodeserver.ts",
-    "compile:http": "tsc --outDir dist/ src/main/httpserver.ts",
+    "compile": "tsc --outDir dist/ src/nodeserver.ts",
+    "compile:http": "tsc --outDir dist/ src/httpserver.ts",
     "webpack:client": "webpack --config webpack.client.js --watch",
     "webpack:server": "webpack --config webpack.server.js --watch"
   },

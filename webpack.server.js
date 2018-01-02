@@ -3,7 +3,7 @@ const path = require('path');
 
 module.exports = {
 	entry: {
-		'js/webserver': './src/main/webserver.ts'
+		'js/webserver': './src/webserver.ts'
 	},
 	output: {
 		path: path.join(__dirname, 'dist'),

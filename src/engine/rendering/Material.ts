@@ -1,4 +1,5 @@
 import { Disposable, CompositeDisposable, IDisposable } from 'konstellio-disposable';
+import { Engine } from '../';
 
 export class Material implements IDisposable {
 
@@ -7,13 +8,19 @@ export class Material implements IDisposable {
 	readonly attributes: Map<string, any>;
 	readonly uniforms: Map<string, any>;
 
+	protected attributeTypes: Map<string, string>;
+	protected uniformTypes: Map<string, string>;
+
 	protected attributeLocations: Map<string, number>;
 	protected uniformLocations: Map<string, WebGLUniformLocation>;
 
-	constructor(public gl: WebGLRenderingContext, vertex: string, fragment: string) {
+	constructor(public engine: Engine, vertex: string, fragment: string) {
+		const gl = engine.gl;
 
 		this.attributes = new Map<string, any>();
 		this.uniforms = new Map<string, any>();
+		this.attributeTypes = new Map<string, string>();
+		this.uniformTypes = new Map<string, string>();
 		this.attributeLocations = new Map<string, number>();
 		this.uniformLocations = new Map<string, WebGLUniformLocation>();
 
@@ -41,13 +48,15 @@ export class Material implements IDisposable {
 
 		let matches: RegExpExecArray | null;
 		while (matches = attrRegex.exec(vertex + fragment)) {
-			const [, , name] = matches;
+			const [, type, name] = matches;
 			this.attributes.set(name, null);
+			this.attributeTypes.set(name, type);
 			this.attributeLocations.set(name, gl.getAttribLocation(this.program, name));
 		}
 		while (matches = uniformRegex.exec(vertex + fragment)) {
-			const [, , name] = matches;
+			const [, type, name] = matches;
 			this.uniforms.set(name, null);
+			this.uniformTypes.set(name, type);
 			this.uniformLocations.set(name, gl.getUniformLocation(this.program, name)!);
 		}
 
@@ -76,7 +85,7 @@ export class Material implements IDisposable {
 	}
 
 	bind(): void {
-		const gl = this.gl;
+		const gl = this.engine.gl;
 
 		gl.useProgram(this.program);
 	}
