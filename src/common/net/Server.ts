@@ -1,9 +1,8 @@
-import { EventEmitter } from 'konstellio-eventemitter';
-import { Disposable } from 'konstellio-disposable';
+import { EventEmitter } from '@konstellio/eventemitter';
+import { Disposable } from '@konstellio/disposable';
 
-import { Payload } from './Message';
+import { Payload, Message } from './Message';
 import { Client } from './Client';
-import { Message } from './Message';
 
 export type CloseEventListener = (error: Error) => void;
 export type ClientConnectEventListener = (client: Client) => void;

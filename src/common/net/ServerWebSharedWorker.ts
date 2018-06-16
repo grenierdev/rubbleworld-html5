@@ -37,9 +37,7 @@ export class ServerWebSharedWorker extends Server {
 
 export class ServerWebSharedWorkerClient extends Client {
 
-	protected port: MessagePort;
-
-	constructor(port: MessagePort) {
+	constructor(protected port: MessagePort) {
 		super();
 
 		this.port = port;

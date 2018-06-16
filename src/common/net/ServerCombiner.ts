@@ -1,4 +1,4 @@
-import { Disposable, CompositeDisposable } from 'konstellio-disposable';
+import { Disposable, CompositeDisposable } from '@konstellio/disposable';
 
 import { Client } from './Client';
 import { Server } from './Server';

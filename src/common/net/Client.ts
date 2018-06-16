@@ -1,5 +1,5 @@
-import { EventEmitter } from 'konstellio-eventemitter';
-import { Disposable } from 'konstellio-disposable';
+import { EventEmitter } from '@konstellio/eventemitter';
+import { Disposable } from '@konstellio/disposable';
 
 import { Message, Payload } from './Message';
 

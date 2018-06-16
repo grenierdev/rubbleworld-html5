@@ -1,11 +1,9 @@
 import { Client } from './Client';
 import { Payload } from './Message';
 
-declare var window: any;
-
 export class ClientWebSharedWorker extends Client {
 
-	protected worker: any; //SharedWorker.SharedWorker;
+	protected worker: any; // SharedWorker.SharedWorker;
 
 	constructor(worker: any) {
 		super();
