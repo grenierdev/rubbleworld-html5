@@ -10,7 +10,8 @@
 		"variable-name": false,
 		"function-name": false,
 		"jsx-no-lambda": false,
-		"no-increment-decrement": false
+		"no-increment-decrement": false,
+		"no-parameter-reassignment": false
 	},
 	"rulesDirectory": []
 }

@@ -1,5 +1,5 @@
-import { ServerCombiner } from "../common/net/ServerCombiner";
-import { ServerWebSharedWorker } from "../common/net/ServerWebSharedWorker";
+import { ServerCombiner } from "../common/engine/net/ServerCombiner";
+import { ServerWebSharedWorker } from "../common/engine/net/ServerWebSharedWorker";
 
 
 
