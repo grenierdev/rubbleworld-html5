@@ -8,8 +8,8 @@ export abstract class Component {
 		this.enabled = true;
 	}
 
-	onMount(): void { }
-	onUnmount(): void { }
+	onStart(): void { }
+	onStop(): void { }
 	onUpdate(): IterableIterator<void> | void { }
 	onRender(): void { }
 }
@@ -58,6 +58,10 @@ export class Entity {
 		if (idx > -1) {
 			this.children.splice(idx, 1);
 			(entity as any).parent = undefined;
+			(entity as any).mounted = false;
+			for (const component of entity.components) {
+				component.onStop();
+			}
 		}
 	}
 
@@ -89,14 +93,7 @@ export class Entity {
 				this.mounted = true;
 
 				for (const component of this.components) {
-					component.onMount();
-				}
-			}
-			else if (this.mounted === true && this.parent === undefined) {
-				this.mounted = false;
-
-				for (const component of this.components) {
-					component.onUnmount();
+					component.onStart();
 				}
 			}
 
