@@ -1,4 +1,4 @@
-import { Vector3 } from ".";
+import { Vector3, Sphere, Plane, Triangle } from ".";
 
 export class Box {
 	constructor(
@@ -12,21 +12,11 @@ export class Box {
 	}
 
 	getCenter(target: Vector3) {
-		if (this.isEmpty) {
-			target.set(0, 0, 0);
-		} else {
-			target.copy(tmpV3.copy(this.min).add(this.max)).multiplyScalar(0.5);
-		}
-		return target;
+		return this.isEmpty ? target.set(0, 0, 0) : target.copy(this.min).add(this.max).multiplyScalar(0.5);
 	}
 
 	getSize(target: Vector3) {
-		if (this.isEmpty) {
-			target.set(0, 0, 0);
-		} else {
-			target.copy(tmpV3.copy(this.min).sub(this.max));
-		}
-		return target;
+		return this.isEmpty ? target.set(0, 0, 0) : target.copy(this.min).sub(this.max);
 	}
 
 	equals(box: Box) {
@@ -48,7 +38,7 @@ export class Box {
 	}
 
 	setFromCenterAndSize(center: Vector3, size: Vector3) {
-		const halfSize = tmpV3.copy(size).multiplyScalar(0.5);
+		const halfSize = tv0.copy(size).multiplyScalar(0.5);
 		this.min.copy(center).sub(halfSize);
 		this.max.copy(center).add(halfSize);
 		return this;
@@ -94,17 +84,112 @@ export class Box {
 		return box.max.x < this.min.x || box.min.x > this.max.x || box.max.y < this.min.y || box.min.y > this.max.y || box.max.z < this.min.z || box.min.z > this.max.z ? false : true;
 	}
 
-	// TODO: intersectsSphere https://github.com/mrdoob/three.js/blob/dev/src/math/Box3.js#L328
-	// TODO: intersectsPlane https://github.com/mrdoob/three.js/blob/dev/src/math/Box3.js#L344
-	// TODO: intersectsTriangle https://github.com/mrdoob/three.js/blob/dev/src/math/Box3.js#L391
-	// TODO: getBoundingSphere https://github.com/mrdoob/three.js/blob/dev/src/math/Box3.js#L518
+	intersectsSphere(sphere: Sphere) {
+		const c = sphere.center;
+		const r = sphere.radius;
+		this.clampPoint(c, tv0);
+		return tv0.distanceToSquared(c) <= r * r;
+	}
+	
+	intersectsPlane(plane: Plane) {
+		let min: number = 0;
+		let max: number = 0;
+
+		const minx = this.min.x;
+		const miny = this.min.y;
+		const minz = this.min.z;
+		const maxx = this.max.x;
+		const maxy = this.max.y;
+		const maxz = this.max.z;
+		const nx = plane.normal.x;
+		const ny = plane.normal.y;
+		const nz = plane.normal.z;
+		const c = plane.constant;
+
+		if (nx > 0) {
+			min = nx * minx;
+			max = nx * maxx;
+		} else {
+			min = nx * maxx;
+			max = nx * minx;
+		}
+
+		if (ny > 0) {
+			min += ny * miny;
+			max += ny * maxy;
+		} else {
+			min += ny * maxy;
+			max += ny * miny;
+		}
+
+		if (nz > 0) {
+			min += nz * minz;
+			max += nz * maxz;
+		} else {
+			min += nz * maxz;
+			max += nz * minz;
+		}
+
+		return (min <= c && max >= c);
+	}
+
+	intersectsTriangle(triangle: Triangle) {
+		if (this.isEmpty) {
+			return false;
+		}
+
+		this.getCenter(c);
+		e.subVectors(this.max, c);
+		v0.subVectors(triangle.a, c);
+		v1.subVectors(triangle.b, c);
+		v2.subVectors(triangle.c, c);
+		f0.subVectors(v1, v0);
+		f1.subVectors(v2, v1);
+		f2.subVectors(v0, v2);
+
+		function satForAxes(axes: number[]): boolean {
+			for (let i = 0, j = axes.length - 3; i <= j; i += 3) {
+				a.set(axes[i + 0], axes[i + 1], axes[i + 2]);
+				const r = e.x * Math.abs(a.x) + e.y * Math.abs(a.y) + e.z * Math.abs(a.z);
+				const p0 = v0.dot(a);
+				const p1 = v1.dot(a);
+				const p2 = v2.dot(a);
+				if (Math.max(- Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		if (satForAxes([
+			0, - f0.z, f0.y, 0, - f1.z, f1.y, 0, - f2.z, f2.y,
+			f0.z, 0, - f0.x, f1.z, 0, - f1.x, f2.z, 0, - f2.x,
+			- f0.y, f0.x, 0, - f1.y, f1.x, 0, - f2.y, f2.x, 0
+		]) === false) {
+			return false;
+		}
+
+		if (satForAxes([1, 0, 0, 0, 1, 0, 0, 0, 1]) === false) {
+			return false;
+		}
+
+		f0.cross(f1);
+		return satForAxes([f0.x, f0.y, f0.z]);
+	}
+
+	getBoundingSphere(target: Sphere) {
+		this.getCenter(target.center);
+		this.getSize(v0);
+		target.radius = v0.length * 0.5;
+		return target;
+	}
 
 	clampPoint(point: Vector3, target: Vector3) {
 		return target.copy(point).clamp(this.min, this.max);
 	}
 
 	distanceToPoint(point: Vector3) {
-		const clampedPoint = tmpV3.copy(point).clamp(this.min, this.max);
+		const clampedPoint = tv0.copy(point).clamp(this.min, this.max);
 		return clampedPoint.sub(point).length;
 	}
 
@@ -127,4 +212,13 @@ export class Box {
 	}
 }
 
-const tmpV3 = new Vector3();
+const tv0 = new Vector3();
+const v0 = new Vector3();
+const v1 = new Vector3();
+const v2 = new Vector3();
+const f0 = new Vector3();
+const f1 = new Vector3();
+const f2 = new Vector3();
+const a = new Vector3();
+const c = new Vector3();
+const e = new Vector3();

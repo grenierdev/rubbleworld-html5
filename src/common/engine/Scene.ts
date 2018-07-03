@@ -2,15 +2,24 @@ export abstract class Component {
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
 
-	private onUpdateGenerator: IterableIterator<any> | false | undefined;
+	private cachedUpdateGenerator: IterableIterator<any> | false | undefined;
+	private cachedLateUpdateGenerator: IterableIterator<any> | false | undefined;
 
 	constructor() {
 		this.enabled = true;
 	}
 
+	getComponent<T extends Component>(type: any): T | undefined {
+		if (this.entity) {
+			return this.entity.getComponent(type);
+		}
+		return undefined;
+	}
+
 	onStart(): void { }
 	onStop(): void { }
 	onUpdate(): IterableIterator<void> | void { }
+	onLateUpdate(): IterableIterator<void> | void { }
 	onRender(): void { }
 }
 
@@ -80,7 +89,7 @@ export class Entity {
 		}
 	}
 
-	getComponent<T extends Component>(type: typeof Component): T | undefined {
+	getComponent<T extends Component>(type: any): T | undefined {
 		const component = this.components.find(component => component.constructor === type);
 		if (component) {
 			return component as T;
@@ -98,18 +107,18 @@ export class Entity {
 			}
 
 			for (const component of this.components) {
-				if ((component as any).onUpdateGenerator === false) {
+				if ((component as any).cachedUpdateGenerator === false) {
 					component.onUpdate();
 				}
 				else {
-					if ((component as any).onUpdateGenerator === undefined) {
-						(component as any).onUpdateGenerator = component.onUpdate() || false;
+					if ((component as any).cachedUpdateGenerator === undefined) {
+						(component as any).cachedUpdateGenerator = component.onUpdate() || false;
 					}
 
-					if ((component as any).onUpdateGenerator) {
-						const next = (component as any).onUpdateGenerator.next() as IteratorResult<void>;
+					if ((component as any).cachedUpdateGenerator) {
+						const next = (component as any).cachedUpdateGenerator.next() as IteratorResult<void>;
 						if (next.done === true) {
-							(component as any).onUpdateGenerator = undefined;
+							(component as any).cachedUpdateGenerator = undefined;
 						}
 					}
 				}
@@ -118,6 +127,25 @@ export class Entity {
 
 			for (const child of this.children) {
 				yield* child.update();
+			}
+
+			for (const component of this.components) {
+				if ((component as any).cachedLateUpdateGenerator === false) {
+					component.onLateUpdate();
+				}
+				else {
+					if ((component as any).cachedLateUpdateGenerator === undefined) {
+						(component as any).cachedLateUpdateGenerator = component.onLateUpdate() || false;
+					}
+
+					if ((component as any).cachedLateUpdateGenerator) {
+						const next = (component as any).cachedLateUpdateGenerator.next() as IteratorResult<void>;
+						if (next.done === true) {
+							(component as any).cachedLateUpdateGenerator = undefined;
+						}
+					}
+				}
+				yield;
 			}
 		}
 	}

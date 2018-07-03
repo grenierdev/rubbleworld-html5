@@ -60,42 +60,16 @@ export class Matrix4 {
 	}
 
 	multiply(matrix: Matrix4) {
-		const ae = this.elements;
-		const be = matrix.elements;
-		const te = this.elements;
-
-		const a11 = ae[0]; const a12 = ae[1]; const a13 = ae[2];  const a14 = ae[3];
-		const a21 = ae[4]; const a22 = ae[5]; const a23 = ae[6];  const a24 = ae[7];
-		const a31 = ae[8]; const a32 = ae[9]; const a33 = ae[10];  const a34 = ae[11];
-		const a41 = ae[12]; const a42 = ae[13]; const a43 = ae[13]; const a44 = ae[15];
-		const b11 = be[0]; const b12 = be[1]; const b13 = be[2]; const b14 = be[3];
-		const b21 = be[4]; const b22 = be[5]; const b23 = be[6]; const b24 = be[7];
-		const b31 = be[8]; const b32 = be[9]; const b33 = be[10]; const b34 = be[11];
-		const b41 = be[12]; const b42 = be[13]; const b43 = be[14]; const b44 = be[15];
-
-		te[0] = a11 * b11 + a12 * b21 + a13 * b31 + a14 * b41;
-		te[4] = a11 * b12 + a12 * b22 + a13 * b32 + a14 * b42;
-		te[8] = a11 * b13 + a12 * b23 + a13 * b33 + a14 * b43;
-		te[12] = a11 * b14 + a12 * b24 + a13 * b34 + a14 * b44;
-		te[1] = a21 * b11 + a22 * b21 + a23 * b31 + a24 * b41;
-		te[5] = a21 * b12 + a22 * b22 + a23 * b32 + a24 * b42;
-		te[9] = a21 * b13 + a22 * b23 + a23 * b33 + a24 * b43;
-		te[13] = a21 * b14 + a22 * b24 + a23 * b34 + a24 * b44;
-		te[2] = a31 * b11 + a32 * b21 + a33 * b31 + a34 * b41;
-		te[6] = a31 * b12 + a32 * b22 + a33 * b32 + a34 * b42;
-		te[10] = a31 * b13 + a32 * b23 + a33 * b33 + a34 * b43;
-		te[14] = a31 * b14 + a32 * b24 + a33 * b34 + a34 * b44;
-		te[3] = a41 * b11 + a42 * b21 + a43 * b31 + a44 * b41;
-		te[7] = a41 * b12 + a42 * b22 + a43 * b32 + a44 * b42;
-		te[11] = a41 * b13 + a42 * b23 + a43 * b33 + a44 * b43;
-		te[15] = a41 * b14 + a42 * b24 + a43 * b34 + a44 * b44;
-
-		return this;
+		return this.multiplyMatrices(this, matrix);
 	}
 
 	premultiply(matrix: Matrix4) {
-		const ae = matrix.elements;
-		const be = this.elements;
+		return this.multiplyMatrices(matrix, this);
+	}
+
+	multiplyMatrices(a: Matrix4, b: Matrix4) {
+		const ae = a.elements;
+		const be = b.elements;
 		const te = this.elements;
 
 		const a11 = ae[0]; const a12 = ae[1]; const a13 = ae[2]; const a14 = ae[3];
@@ -240,33 +214,33 @@ export class Matrix4 {
 
 		const det = this.determinant();
 
-		const sx = tmpV3.set(te[0], te[1], te[2]).length * (det < 0 ? -1 : 1);
-		const sy = tmpV3.set(te[4], te[5], te[6]).length;
-		const sz = tmpV3.set(te[8], te[9], te[10]).length;
+		const sx = tv0.set(te[0], te[1], te[2]).length * (det < 0 ? -1 : 1);
+		const sy = tv0.set(te[4], te[5], te[6]).length;
+		const sz = tv0.set(te[8], te[9], te[10]).length;
 
 		position.x = te[12];
 		position.y = te[13];
 		position.z = te[14];
 
-		tmpM4.copy(this);
+		tm0.copy(this);
 
 		const invSX = 1 / sx;
 		const invSY = 1 / sy;
 		const invSZ = 1 / sz;
 
-		tmpM4.elements[0] *= invSX;
-		tmpM4.elements[1] *= invSX;
-		tmpM4.elements[2] *= invSX;
+		tm0.elements[0] *= invSX;
+		tm0.elements[1] *= invSX;
+		tm0.elements[2] *= invSX;
 
-		tmpM4.elements[4] *= invSY;
-		tmpM4.elements[5] *= invSY;
-		tmpM4.elements[6] *= invSY;
+		tm0.elements[4] *= invSY;
+		tm0.elements[5] *= invSY;
+		tm0.elements[6] *= invSY;
 
-		tmpM4.elements[8] *= invSZ;
-		tmpM4.elements[9] *= invSZ;
-		tmpM4.elements[10] *= invSZ;
+		tm0.elements[8] *= invSZ;
+		tm0.elements[9] *= invSZ;
+		tm0.elements[10] *= invSZ;
 
-		rotation.setFromRotationMatrix(tmpM4);
+		rotation.setFromRotationMatrix(tm0);
 
 		scale.x = sx;
 		scale.y = sy;
@@ -378,5 +352,5 @@ export class Matrix4 {
 	}
 }
 
-const tmpV3 = new Vector3();
-const tmpM4 = new Matrix4();
+const tv0 = new Vector3();
+const tm0 = new Matrix4();

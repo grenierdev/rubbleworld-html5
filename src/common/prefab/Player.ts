@@ -1,13 +1,40 @@
-import { coroutine } from '../engine/util/coroutine';
+import { Transform } from '../engine/components/Transform';
 import { Component, Entity } from '../engine/Scene';
 import { Gamepad } from '../engine/Gamepad';
+import { Vector3, Quaterion } from '../engine/math';
 
-export function PlayerPrefab () {
-	return new Entity([new PlayerComponent(), new PlayerGun()]);
+export function PlayerPrefab (
+	position = new Vector3(),
+	rotation = new Quaterion()
+) {
+	return new Entity([new Transform(position, Vector3.One, rotation), new PlayerComponent(), new PlayerGun()]);
 }
 
 export class PlayerComponent extends Component {
+	private transform: Transform | undefined;
+
+	onStart() {
+		this.transform = this.getComponent(Transform);
+	}
+
 	*onUpdate() {
+		const pulsion = new Vector3();
+		
+		if (Gamepad.gamepad[0].getButton('right')) {
+			this.transform!.getRightVector(v0);
+			pulsion.add(v0.multiplyScalar(2));
+		}
+		if (Gamepad.gamepad[0].getButton('left')) {
+			this.transform!.getRightVector(v0);
+			pulsion.add(v0.multiplyScalar(-2));
+		}
+		if (Gamepad.gamepad[0].getButton('up')) {
+			this.transform!.getUpVector(v0);
+			pulsion.add(v0.multiplyScalar(2));
+		}
+
+		console.log(`Moving`, pulsion);
+
 		yield* this.runAnimation('run', 3);
 	}
 
@@ -26,3 +53,5 @@ export class PlayerGun extends Component {
 		}
 	}
 }
+
+const v0 = new Vector3();

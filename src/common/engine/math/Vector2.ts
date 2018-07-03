@@ -1,4 +1,5 @@
 import { clamp } from './util';
+import { Matrix3 } from '.';
 
 export class Vector2 {
 	constructor(
@@ -81,6 +82,12 @@ export class Vector2 {
 		return this;
 	}
 
+	addVectors(a: Vector2, b: Vector2) {
+		this.x = a.x + b.x;
+		this.y = a.y + b.y;
+		return this;
+	}
+
 	addScalar(scalar: number) {
 		this.x += scalar;
 		this.y += scalar;
@@ -90,6 +97,12 @@ export class Vector2 {
 	sub(vector: Vector2) {
 		this.x -= vector.x;
 		this.y -= vector.y;
+		return this;
+	}
+
+	subVectors(a: Vector2, b: Vector2) {
+		this.x = a.x - b.x;
+		this.y = a.y - b.y;
 		return this;
 	}
 
@@ -105,6 +118,12 @@ export class Vector2 {
 		return this;
 	}
 
+	multiplyVectors(a: Vector2, b: Vector2) {
+		this.x = a.x * b.x;
+		this.y = a.y * b.y;
+		return this;
+	}
+
 	multiplyScalar(scalar: number) {
 		this.x *= scalar;
 		this.y *= scalar;
@@ -114,6 +133,12 @@ export class Vector2 {
 	divide(vector: Vector2) {
 		this.x /= vector.x;
 		this.y /= vector.y;
+		return this;
+	}
+
+	divideVectors(a: Vector2, b: Vector2) {
+		this.x = a.x / b.x;
+		this.y = a.y / b.y;
 		return this;
 	}
 
@@ -180,6 +205,27 @@ export class Vector2 {
 	manhattanDistanceTo(vector: Vector2) {
 		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y);
 	}
+
+	applyMatrix3(matrix: Matrix3) {
+		const x = this.x;
+		const y = this.y;
+		const me = matrix.elements;
+
+		this.x = me[0] * x + me[3] * y + me[6];
+		this.y = me[1] * x + me[4] * y + me[7];
+
+		return this;
+	}
+
+	static readonly One = new Vector2(1, 1);
+	static readonly Zero = new Vector2(0, 0);
+	static readonly Right = new Vector2(1, 0);
+	static readonly Up = new Vector2(0, 1);
 }
+
+Object.freeze(Vector2.One);
+Object.freeze(Vector2.Zero);
+Object.freeze(Vector2.Right);
+Object.freeze(Vector2.Up);
 
 const tmp = new Vector2();

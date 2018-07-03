@@ -1,4 +1,5 @@
 import { clamp } from './util';
+import { Matrix4 } from '.';
 
 export class Vector4 {
 	constructor(
@@ -98,6 +99,14 @@ export class Vector4 {
 		return this;
 	}
 
+	addVectors(a: Vector4, b: Vector4) {
+		this.x = a.x + b.x;
+		this.y = a.y + b.y;
+		this.z = a.z + b.z;
+		this.w = a.w + b.w;
+		return this;
+	}
+
 	addScalar(scalar: number) {
 		this.x += scalar;
 		this.y += scalar;
@@ -111,6 +120,14 @@ export class Vector4 {
 		this.y -= vector.y;
 		this.w -= vector.z;
 		this.w -= vector.w;
+		return this;
+	}
+
+	subVectors(a: Vector4, b: Vector4) {
+		this.x = a.x - b.x;
+		this.y = a.y - b.y;
+		this.z = a.z - b.z;
+		this.w = a.w - b.w;
 		return this;
 	}
 
@@ -130,6 +147,14 @@ export class Vector4 {
 		return this;
 	}
 
+	multiplyVectors(a: Vector4, b: Vector4) {
+		this.x = a.x * b.x;
+		this.y = a.y * b.y;
+		this.z = a.z * b.z;
+		this.w = a.w * b.w;
+		return this;
+	}
+
 	multiplyScalar(scalar: number) {
 		this.x *= scalar;
 		this.y *= scalar;
@@ -143,6 +168,14 @@ export class Vector4 {
 		this.y /= vector.y;
 		this.z /= vector.z;
 		this.w /= vector.w;
+		return this;
+	}
+
+	divideVectors(a: Vector4, b: Vector4) {
+		this.x = a.x / b.x;
+		this.y = a.y / b.y;
+		this.z = a.z / b.z;
+		this.w = a.w / b.w;
 		return this;
 	}
 
@@ -230,6 +263,23 @@ export class Vector4 {
 
 	manhattanDistanceTo(vector: Vector4) {
 		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y) + Math.abs(this.z - vector.z) + Math.abs(this.w - vector.w);
+	}
+
+	applyMatrix4(matrix: Matrix4) {
+
+		const x = this.x;
+		const y = this.y;
+		const z = this.z;
+		const w = this.w;
+		const me = matrix.elements;
+
+		this.x = me[0] * x + me[4] * y + me[8] * z + me[12] * w;
+		this.y = me[1] * x + me[5] * y + me[9] * z + me[13] * w;
+		this.z = me[2] * x + me[6] * y + me[10] * z + me[14] * w;
+		this.w = me[3] * x + me[7] * y + me[11] * z + me[15] * w;
+
+		return this;
+
 	}
 }
 

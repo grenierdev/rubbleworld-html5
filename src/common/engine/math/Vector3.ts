@@ -1,4 +1,7 @@
 import { clamp } from './util';
+import { Matrix3 } from '.';
+import { Matrix4 } from './Matrix4';
+import { Quaterion } from './Quaterion';
 
 export class Vector3 {
 	constructor(
@@ -87,6 +90,13 @@ export class Vector3 {
 		return this;
 	}
 
+	addVectors(a: Vector3, b: Vector3) {
+		this.x = a.x + b.x;
+		this.y = a.y + b.y;
+		this.z = a.z + b.z;
+		return this;
+	}
+
 	addScalar(scalar: number) {
 		this.x += scalar;
 		this.y += scalar;
@@ -98,6 +108,13 @@ export class Vector3 {
 		this.x -= vector.x;
 		this.y -= vector.y;
 		this.z -= vector.z;
+		return this;
+	}
+
+	subVectors(a: Vector3, b: Vector3) {
+		this.x = a.x - b.x;
+		this.y = a.y - b.y;
+		this.z = a.z - b.z;
 		return this;
 	}
 
@@ -115,6 +132,13 @@ export class Vector3 {
 		return this;
 	}
 
+	multiplyVectors(a: Vector3, b: Vector3) {
+		this.x = a.x * b.x;
+		this.y = a.y * b.y;
+		this.z = a.z * b.z;
+		return this;
+	}
+
 	multiplyScalar(scalar: number) {
 		this.x *= scalar;
 		this.y *= scalar;
@@ -126,6 +150,13 @@ export class Vector3 {
 		this.x /= vector.x;
 		this.y /= vector.y;
 		this.z /= vector.z;
+		return this;
+	}
+
+	divideVectors(a: Vector3, b: Vector3) {
+		this.x = a.x / b.x;
+		this.y = a.y / b.y;
+		this.z = a.z / b.z;
 		return this;
 	}
 
@@ -175,12 +206,16 @@ export class Vector3 {
 	}
 
 	cross(vector: Vector3) {
-		const ax = this.x;
-		const bx = vector.x;
-		const ay = this.y;
-		const by = vector.y;
-		const az = this.z;
-		const bz = vector.z;
+		return this.crossVectors(this, vector);
+	}
+
+	crossVectors(a: Vector3, b: Vector3) {
+		const ax = a.x;
+		const bx = b.x;
+		const ay = a.y;
+		const by = b.y;
+		const az = a.z;
+		const bz = b.z;
 
 		this.x = ay * bz - az * by;
 		this.y = az * bx - ax * bz;
@@ -207,6 +242,68 @@ export class Vector3 {
 	manhattanDistanceTo(vector: Vector3) {
 		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y) + Math.abs(this.z - vector.z);
 	}
+
+	applyMatrix3(matrix: Matrix3) {
+		const x = this.x;
+		const y = this.y;
+		const z = this.z;
+		const me = matrix.elements;
+
+		this.x = me[0] * x + me[3] * y + me[6] * z;
+		this.y = me[1] * x + me[4] * y + me[7] * z;
+		this.z = me[2] * x + me[5] * y + me[8] * z;
+
+		return this;
+
+	}
+
+	applyMatrix4(matrix: Matrix4) {
+		const x = this.x;
+		const y = this.y;
+		const z = this.z;
+		const me = matrix.elements;
+
+		const w = 1 / (me[3] * x + me[7] * y + me[11] * z + me[15]);
+
+		this.x = (me[0] * x + me[4] * y + me[8] * z + me[12]) * w;
+		this.y = (me[1] * x + me[5] * y + me[9] * z + me[13]) * w;
+		this.z = (me[2] * x + me[6] * y + me[10] * z + me[14]) * w;
+
+		return this;
+	}
+
+	applyQuaternion(quaterion: Quaterion) {
+		const x = this.x;
+		const y = this.y;
+		const z = this.z;
+		const qx = quaterion.x;
+		const qy = quaterion.y;
+		const qz = quaterion.z;
+		const qw = quaterion.w;
+
+		const ix = qw * x + qy * z - qz * y;
+		const iy = qw * y + qz * x - qx * z;
+		const iz = qw * z + qx * y - qy * x;
+		const iw = - qx * x - qy * y - qz * z;
+
+		this.x = ix * qw + iw * - qx + iy * - qz - iz * - qy;
+		this.y = iy * qw + iw * - qy + iz * - qx - ix * - qz;
+		this.z = iz * qw + iw * - qz + ix * - qy - iy * - qx;
+
+		return this;
+	}
+
+	static readonly One = new Vector3(1, 1, 1);
+	static readonly Zero = new Vector3(0, 0, 0);
+	static readonly Right = new Vector3(1, 0, 0);
+	static readonly Up = new Vector3(0, 1, 0);
+	static readonly Forward = new Vector3(0, 0, 1);
 }
+
+Object.freeze(Vector3.One);
+Object.freeze(Vector3.Zero);
+Object.freeze(Vector3.Right);
+Object.freeze(Vector3.Up);
+Object.freeze(Vector3.Forward);
 
 const tmp = new Vector3();
