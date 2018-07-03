@@ -42,7 +42,6 @@ export class Quaterion {
 		let s = 0;
 
 		if (trace > 0) {
-
 			s = 0.5 / Math.sqrt(trace + 1.0);
 
 			this.w = 0.25 / s;
@@ -51,7 +50,6 @@ export class Quaterion {
 			this.z = (m21 - m12) * s;
 
 		} else if (m11 > m22 && m11 > m33) {
-
 			s = 2.0 * Math.sqrt(1.0 + m11 - m22 - m33);
 
 			this.w = (m32 - m23) / s;
@@ -60,7 +58,6 @@ export class Quaterion {
 			this.z = (m13 + m31) / s;
 
 		} else if (m22 > m33) {
-
 			s = 2.0 * Math.sqrt(1.0 + m22 - m11 - m33);
 
 			this.w = (m13 - m31) / s;
@@ -69,7 +66,6 @@ export class Quaterion {
 			this.z = (m23 + m32) / s;
 
 		} else {
-
 			s = 2.0 * Math.sqrt(1.0 + m33 - m11 - m22);
 
 			this.w = (m21 - m12) / s;
@@ -79,6 +75,18 @@ export class Quaterion {
 
 		}
 		
+		return this;
+	}
+
+	clone() {
+		return new Quaterion(this.x, this.y, this.z, this.w);
+	}
+
+	copy(quaternion: Quaterion) {
+		this.x = quaternion.x;
+		this.y = quaternion.y;
+		this.z = quaternion.z;
+		this.w = quaternion.w;
 		return this;
 	}
 
@@ -100,18 +108,6 @@ export class Quaterion {
 		return this;
 	}
 
-	clone() {
-		return new Quaterion(this.x, this.y, this.z, this.w);
-	}
-
-	copy(quaternion: Quaterion) {
-		this.x = quaternion.x;
-		this.y = quaternion.y;
-		this.z = quaternion.z;
-		this.w = quaternion.w;
-		return this;
-	}
-
 	inverse() {
 		return this.conjugate();
 	}
@@ -128,30 +124,22 @@ export class Quaterion {
 	}
 
 	multiply(quaterion: Quaterion) {
-		const qax = this.x;
-		const qay = this.y;
-		const qaz = this.z;
-		const qaw = this.w;
-		const qbx = quaterion.x;
-		const qby = quaterion.y;
-		const qbz = quaterion.z;
-		const qbw = quaterion.w;
-		this.x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
-		this.y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
-		this.z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
-		this.w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
-		return this;
+		return this.multiplyQuaterions(this, quaterion);
 	}
 
 	premultiply(quaterion: Quaterion) {
-		const qax = quaterion.x;
-		const qay = quaterion.y;
-		const qaz = quaterion.z;
-		const qaw = quaterion.w;
-		const qbx = this.x;
-		const qby = this.y;
-		const qbz = this.z;
-		const qbw = this.w;
+		return this.multiplyQuaterions(quaterion, this);
+	}
+
+	multiplyQuaterions(a: Quaterion, b: Quaterion) {
+		const qax = a.x;
+		const qay = a.y;
+		const qaz = a.z;
+		const qaw = a.w;
+		const qbx = b.x;
+		const qby = b.y;
+		const qbz = b.z;
+		const qbw = b.w;
 		this.x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
 		this.y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
 		this.z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
