@@ -18,24 +18,25 @@ export class PlayerComponent extends Component {
 	}
 
 	*onUpdate() {
-		const pulsion = new Vector3();
+		const input = new Vector3();
 		
 		if (Gamepad.gamepad[0].getButton('right')) {
 			this.transform!.getRightVector(v0);
-			pulsion.add(v0.multiplyScalar(2));
+			input.add(v0.multiplyScalar(2));
 		}
 		if (Gamepad.gamepad[0].getButton('left')) {
 			this.transform!.getRightVector(v0);
-			pulsion.add(v0.multiplyScalar(-2));
+			input.add(v0.multiplyScalar(-2));
 		}
 		if (Gamepad.gamepad[0].getButton('up')) {
 			this.transform!.getUpVector(v0);
-			pulsion.add(v0.multiplyScalar(2));
+			input.add(v0.multiplyScalar(2));
 		}
 
-		console.log(`Moving`, pulsion);
+		// Move transform using user input
+		this.transform!.localPosition.add(input);
 
-		yield* this.runAnimation('run', 3);
+		// yield* this.runAnimation('run', 3);
 	}
 
 	*runAnimation(name: string, frames: number) {

@@ -1,4 +1,6 @@
 
+// From https://fadden.com/tech/ShadowCast.cs.txt
+
 interface Octant {
 	xx: number
 	xy: number
