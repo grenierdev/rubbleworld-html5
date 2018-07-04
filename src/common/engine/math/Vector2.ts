@@ -1,5 +1,5 @@
 import { clamp } from './util';
-import { Matrix3 } from '.';
+import { Matrix3 } from './Matrix3';
 
 export class Vector2 {
 	constructor(

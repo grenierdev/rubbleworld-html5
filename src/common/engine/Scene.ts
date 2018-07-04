@@ -1,4 +1,4 @@
-export abstract class Component {
+export abstract class Behaviour {
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
 
@@ -9,9 +9,9 @@ export abstract class Component {
 		this.enabled = true;
 	}
 
-	getComponent<T extends Component>(type: any): T | undefined {
+	getBehaviour<T extends Behaviour>(type: any): T | undefined {
 		if (this.entity) {
-			return this.entity.getComponent(type);
+			return this.entity.getBehaviour(type);
 		}
 		return undefined;
 	}
@@ -31,19 +31,19 @@ export class Entity {
 	private mounted: boolean;
 
 	private children: Entity[];
-	private components: Component[];
+	private behaviours: Behaviour[];
 
 	constructor(
-		components: Component[] = [],
+		behaviours: Behaviour[] = [],
 		children: Entity[] = []
 	) {
 		this.enabled = true;
 		this.mounted = false;
 		this.children = [];
-		this.components = [];
+		this.behaviours = [];
 
-		for (const component of components) {
-			this.addComponent(component);
+		for (const behaviour of behaviours) {
+			this.addBehaviour(behaviour);
 		}
 
 		for (const child of children) {
@@ -68,31 +68,31 @@ export class Entity {
 			this.children.splice(idx, 1);
 			(entity as any).parent = undefined;
 			(entity as any).mounted = false;
-			for (const component of entity.components) {
-				component.onStop();
+			for (const behaviour of entity.behaviours) {
+				behaviour.onStop();
 			}
 		}
 	}
 
-	addComponent(component: Component) {
-		if (this.components.indexOf(component) === -1) {
-			this.components.push(component);
-			(component as any).entity = this;
+	addBehaviour(behaviour: Behaviour) {
+		if (this.behaviours.indexOf(behaviour) === -1) {
+			this.behaviours.push(behaviour);
+			(behaviour as any).entity = this;
 		}
 	}
 
-	removeComponent(component: Component) {
-		const idx = this.components.indexOf(component);
+	removeBehaviour(behaviour: Behaviour) {
+		const idx = this.behaviours.indexOf(behaviour);
 		if (idx > -1) {
-			this.components.splice(idx, 1);
-			(component as any).entity = undefined;
+			this.behaviours.splice(idx, 1);
+			(behaviour as any).entity = undefined;
 		}
 	}
 
-	getComponent<T extends Component>(type: any): T | undefined {
-		const component = this.components.find(component => component.constructor === type);
-		if (component) {
-			return component as T;
+	getBehaviour<T extends Behaviour>(type: any): T | undefined {
+		const behaviour = this.behaviours.find(behaviour => behaviour.constructor === type);
+		if (behaviour) {
+			return behaviour as T;
 		}
 	}
 
@@ -101,24 +101,24 @@ export class Entity {
 			if (this.mounted === false && this.parent) {
 				this.mounted = true;
 
-				for (const component of this.components) {
-					component.onStart();
+				for (const behaviour of this.behaviours) {
+					behaviour.onStart();
 				}
 			}
 
-			for (const component of this.components) {
-				if ((component as any).cachedUpdateGenerator === false) {
-					component.onUpdate();
+			for (const behaviour of this.behaviours) {
+				if ((behaviour as any).cachedUpdateGenerator === false) {
+					behaviour.onUpdate();
 				}
 				else {
-					if ((component as any).cachedUpdateGenerator === undefined) {
-						(component as any).cachedUpdateGenerator = component.onUpdate() || false;
+					if ((behaviour as any).cachedUpdateGenerator === undefined) {
+						(behaviour as any).cachedUpdateGenerator = behaviour.onUpdate() || false;
 					}
 
-					if ((component as any).cachedUpdateGenerator) {
-						const next = (component as any).cachedUpdateGenerator.next() as IteratorResult<void>;
+					if ((behaviour as any).cachedUpdateGenerator) {
+						const next = (behaviour as any).cachedUpdateGenerator.next() as IteratorResult<void>;
 						if (next.done === true) {
-							(component as any).cachedUpdateGenerator = undefined;
+							(behaviour as any).cachedUpdateGenerator = undefined;
 						}
 					}
 				}
@@ -129,19 +129,19 @@ export class Entity {
 				yield* child.update();
 			}
 
-			for (const component of this.components) {
-				if ((component as any).cachedLateUpdateGenerator === false) {
-					component.onLateUpdate();
+			for (const behaviour of this.behaviours) {
+				if ((behaviour as any).cachedLateUpdateGenerator === false) {
+					behaviour.onLateUpdate();
 				}
 				else {
-					if ((component as any).cachedLateUpdateGenerator === undefined) {
-						(component as any).cachedLateUpdateGenerator = component.onLateUpdate() || false;
+					if ((behaviour as any).cachedLateUpdateGenerator === undefined) {
+						(behaviour as any).cachedLateUpdateGenerator = behaviour.onLateUpdate() || false;
 					}
 
-					if ((component as any).cachedLateUpdateGenerator) {
-						const next = (component as any).cachedLateUpdateGenerator.next() as IteratorResult<void>;
+					if ((behaviour as any).cachedLateUpdateGenerator) {
+						const next = (behaviour as any).cachedLateUpdateGenerator.next() as IteratorResult<void>;
 						if (next.done === true) {
-							(component as any).cachedLateUpdateGenerator = undefined;
+							(behaviour as any).cachedLateUpdateGenerator = undefined;
 						}
 					}
 				}

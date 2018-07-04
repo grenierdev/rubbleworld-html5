@@ -1,7 +1,7 @@
 import { clamp } from './util';
-import { Matrix3 } from '.';
 import { Matrix4 } from './Matrix4';
 import { Quaterion } from './Quaterion';
+import { Matrix3 } from './Matrix3';
 
 export class Vector3 {
 	constructor(

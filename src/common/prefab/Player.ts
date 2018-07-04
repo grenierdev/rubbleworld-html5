@@ -1,20 +1,21 @@
-import { Transform } from '../engine/components/Transform';
-import { Component, Entity } from '../engine/Scene';
+import { Transform } from '../engine/behaviours/Transform';
+import { Behaviour, Entity } from '../engine/Scene';
 import { Gamepad } from '../engine/Gamepad';
-import { Vector3, Quaterion } from '../engine/math';
+import { Vector3 } from '../engine/math/Vector3';
+import { Quaterion } from '../engine/math/Quaterion';
 
 export function PlayerPrefab (
 	position = new Vector3(),
 	rotation = new Quaterion()
 ) {
-	return new Entity([new Transform(position, Vector3.One, rotation), new PlayerComponent(), new PlayerGun()]);
+	return new Entity([new Transform(position, Vector3.One, rotation), new PlayerBehaviour(), new PlayerGun()]);
 }
 
-export class PlayerComponent extends Component {
+export class PlayerBehaviour extends Behaviour {
 	private transform: Transform | undefined;
 
 	onStart() {
-		this.transform = this.getComponent(Transform);
+		this.transform = this.getBehaviour(Transform);
 	}
 
 	*onUpdate() {
@@ -47,7 +48,7 @@ export class PlayerComponent extends Component {
 	}
 }
 
-export class PlayerGun extends Component {
+export class PlayerGun extends Behaviour {
 	onUpdate() {
 		if (Gamepad.gamepad[0].getButtonDown('fire')) {
 			console.log('Fire !');

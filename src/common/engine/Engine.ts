@@ -3,7 +3,7 @@ import { IDisposable } from '@konstellio/disposable';
 import { Material } from './rendering/Material';
 import { Texture } from './rendering/Texture';
 import { Scene } from './Scene';
-import { loadImageFromUrl } from './util';
+import { loadImageFromUrl } from './util/loadImage';
 
 export class Engine implements IDisposable {
 

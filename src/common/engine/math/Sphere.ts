@@ -1,4 +1,6 @@
-import { Vector3, Box, Plane } from ".";
+import { Vector3 } from "./Vector3";
+import { Box } from "./Box";
+import { Plane } from "./Plane";
 
 export class Sphere {
 	constructor(

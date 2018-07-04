@@ -1,5 +1,4 @@
-import { clamp } from './util';
-import { Matrix4 } from '.';
+import { Matrix4 } from "./Matrix4";
 
 export class Quaterion {
 	constructor(

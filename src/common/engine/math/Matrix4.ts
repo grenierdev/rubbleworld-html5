@@ -1,4 +1,5 @@
-import { Vector3, Quaterion } from ".";
+import { Vector3 } from "./Vector3";
+import { Quaterion } from "./Quaterion";
 
 export class Matrix4 {
 

@@ -1,7 +1,9 @@
-import { Component, Entity } from "../Scene";
-import { Vector3, Quaterion, Matrix4 } from "../math";
+import { Behaviour } from "../Scene";
+import { Matrix4 } from "../math/Matrix4";
+import { Vector3 } from "../math/Vector3";
+import { Quaterion } from "../math/Quaterion";
 
-export class Transform extends Component {
+export class Transform extends Behaviour {
 	public localMatrix: Matrix4;
 	public worldMatrix: Matrix4;
 
@@ -29,7 +31,7 @@ export class Transform extends Component {
 		// Get parent transform from parent entity if possible
 		let parentTransform: Transform | undefined;
 		if (this.entity && this.entity.parent) {
-			parentTransform = this.entity.parent.getComponent(Transform);
+			parentTransform = this.entity.parent.getBehaviour(Transform);
 		}
 
 		

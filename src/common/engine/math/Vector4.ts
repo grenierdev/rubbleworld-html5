@@ -1,5 +1,5 @@
 import { clamp } from './util';
-import { Matrix4 } from '.';
+import { Matrix4 } from './Matrix4';
 
 export class Vector4 {
 	constructor(
@@ -266,7 +266,6 @@ export class Vector4 {
 	}
 
 	applyMatrix4(matrix: Matrix4) {
-
 		const x = this.x;
 		const y = this.y;
 		const z = this.z;

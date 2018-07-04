@@ -1,4 +1,6 @@
-import { Vector3, Plane, Box } from ".";
+import { Vector3 } from "./Vector3";
+import { Plane } from "./Plane";
+import { Box } from "./Box";
 
 export class Triangle {
 	constructor(
