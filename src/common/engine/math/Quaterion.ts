@@ -145,4 +145,8 @@ export class Quaterion {
 		this.w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
 		return this;
 	}
+
+	static readonly Identity = new Quaterion();
 }
+
+Object.freeze(Quaterion.Identity);

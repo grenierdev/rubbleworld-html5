@@ -158,4 +158,8 @@ export class Matrix3 {
 		te[1] += y * te[2]; te[4] += y * te[5]; te[7] += y * te[8];
 		return this;
 	}
+
+	static readonly Identity = new Matrix3();
 }
+
+Object.freeze(Matrix3.Identity);

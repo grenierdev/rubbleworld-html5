@@ -351,7 +351,11 @@ export class Matrix4 {
 		te[3] = 0; te[7] = 0; te[11] = 0; te[15] = 1;
 		return this;
 	}
+
+	static readonly Identity = new Matrix4();
 }
+
+Object.freeze(Matrix4.Identity);
 
 const tv0 = new Vector3();
 const tm0 = new Matrix4();
