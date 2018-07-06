@@ -1,24 +1,16 @@
 import { IDisposable } from '@konstellio/disposable';
-import { Engine } from '../Engine';
 
 export class Material implements IDisposable {
 
 	readonly program: WebGLProgram;
 
-	readonly attributes: Map<string, any>;
-	readonly uniforms: Map<string, any>;
+	public readonly attributeTypes: Map<string, string>;
+	public readonly uniformTypes: Map<string, string>;
 
-	protected attributeTypes: Map<string, string>;
-	protected uniformTypes: Map<string, string>;
+	public readonly attributeLocations: Map<string, number>;
+	public readonly uniformLocations: Map<string, WebGLUniformLocation>;
 
-	protected attributeLocations: Map<string, number>;
-	protected uniformLocations: Map<string, WebGLUniformLocation>;
-
-	constructor(public engine: Engine, vertex: string, fragment: string) {
-		const gl = engine.gl;
-
-		this.attributes = new Map<string, any>();
-		this.uniforms = new Map<string, any>();
+	constructor(public gl: WebGLRenderingContext, vertex: string, fragment: string) {
 		this.attributeTypes = new Map<string, string>();
 		this.uniformTypes = new Map<string, string>();
 		this.attributeLocations = new Map<string, number>();
@@ -33,7 +25,6 @@ export class Material implements IDisposable {
 		gl.linkProgram(this.program);
 
 		const status = gl.getProgramParameter(this.program, gl.LINK_STATUS);
-
 		if (!status) {
 			throw new SyntaxError(`Could not load program : ${gl.getProgramInfoLog(this.program)}.`);
 		}
@@ -49,13 +40,11 @@ export class Material implements IDisposable {
 		let matches: RegExpExecArray | null;
 		while (matches = attrRegex.exec(vertex + fragment)) {
 			const [, type, name] = matches;
-			this.attributes.set(name, null);
 			this.attributeTypes.set(name, type);
 			this.attributeLocations.set(name, gl.getAttribLocation(this.program, name));
 		}
 		while (matches = uniformRegex.exec(vertex + fragment)) {
 			const [, type, name] = matches;
-			this.uniforms.set(name, null);
 			this.uniformTypes.set(name, type);
 			this.uniformLocations.set(name, gl.getUniformLocation(this.program, name)!);
 		}
@@ -66,7 +55,6 @@ export class Material implements IDisposable {
 	static getShader(gl: WebGLRenderingContext, type: number, source: string): WebGLShader {
 		const shader = gl.createShader(type)!;
 
-		gl.createShader(type)!;
 		gl.shaderSource(shader, source);
 		gl.compileShader(shader);
 
@@ -85,7 +73,6 @@ export class Material implements IDisposable {
 	}
 
 	bind(): void {
-		const gl = this.engine.gl;
-		gl.useProgram(this.program);
+		this.gl.useProgram(this.program);
 	}
 }
