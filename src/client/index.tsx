@@ -3,6 +3,7 @@ import { Matrix4 } from "../common/engine/math/Matrix4";
 import { CameraOrthographic, CameraPerspective } from "../common/engine/rendering/Camera";
 import { Vector3 } from "../common/engine/math/Vector3";
 import { Quaterion } from "../common/engine/math/Quaterion";
+import { Shader } from "../common/engine/rendering/Shader";
 
 // Source: http://learningwebgl.com/blog/?p=28
 
@@ -20,11 +21,12 @@ const material = new Material(
 	`
 		attribute vec3 vertexPosition;
 
-		uniform mat4 modelViewMatrix;
 		uniform mat4 projectionMatrix;
+		uniform mat4 viewMatrix;
+		uniform mat4 worldMatrix;
 
 		void main(void) {
-			gl_Position = projectionMatrix * modelViewMatrix * vec4(vertexPosition, 1.0);
+			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertexPosition, 1.0);
 		}
 	`,
 	`
@@ -49,7 +51,8 @@ const vertexPositionBufferItems = 4;
 // const modelView = new Matrix4().makeTranslation(1.5, 0.0, -7.0);
 const position = new Vector3(0, 0, -7);
 const rotation = new Quaterion();
-const modelView = new Matrix4().compose(position, rotation, Vector3.One);
+const view = new Matrix4();
+const world = new Matrix4().compose(position, rotation, Vector3.One);
 const camera = new CameraPerspective(45, width / height, 0.1, 100.0, 1);
 
 let frameId = 0;
@@ -62,13 +65,14 @@ let frameId = 0;
 	position.y = Math.cos(frameId / 20);
 	// modelView.elements[12] = position.x;
 	// modelView.elements[13] = position.y;
-	modelView.compose(position, rotation, Vector3.One);
+	world.compose(position, rotation, Vector3.One);
 
 	// Use material set attribute & uniform
 	material.bind();
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
 	gl.vertexAttribPointer(material.attributeLocations.get('vertexPosition')!, vertexPositionBufferSize, gl.FLOAT, false, 0, 0);
-	gl.uniformMatrix4fv(material.uniformLocations.get('modelViewMatrix')!, false, modelView.elements);
+	gl.uniformMatrix4fv(material.uniformLocations.get('worldMatrix')!, false, world.elements);
+	gl.uniformMatrix4fv(material.uniformLocations.get('viewMatrix')!, false, view.elements);
 	gl.uniformMatrix4fv(material.uniformLocations.get('projectionMatrix')!, false, camera.projectionMatrix.elements);
 
 	// Draw
