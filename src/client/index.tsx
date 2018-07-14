@@ -94,9 +94,12 @@ const world = new Matrix4().compose(position, rotation, Vector3.One);
 const camera = new CameraPerspective(45, width / height, 0.1, 100.0, 2);
 // const camera = new CameraOrthographic(-250, 250, -250, 250, 0.1, 100, 1);
 
-material.uniforms.set('worldMatrix', world.elements);
-material.uniforms.set('viewMatrix', view.elements);
-material.uniforms.set('projectionMatrix', camera.projectionMatrix.elements);
+material.setUniform('worldMatrix', world.elements);
+material.setUniform('viewMatrix', view.elements);
+material.setUniform('projectionMatrix', camera.projectionMatrix.elements);
+material.bind();
+tex.bind();
+mesh.bind();
 
 let frameId = 0;
 (function draw() {
@@ -105,7 +108,7 @@ let frameId = 0;
 	gl.clearColor(0.0, 0.0, 0.0, 1.0);
 	gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.ALPHA_BITS);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 	gl.depthFunc(gl.LESS);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
@@ -114,7 +117,7 @@ let frameId = 0;
 	gl.disable(gl.DEPTH_TEST);
 	gl.enable(gl.BLEND);
 
-	for (let i = 10; --i >= 0;) {
+	for (let i = 20; --i >= 0;) {
 
 		// rotation.y = Math.sin(Math.max(0, frameId - i * 10) / 20);
 		// position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
@@ -124,10 +127,8 @@ let frameId = 0;
 		world.elements[13] = Math.cos(Math.max(0, frameId - i * 10) / 20);
 
 		// Use material set attribute & uniform
-		material.uniforms.set('worldMatrix', world.elements);
-		material.bind();
-		tex.bind();
-		material.drawMesh(mesh);
+		material.setUniform('worldMatrix', world.elements);
+		mesh.draw();
 	}
 
 	requestAnimationFrame(draw);

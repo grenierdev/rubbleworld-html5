@@ -1,6 +1,10 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Shader } from './Shader';
-import { Mesh } from './Mesh';
+import { isArray as isarray } from 'util';
+
+function isArray<T>(value: any): value is T[] {
+	return isarray(value);
+}
 
 export class Material implements IDisposable {
 
@@ -12,11 +16,12 @@ export class Material implements IDisposable {
 
 	public readonly attributeTypes: Map<string, string>;
 	public readonly attributeLocations: Map<string, number>;
-	public readonly attributes: Map<string, any>;
 	
 	public readonly uniformTypes: Map<string, string>;
 	public readonly uniformLocations: Map<string, WebGLUniformLocation>;
-	public readonly uniforms: Map<string, any>;
+	public readonly uniforms: Map<string, undefined | number | number[]>;
+
+	public static currentMaterial: Material | undefined;
 
 	constructor(
 		public gl: WebGLRenderingContext,
@@ -30,7 +35,6 @@ export class Material implements IDisposable {
 
 		this.attributeTypes = new Map();
 		this.attributeLocations = new Map();
-		this.attributes = new Map();
 		this.uniformTypes = new Map();
 		this.uniformLocations = new Map();
 		this.uniforms = new Map();
@@ -61,6 +65,7 @@ export class Material implements IDisposable {
 			const [, type, name] = matches;
 			this.uniformTypes.set(name, type.toLocaleLowerCase());
 			this.uniformLocations.set(name, gl.getUniformLocation(this.program, name)!);
+			this.uniforms.set(name, undefined);
 		}
 
 		gl.useProgram(null);
@@ -78,67 +83,72 @@ export class Material implements IDisposable {
 	}
 
 	bind(): void {
-		const gl = this.gl;
+		if (Material.currentMaterial !== this) {
+			Material.currentMaterial = this;
+			this.gl.useProgram(this.program);
+			this.updateUniforms();
+		}
 
-		gl.useProgram(this.program);
-		for (const [name, value] of this.uniforms) {
-			if (value) {
+	}
+
+	setUniform(name: string, value: number | number[]): void {
+		if (this.uniforms.has(name)) {
+			this.uniforms.set(name, value);
+			if (Material.currentMaterial === this) {
 				const indx = this.uniformLocations.get(name)!;
 				const type = this.uniformTypes.get(name)!;
-				switch (type) {
-					case 'int':
-					case 'sampler':
-					case 'sampler2d':
-					case 'samplercube':
-						gl.uniform1iv(indx, value); break;
-					case 'int': gl.uniform1iv(indx, value); break;
-					case 'ivec2': gl.uniform2iv(indx, value); break;
-					case 'ivec3': gl.uniform3iv(indx, value); break;
-					case 'ivec4': gl.uniform4iv(indx, value); break;
-					case 'float': gl.uniform1fv(indx, value); break;
-					case 'vec2': gl.uniform2fv(indx, value); break;
-					case 'vec3': gl.uniform3fv(indx, value); break;
-					case 'vec4': gl.uniform4fv(indx, value); break;
-					case 'mat2': gl.uniformMatrix2fv(indx, false, value); break;
-					case 'mat3': gl.uniformMatrix3fv(indx, false, value); break;
-					case 'mat4': gl.uniformMatrix4fv(indx, false, value); break;
-				}
+				this.updateUniform(indx, type, value);
 			}
 		}
 	}
 
-	drawMesh(mesh: Mesh): void {
-		const gl = this.gl;
-		if (this.attributeLocations.has('vertPosition')) {
-			const indx = this.attributeLocations.get('vertPosition')!;
-			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
-			gl.vertexAttribPointer(indx, 3, gl.FLOAT, false, 0, 0);
-			gl.enableVertexAttribArray(indx);
-		}
-		if (mesh.normalBuffer && this.attributeLocations.has('vertNormal')) {
-			const indx = this.attributeLocations.get('vertNormal')!;
-			gl.bindBuffer(gl.ARRAY_BUFFER, mesh.normalBuffer);
-			gl.vertexAttribPointer(indx, 3, gl.FLOAT, false, 0, 0);
-			gl.enableVertexAttribArray(indx);
-		}
-		for (let i = 0, l = mesh.uvsBuffer.length; i < l; ++i) {
-			if (this.attributeLocations.has('vertUV' + (i + 1))) {
-				const indx = this.attributeLocations.get('vertUV' + (i + 1))!;
-				gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvsBuffer[i]);
-				gl.vertexAttribPointer(indx, 2, gl.FLOAT, false, 0, 0);
-				gl.enableVertexAttribArray(indx);
+	updateUniforms(): void {
+		for (const [name, value] of this.uniforms) {
+			if (value) {
+				const indx = this.uniformLocations.get(name)!;
+				const type = this.uniformTypes.get(name)!;
+				this.updateUniform(indx, type, value);
 			}
 		}
-		for (let i = 0, l = mesh.colorsBuffer.length; i < l; ++i) {
-			if (this.attributeLocations.has('vertColor' + (i + 1))) {
-				const indx = this.attributeLocations.get('vertColor' + (i + 1))!;
-				gl.bindBuffer(gl.ARRAY_BUFFER, mesh.colorsBuffer[i]);
-				gl.vertexAttribPointer(indx, 4, gl.FLOAT, false, 0, 0);
-				gl.enableVertexAttribArray(indx);
-			}
-		}
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indiceBuffer);
+	}
 
-		gl.drawElements(gl.TRIANGLES, mesh.indiceCount, gl.UNSIGNED_SHORT, 0);
+	protected updateUniform(indx: WebGLUniformLocation, type: string, value: number | number[]) {
+		if ((type === 'ivec2' || type === 'ivec3' || type === 'ivec4' || type === 'vec2' || type === 'vec3' || type === 'vec4' || type === 'mat2' || type === 'mat3' || type === 'mat4') && isArray(value) === false) {
+			throw new SyntaxError(`Expected uniform ${name} to be an array of number. Got ${value}.`);
+		}
+		else if ((type === 'sampler' || type === 'sampler2d' || type === 'samplercube') && isArray(value)) {
+			throw new SyntaxError(`Expected uniform ${name} to be a number.`);
+		}
+
+		switch (type) {
+			case 'int':
+				if (isArray(value)) {
+					this.gl.uniform1iv(indx, value);
+				} else {
+					this.gl.uniform1i(indx, value);
+				}
+				break;
+			case 'float':
+				if (isArray(value)) {
+					this.gl.uniform1fv(indx, value);
+				} else {
+					this.gl.uniform1f(indx, value);
+				}
+				break;
+			case 'sampler':
+			case 'sampler2d':
+			case 'samplercube':
+				this.gl.uniform1i(indx, value as number);
+				break;
+			case 'ivec2': this.gl.uniform2iv(indx, value as number[]); break;
+			case 'ivec3': this.gl.uniform3iv(indx, value as number[]); break;
+			case 'ivec4': this.gl.uniform4iv(indx, value as number[]); break;
+			case 'vec2': this.gl.uniform2fv(indx, value as number[]); break;
+			case 'vec3': this.gl.uniform3fv(indx, value as number[]); break;
+			case 'vec4': this.gl.uniform4fv(indx, value as number[]); break;
+			case 'mat2': this.gl.uniformMatrix2fv(indx, false, value as number[]); break;
+			case 'mat3': this.gl.uniformMatrix3fv(indx, false, value as number[]); break;
+			case 'mat4': this.gl.uniformMatrix4fv(indx, false, value as number[]); break;
+		}
 	}
 }

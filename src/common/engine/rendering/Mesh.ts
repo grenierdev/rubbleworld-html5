@@ -87,5 +87,46 @@ export class Mesh implements IDisposable {
 	isDisposed(): boolean {
 		return this.disposed;
 	}
+
+	bind(): void {
+		const material = Material.currentMaterial;
+		if (material) {
+			const gl = this.gl;
+
+			if(material.attributeLocations.has('vertPosition')) {
+				const indx = material.attributeLocations.get('vertPosition')!;
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+				gl.vertexAttribPointer(indx, 3, gl.FLOAT, false, 0, 0);
+				gl.enableVertexAttribArray(indx);
+			}
+			if (this.normalBuffer && material.attributeLocations.has('vertNormal')) {
+				const indx = material.attributeLocations.get('vertNormal')!;
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+				gl.vertexAttribPointer(indx, 3, gl.FLOAT, false, 0, 0);
+				gl.enableVertexAttribArray(indx);
+			}
+			for (let i = 0, l = this.uvsBuffer.length; i < l; ++i) {
+				if (material.attributeLocations.has('vertUV' + (i + 1))) {
+					const indx = material.attributeLocations.get('vertUV' + (i + 1))!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
+					gl.vertexAttribPointer(indx, 2, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(indx);
+				}
+			}
+			for (let i = 0, l = this.colorsBuffer.length; i < l; ++i) {
+				if (material.attributeLocations.has('vertColor' + (i + 1))) {
+					const indx = material.attributeLocations.get('vertColor' + (i + 1))!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
+					gl.vertexAttribPointer(indx, 4, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(indx);
+				}
+			}
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
+		}
+	}
+
+	draw(): void {
+		this.gl.drawElements(this.gl.TRIANGLES, this.indiceCount, this.gl.UNSIGNED_SHORT, 0);
+	}
     
 }
