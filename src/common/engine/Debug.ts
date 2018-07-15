@@ -48,7 +48,7 @@ export class Debug {
 			radius,
 			color,
 			type: DebugType.Point,
-			point: [position.x, position.y, position.z]
+			point: position
 		} as DebugPrimitivePoint);
 	}
 
@@ -58,9 +58,7 @@ export class Debug {
 				ttl,
 				color,
 				type: DebugType.Line,
-				points: positions[0] instanceof Vector3
-					? (positions as Vector3[]).reduce((points, pos) => { points.push(pos.x, pos.y, pos.z); return points; }, [] as number[])
-					: positions
+				points: positions
 			} as DebugPrimitiveLine);
 		}
 	}
@@ -72,9 +70,7 @@ export class Debug {
 				color,
 				indices,
 				type: DebugType.Triangles,
-				points: positions[0] instanceof Vector3
-					? (positions as Vector3[]).reduce((points, pos) => { points.push(pos.x, pos.y, pos.z); return points; }, [] as number[])
-					: positions
+				points: positions
 			} as DebugPrimitiveTriangles);
 		}
 	}
