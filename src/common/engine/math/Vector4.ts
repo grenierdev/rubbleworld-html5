@@ -107,11 +107,11 @@ export class Vector4 {
 		return this;
 	}
 
-	addScalar(scalar: number) {
-		this.x += scalar;
-		this.y += scalar;
-		this.z += scalar;
-		this.w += scalar;
+	addScalar(x: number, y = x, z = x, w = x) {
+		this.x += x;
+		this.y += y;
+		this.z += z;
+		this.w += w;
 		return this;
 	}
 
@@ -131,11 +131,11 @@ export class Vector4 {
 		return this;
 	}
 
-	subScalar(scalar: number) {
-		this.x -= scalar;
-		this.y -= scalar;
-		this.z -= scalar;
-		this.w -= scalar;
+	subScalar(x: number, y = x, z = x, w = x) {
+		this.x -= x;
+		this.y -= y;
+		this.z -= z;
+		this.w -= w;
 		return this;
 	}
 
@@ -155,11 +155,11 @@ export class Vector4 {
 		return this;
 	}
 
-	multiplyScalar(scalar: number) {
-		this.x *= scalar;
-		this.y *= scalar;
-		this.z *= scalar;
-		this.w *= scalar;
+	multiplyScalar(x: number, y = x, z = x, w = x) {
+		this.x *= x;
+		this.y *= y;
+		this.z *= z;
+		this.w *= w;
 		return this;
 	}
 
@@ -179,11 +179,11 @@ export class Vector4 {
 		return this;
 	}
 
-	divideScalar(scalar: number) {
-		this.x /= scalar;
-		this.y /= scalar;
-		this.z /= scalar;
-		this.w /= scalar;
+	divideScalar(x: number, y = x, z = x, w = x) {
+		this.x /= x;
+		this.y /= y;
+		this.z /= z;
+		this.w /= w;
 		return this;
 	}
 

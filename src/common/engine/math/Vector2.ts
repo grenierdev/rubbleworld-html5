@@ -88,9 +88,9 @@ export class Vector2 {
 		return this;
 	}
 
-	addScalar(scalar: number) {
-		this.x += scalar;
-		this.y += scalar;
+	addScalar(x: number, y = x) {
+		this.x += x;
+		this.y += y;
 		return this;
 	}
 
@@ -106,9 +106,9 @@ export class Vector2 {
 		return this;
 	}
 
-	subScalar(scalar: number) {
-		this.x -= scalar;
-		this.y -= scalar;
+	subScalar(x: number, y = x) {
+		this.x -= x;
+		this.y -= y;
 		return this;
 	}
 
@@ -124,9 +124,9 @@ export class Vector2 {
 		return this;
 	}
 
-	multiplyScalar(scalar: number) {
-		this.x *= scalar;
-		this.y *= scalar;
+	multiplyScalar(x: number, y = x) {
+		this.x *= x;
+		this.y *= y;
 		return this;
 	}
 
@@ -142,9 +142,9 @@ export class Vector2 {
 		return this;
 	}
 
-	divideScalar(scalar: number) {
-		this.x /= scalar;
-		this.y /= scalar;
+	divideScalar(x: number, y = x) {
+		this.x /= x;
+		this.y /= y;
 		return this;
 	}
 
