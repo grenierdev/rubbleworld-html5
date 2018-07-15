@@ -33,6 +33,8 @@ export class Texture implements IDisposable {
 		} else {
 			gl.texImage2D(gl.TEXTURE_2D, 0, format, format, type, data);
 		}
+
+		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
 	dispose(): void {
@@ -46,8 +48,8 @@ export class Texture implements IDisposable {
 		return this.disposed;
 	}
 
-	bind(slot?: number): void {
+	bind(slot = 0): void {
 		this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-		this.gl.activeTexture(typeof slot === 'undefined' ? this.gl.TEXTURE0 : slot);
+		this.gl.activeTexture(this.gl[`TEXTURE${slot}`]);
 	}
 }

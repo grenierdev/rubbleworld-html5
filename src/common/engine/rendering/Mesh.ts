@@ -22,6 +22,8 @@ export class Mesh implements IDisposable {
 	public readonly uvsBuffer: WebGLBuffer[];
 	public readonly colorsBuffer: WebGLBuffer[];
 
+	public static currentMesh: Mesh | undefined;
+
 	constructor(
 		public readonly gl: WebGLRenderingContext,
 		public readonly data: MeshData,
@@ -65,6 +67,9 @@ export class Mesh implements IDisposable {
 				this.colorsBuffer.push(colorBuffer);
 			}
 		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 	}
 
 	dispose(): void {
@@ -89,44 +94,50 @@ export class Mesh implements IDisposable {
 	}
 
 	bind(): void {
-		const material = Material.currentMaterial;
-		if (material) {
-			const gl = this.gl;
+		if (Mesh.currentMesh !== this) {
+			Mesh.currentMesh = this;
 
-			if(material.attributeLocations.has('vertPosition')) {
-				const indx = material.attributeLocations.get('vertPosition')!;
-				gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-				gl.vertexAttribPointer(indx, 3, gl.FLOAT, false, 0, 0);
-				gl.enableVertexAttribArray(indx);
-			}
-			if (this.normalBuffer && material.attributeLocations.has('vertNormal')) {
-				const indx = material.attributeLocations.get('vertNormal')!;
-				gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-				gl.vertexAttribPointer(indx, 3, gl.FLOAT, false, 0, 0);
-				gl.enableVertexAttribArray(indx);
-			}
-			for (let i = 0, l = this.uvsBuffer.length; i < l; ++i) {
-				if (material.attributeLocations.has('vertUV' + (i + 1))) {
-					const indx = material.attributeLocations.get('vertUV' + (i + 1))!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
-					gl.vertexAttribPointer(indx, 2, gl.FLOAT, false, 0, 0);
-					gl.enableVertexAttribArray(indx);
+			const material = Material.currentMaterial;
+			if (material) {
+				const gl = this.gl;
+
+				if(material.attributes.has('vertPosition')) {
+					const attribute = material.attributes.get('vertPosition')!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(attribute.location);
 				}
-			}
-			for (let i = 0, l = this.colorsBuffer.length; i < l; ++i) {
-				if (material.attributeLocations.has('vertColor' + (i + 1))) {
-					const indx = material.attributeLocations.get('vertColor' + (i + 1))!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
-					gl.vertexAttribPointer(indx, 4, gl.FLOAT, false, 0, 0);
-					gl.enableVertexAttribArray(indx);
+				if (this.normalBuffer && material.attributes.has('vertNormal')) {
+					const attribute = material.attributes.get('vertNormal')!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(attribute.location);
 				}
+				for (let i = 0, l = this.uvsBuffer.length; i < l; ++i) {
+					if (material.attributes.has('vertUV' + (i + 1))) {
+						const attribute = material.attributes.get('vertUV' + (i + 1))!;
+						gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
+						gl.vertexAttribPointer(attribute.location, 2, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(attribute.location);
+					}
+				}
+				for (let i = 0, l = this.colorsBuffer.length; i < l; ++i) {
+					if (material.attributes.has('vertColor' + (i + 1))) {
+						const attribute = material.attributes.get('vertColor' + (i + 1))!;
+						gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
+						gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(attribute.location);
+					}
+				}
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
 			}
-			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
 		}
 	}
 
 	draw(): void {
-		this.gl.drawElements(this.gl.TRIANGLES, this.indiceCount, this.gl.UNSIGNED_SHORT, 0);
+		if (Mesh.currentMesh === this) {
+			this.gl.drawElements(this.gl.TRIANGLES, this.indiceCount, this.gl.UNSIGNED_SHORT, 0);
+		}
 	}
     
 }
