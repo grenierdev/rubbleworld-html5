@@ -11,7 +11,8 @@
 		"function-name": false,
 		"jsx-no-lambda": false,
 		"no-increment-decrement": false,
-		"no-parameter-reassignment": false
+		"no-parameter-reassignment": false,
+		"no-else-after-return": false
 	},
 	"rulesDirectory": []
 }
