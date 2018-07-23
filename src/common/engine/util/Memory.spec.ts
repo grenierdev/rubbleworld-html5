@@ -26,18 +26,18 @@ describe('Memory', () => {
 	it('alloc', async () => {
 		const mem = new MemoryAddress(10, 10);
 
-		const b1 = mem.alloc(2, [1, 2]);
+		const b1 = mem.alloc([1, 2]);
 		expect(mem.head).to.equal(b1);
 		expect(b1.left).to.equal(undefined);
 		expect(b1.right).to.equal(mem.tail);
 		expect(Array.from(mem.buffer)).to.eql([1, 2, 0, 0, 0, 0, 0, 0, 0, 0]);
-		const b2 = mem.alloc(2, [3, 4]);
+		const b2 = mem.alloc([3, 4]);
 		expect(b1.left).to.equal(undefined);
 		expect(b1.right).to.equal(b2);
 		expect(b2.left).to.equal(b1);
 		expect(b2.right).to.equal(mem.tail);
 		expect(Array.from(mem.buffer)).to.eql([1, 2, 3, 4, 0, 0, 0, 0, 0, 0]);
-		const b3 = mem.alloc(2, [5, 6]);
+		const b3 = mem.alloc([5, 6]);
 		expect(b1.left).to.equal(undefined);
 		expect(b1.right).to.equal(b2);
 		expect(b2.left).to.equal(b1);
@@ -50,10 +50,10 @@ describe('Memory', () => {
 	it('free', async () => {
 		const mem = new MemoryAddress(10, 10);
 
-		const b1 = mem.alloc(2, [1, 2]);
-		const b2 = mem.alloc(2, [3, 4]);
-		const b3 = mem.alloc(2, [5, 6]);
-		const b4 = mem.alloc(2, [7, 8]);
+		const b1 = mem.alloc([1, 2]);
+		const b2 = mem.alloc([3, 4]);
+		const b3 = mem.alloc([5, 6]);
+		const b4 = mem.alloc([7, 8]);
 
 		mem.free(b2);
 
@@ -79,7 +79,7 @@ describe('Memory', () => {
 		expect(b4.right).to.equal(mem.tail);
 
 		
-		const b5 = mem.alloc(3, [9, 10, 11]);
+		const b5 = mem.alloc([9, 10, 11]);
 
 		expect(b1.left).to.equal(undefined);
 		expect(b1.right).to.equal(b5);
@@ -97,25 +97,25 @@ describe('Memory', () => {
 
 		expect(Array.from(mem.buffer)).to.eql([]);
 
-		const b1 = mem.alloc(2, [1, 2]);
+		const b1 = mem.alloc([1, 2]);
 
 		expect(Array.from(mem.buffer)).to.eql([1, 2]);
 		expect(mem.tail.freed).to.equal(false);
 
-		const b2 = mem.alloc(2, [3, 4]);
+		const b2 = mem.alloc([3, 4]);
 		expect(Array.from(mem.buffer)).to.eql([1, 2, 3, 4]);
 		expect(mem.tail.freed).to.equal(false);
 	});
 
 	it('defrag', async () => {
 		const mem = new MemoryAddress(10, 10);
-		const b1 = mem.alloc(2, [1, 2]);
-		const b2 = mem.alloc(2, [3, 4]);
-		const b3 = mem.alloc(2, [5, 6]);
-		const b4 = mem.alloc(2, [7, 8]);
+		const b1 = mem.alloc([1, 2]);
+		const b2 = mem.alloc([3, 4]);
+		const b3 = mem.alloc([5, 6]);
+		const b4 = mem.alloc([7, 8]);
 		mem.free(b2);
 		mem.free(b3);
-		const b5 = mem.alloc(2, [9, 10]);
+		const b5 = mem.alloc([9, 10]);
 
 		expect(Array.from(mem.buffer)).to.eql([1, 2, 9, 10, 5, 6, 7, 8, 0, 0]);
 
@@ -127,7 +127,7 @@ describe('Memory', () => {
 	it('shrink', async () => {
 		const mem = new MemoryAddress(10, 2);
 
-		const b1 = mem.alloc(2, [1, 2]);
+		const b1 = mem.alloc([1, 2]);
 		expect(Array.from(mem.buffer)).to.eql([1, 2, 0, 0, 0, 0, 0, 0, 0, 0]);
 
 		mem.shrink();

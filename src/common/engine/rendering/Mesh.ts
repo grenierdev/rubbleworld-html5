@@ -4,6 +4,11 @@ import { Material } from './Material';
 export type FloatArray = number[] | Float32Array;
 export type UintArray = number[] | Uint16Array;
 
+export interface IMesh {
+	bind(): void
+	draw(): void
+}
+
 export interface MeshData {
 	vertices: FloatArray
 	indices: UintArray
@@ -12,7 +17,7 @@ export interface MeshData {
 	colors?: FloatArray[]
 }
 
-export class Mesh implements IDisposable {
+export class Mesh implements IDisposable, IMesh {
 	private disposed: boolean;
 
 	public readonly vertexBuffer: WebGLBuffer;

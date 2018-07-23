@@ -6,6 +6,7 @@ import { Quaterion } from "../common/engine/math/Quaterion";
 import { Mesh } from "../common/engine/rendering/Mesh";
 import { Texture } from "../common/engine/rendering/Texture";
 import { Debug } from "../common/engine/Debug";
+import { Color } from "../common/engine/math/Color";
 
 // Source: http://learningwebgl.com/blog/?p=28
 
@@ -100,10 +101,13 @@ material.setUniform('worldMatrix', world.elements);
 material.setUniform('viewMatrix', view.elements);
 material.setUniform('projectionMatrix', camera.projectionMatrix.elements);
 material.setUniform('sampler', tex);
-material.bind();
-mesh.bind();
 
 const point = new Vector3();
+
+Debug.setRenderingContext(gl);
+Debug.drawPoint(new Vector3(0, 2, -8), 3, { color: new Color(1, 0, 0) });
+Debug.drawPoint(new Vector3(1, 0, -8), 5, { color: new Color(0, 1, 0) });
+Debug.drawPoint(new Vector3(-1, 0, -8), 10, { color: new Color(0, 0, 1) });
 
 let frameId = 0;
 (function draw() {
@@ -121,7 +125,7 @@ let frameId = 0;
 	gl.disable(gl.DEPTH_TEST);
 	gl.enable(gl.BLEND);
 
-	for (let i = 20; --i >= 0;) {
+	for (let i = 1; --i >= 0;) {
 
 		// rotation.y = Math.sin(Math.max(0, frameId - i * 10) / 20);
 		// position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
@@ -131,13 +135,15 @@ let frameId = 0;
 		world.elements[13] = Math.cos(Math.max(0, frameId - i * 10) / 20);
 
 		// Use material set attribute & uniform
+		material.bind();
 		material.setUniform('worldMatrix', world.elements);
-		// material.bind();
+		mesh.bind();
 		mesh.draw();
 
-		Debug.drawPoint(point, 1);
+		// Debug.drawPoint(point, 1);
 
-		Debug.draw(gl);
+		Debug.draw(view, camera.projectionMatrix);
+		// Debug.draw(Matrix4.Identity, Matrix4.Identity);
 
 	}
 

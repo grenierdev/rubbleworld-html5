@@ -1,4 +1,5 @@
 import { Mutable } from "./Mutable";
+import { isArray } from "util";
 
 export interface MemoryArray<T> {
 	readonly length: number;
@@ -15,7 +16,7 @@ export interface MemoryArrayConstructor<T> {
 	new(buffer: ArrayBufferLike, byteOffset: number, length?: number): MemoryArray<T>;
 }
 
-export class MemoryAddress<T extends MemoryArray<number> = Uint8Array> {
+export class MemoryAddress<T extends MemoryArray<number>> {
 
 	public readonly buffer: T;
 	public readonly head: MemoryBlock<T>;
@@ -31,8 +32,13 @@ export class MemoryAddress<T extends MemoryArray<number> = Uint8Array> {
 		this.tail = this.head;
 	}
 
-	alloc(size: number, values?: number[]): MemoryBlock<T> {
+	alloc(size: number): MemoryBlock<T>
+	alloc(values: number[]): MemoryBlock<T>
+	alloc(arg: number | number[]): MemoryBlock<T> {
 		let newBlock: MemoryBlock<T> | undefined;
+
+		const size = typeof arg === 'number' ? arg : arg.length;
+		const values = isArray(arg) ? arg as number[] : undefined;
 
 		for (
 			let block: MemoryBlock<T> | undefined = this.head;
@@ -64,16 +70,19 @@ export class MemoryAddress<T extends MemoryArray<number> = Uint8Array> {
 				(this.tail as Mutable<MemoryBlock<T>>).right = newTail;
 				(this as Mutable<MemoryAddress<T>>).tail = newTail;
 			} else {
-				(this.tail as Mutable<MemoryBlock<T>>).resizeWindow(this.tail.length + newLength - this.buffer.length);
+				(this.tail as Mutable<MemoryBlock<T>>).length += newLength - this.buffer.length;
 			}
 
 			(this as Mutable<MemoryAddress<T>>).buffer = newBuffer;
 
-			return this.alloc(size, values);
+			if (values) {
+				return this.alloc(values);
+			}
+			return this.alloc(size);
 		}
 
 		if (values) {
-			newBlock!.set(...values);
+			newBlock!.set(0, ...values);
 		}
 		return newBlock!;
 	}
@@ -85,7 +94,7 @@ export class MemoryAddress<T extends MemoryArray<number> = Uint8Array> {
 			let destroyBlock = false;
 
 			if (block.left && block.left.freed) {
-				(block.left as Mutable<MemoryBlock<T>>).resizeWindow(block.left.length + block.length);
+				(block.left as Mutable<MemoryBlock<T>>).length += block.length;
 				(block.left as Mutable<MemoryBlock<T>>).right = block.right;
 				if (block.right) {
 					(block.right as Mutable<MemoryBlock<T>>).left = block.left;
@@ -95,7 +104,7 @@ export class MemoryAddress<T extends MemoryArray<number> = Uint8Array> {
 			
 			if (block.right && block.right.freed) {
 				(block.right as Mutable<MemoryBlock<T>>).offset = block.offset;
-				(block.right as Mutable<MemoryBlock<T>>).resizeWindow(block.right.length + block.length);
+				(block.right as Mutable<MemoryBlock<T>>).length += block.length;
 				(block.right as Mutable<MemoryBlock<T>>).left = block.left;
 				if (block.left) {
 					(block.left as Mutable<MemoryBlock<T>>).right = block.right;
@@ -156,7 +165,7 @@ export class MemoryAddress<T extends MemoryArray<number> = Uint8Array> {
 				(this as Mutable<MemoryAddress<T>>).buffer = newBuffer;
 			} else {
 				(this as Mutable<MemoryAddress<T>>).buffer = new this.typedArrayConstructor(0) as  T;
-				this.tail.resizeWindow(0);
+				(this.tail as Mutable<MemoryBlock<T>>).length = 0;
 			}
 		}
 	}
@@ -178,31 +187,17 @@ export class MemoryBlock<T extends MemoryArray<number>> implements Chain<MemoryB
 		public left?: MemoryBlock<T>,
 		public right?: MemoryBlock<T>
 	) {
-		this.resizeWindow(length);
+		
 	}
 
-	resizeWindow(length: number) {
-		const memory = this.memory;
-		for (let i = 0; i < length; ++i) {
-			if (Object.getOwnPropertyDescriptor(this, i) === undefined) {
-				Object.defineProperty(this, i, {
-					enumerable: true,
-					get() {
-						return memory.buffer[this.offset + i];
-					},
-					set(v: any) {
-						memory.buffer[this.offset + i] = v;
-					}
-				});
-			}
-		}
-		(this as Mutable<MemoryBlock<T>>).length = length;
-	}
-
-	set(...values: number[]) {
+	set(index: number, ...values: number[]) {
 		for (let i = 0, l = values.length; i < l; ++i) {
-			this[i] = values[i];
+			this.memory.buffer[this.offset + index + i] = values[i];
 		}
+	}
+
+	get(index: number) {
+		return this.memory.buffer[this.offset + index];
 	}
 }
 
@@ -226,7 +221,7 @@ function split(block: MemoryBlock<any>, size: number, freed = block.freed): Memo
 	}
 
 	(block as Mutable<MemoryBlock<any>>).offset += size;
-	(block as Mutable<MemoryBlock<any>>).resizeWindow(block.length - size);
+	(block as Mutable<MemoryBlock<any>>).length -= size;
 	(block as Mutable<MemoryBlock<any>>).left = left;
 
 	if (block.memory.head === block) {

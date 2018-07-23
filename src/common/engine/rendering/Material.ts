@@ -165,6 +165,9 @@ export class Material implements IDisposable {
 		}
 
 		gl.useProgram(null);
+
+		Material.currentMaterial = undefined;
+		Mesh.currentMesh = undefined;
 	}
 
 	dispose(): void {
