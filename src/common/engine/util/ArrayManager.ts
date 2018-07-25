@@ -129,10 +129,15 @@ export abstract class ArrayManager<T = any, I = any> {
 			}
 		}
 
-		if (left && left.offset + left.size < currentSize) {
-			const tail = new ArrayBlock<T, I>(this, true, left.offset + left.size, currentSize - (left.offset + left.size), left, undefined);
-			swapBlock(left, left.left, tail);
-			(this as Mutable<ArrayManager<T, I>>).tail = tail;
+		if (left) {
+			if (left.offset + left.size < currentSize) {
+				const tail = new ArrayBlock<T, I>(this, true, left.offset + left.size, currentSize - (left.offset + left.size), left, undefined);
+				swapBlock(left, left.left, tail);
+				(this as Mutable<ArrayManager<T, I>>).tail = tail;
+			} else {
+				swapBlock(left, left.left, undefined);
+				(this as Mutable<ArrayManager<T, I>>).tail = left;
+			}
 		}
 	}
 
