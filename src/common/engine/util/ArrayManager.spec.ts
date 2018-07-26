@@ -84,8 +84,14 @@ describe('Storage', () => {
 		m1.free(b2);
 		expect(m1.head.right).to.equal(b1);
 
-		m1.alloc([9, 10, 11]);
+		const b3 = m1.alloc([9]);
+		const b4 = m1.alloc([10]);
+		const b5 = m1.alloc([11]);
 		expect(Array.from(m1.data)).to.eql([1, 2, 9, 10, 11, 6, 7, 8, 0, 0]);
+
+		m1.free(b3);
+		m1.free(b5);
+		m1.free(b4);
 	});
 
 	it('defrag', async () => {

@@ -69,19 +69,26 @@ export abstract class ArrayManager<T = any, I = any> {
 
 			let destroyBlock = false;
 
-			// Grow left block if it's freed
 			if (block.left && block.left.freed) {
-				(block.left as Mutable<ArrayBlock>).size = block.left.size + block.size;
-				swapBlock(block.left, block.left.left, block.right);
-				if (block.right) {
-					swapBlock(block.right, block.left, block.right.right);
+				if (block.right && block.right.freed) {
+					(block.left as Mutable<ArrayBlock>).size += block.size + block.right.size;
+					swapBlock(block.left, block.left.left, block.right.right);
+					if (block.right.right) {
+						swapBlock(block.right.right, block.left, block.right.right.right);
+					}
+				} else {
+					(block.left as Mutable<ArrayBlock>).size += block.size;
+					swapBlock(block.left, block.left.left, block.right);
+					if (block.right) {
+						swapBlock(block.right, block.left, block.right.right);
+					}
 				}
 				destroyBlock = true;
 			}
 
-			// Grow left block if it's freed
-			if (block.right && block.right.freed) {
-				(block.right as Mutable<ArrayBlock>).size = block.right.size + block.size;
+			else if (block.right && block.right.freed) {
+				(block.right as Mutable<ArrayBlock>).offset = block.offset;
+				(block.right as Mutable<ArrayBlock>).size += block.size;
 				swapBlock(block.right, block.left, block.right.right);
 				if (block.left) {
 					swapBlock(block.left, block.left.left, block.right);
