@@ -1,20 +1,19 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Material } from './Material';
-
-export type FloatArray = number[] | Float32Array;
-export type UintArray = number[] | Uint16Array;
+import { Mutable } from '../util/Mutable';
 
 export interface IMesh {
+	updateBuffers(): void
 	bind(): void
 	draw(): void
 }
 
 export interface MeshData {
-	vertices: FloatArray
-	indices: UintArray
-	normals?: FloatArray
-	uvs?: FloatArray[]
-	colors?: FloatArray[]
+	vertices: Float32Array
+	indices: Uint16Array
+	normals?: Float32Array
+	uvs?: Float32Array[]
+	colors?: Float32Array[]
 }
 
 export class Mesh implements IDisposable, IMesh {
@@ -23,11 +22,11 @@ export class Mesh implements IDisposable, IMesh {
 	public readonly vertexBuffer: WebGLBuffer;
 	public readonly indiceBuffer: WebGLBuffer;
 	public readonly indiceCount: number;
-	public readonly normalBuffer: WebGLBuffer | undefined;
+	public readonly normalBuffer: WebGLBuffer;
 	public readonly uvsBuffer: WebGLBuffer[];
 	public readonly colorsBuffer: WebGLBuffer[];
 
-	public static currentMesh: Mesh | undefined;
+	public static currentMesh: IMesh | undefined;
 
 	constructor(
 		public readonly gl: WebGLRenderingContext,
@@ -40,17 +39,17 @@ export class Mesh implements IDisposable, IMesh {
 
 		this.vertexBuffer = gl.createBuffer()!;
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertices), drawType);
+		gl.bufferData(gl.ARRAY_BUFFER, data.vertices, drawType);
 
 		this.indiceBuffer = gl.createBuffer()!;
 		this.indiceCount = data.indices.length;
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices), drawType);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data.indices, drawType);
 		
+		this.normalBuffer = gl.createBuffer()!;
 		if (data.normals) {
-			this.normalBuffer = gl.createBuffer()!;
 			gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.normals), drawType);
+			gl.bufferData(gl.ARRAY_BUFFER, data.normals, drawType);
 		}
 
 		this.uvsBuffer = [];
@@ -58,7 +57,7 @@ export class Mesh implements IDisposable, IMesh {
 			for (const uv of data.uvs) {
 				const uvBuffer = gl.createBuffer()!;
 				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-				gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uv), drawType);
+				gl.bufferData(gl.ARRAY_BUFFER, uv, drawType);
 				this.uvsBuffer.push(uvBuffer);
 			}
 		}
@@ -68,8 +67,46 @@ export class Mesh implements IDisposable, IMesh {
 			for (const color of data.colors) {
 				const colorBuffer = gl.createBuffer()!;
 				gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-				gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(color), drawType);
+				gl.bufferData(gl.ARRAY_BUFFER, color, drawType);
 				this.colorsBuffer.push(colorBuffer);
+			}
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+	}
+
+	updateBuffers(): void {
+		if (this.dynamic === false) {
+			throw new SyntaxError(`Can not update a static Mesh.`);
+		}
+		Mesh.currentMesh = undefined;
+
+		const gl = this.gl;
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.vertices);
+
+		(this as Mutable<Mesh>).indiceCount = this.data.indices.length;
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
+		gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, this.data.indices);
+
+		if (this.data.normals) {
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.normals);
+		}
+
+		if (this.data.uvs) {
+			for (let i = 0, l = this.data.uvs.length; i < l; ++i) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
+				gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.uvs[i]);
+			}
+		}
+
+		if (this.data.colors) {
+			for (let i = 0, l = this.data.colors.length; i < l; ++i) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
+				gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors[i]);
 			}
 		}
 
@@ -140,9 +177,136 @@ export class Mesh implements IDisposable, IMesh {
 	}
 
 	draw(): void {
-		if (Mesh.currentMesh === this) {
-			this.gl.drawElements(this.gl.TRIANGLES, this.indiceCount, this.gl.UNSIGNED_SHORT, 0);
+		if (Mesh.currentMesh !== this) {
+			this.bind();
 		}
+
+		this.gl.drawElements(this.gl.TRIANGLES, this.indiceCount, this.gl.UNSIGNED_SHORT, 0);
 	}
     
+}
+
+export interface PointMeshData {
+	count: number
+	positions: Float32Array
+	sizes?: Float32Array
+	colors?: Float32Array
+}
+
+export class PointMesh implements IDisposable, IMesh {
+	private disposed: boolean;
+
+	public readonly positionBuffer: WebGLBuffer;
+	public readonly sizeBuffer: WebGLBuffer;
+	public readonly colorBuffer: WebGLBuffer;
+
+	constructor(
+		public readonly gl: WebGLRenderingContext,
+		public readonly data: PointMeshData,
+		public readonly dynamic = false
+	) {
+		this.disposed = false;
+
+		const drawType = dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+
+		this.positionBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, data.positions, drawType);
+
+		this.sizeBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, data.sizes || new Float32Array(data.positions.length).fill(1.0), drawType);
+
+		this.colorBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+		if (data.colors) {
+			gl.bufferData(gl.ARRAY_BUFFER, data.colors, drawType);
+		} else {
+			const colors = data.positions.reduce<Float32Array>((colors, pos, i) => {
+				colors[i * 4 + 0] = 1;
+				colors[i * 4 + 1] = 1;
+				colors[i * 4 + 2] = 1;
+				colors[i * 4 + 3] = 1;
+				return colors;
+			}, new Float32Array(data.positions.length * 4));
+			gl.bufferData(gl.ARRAY_BUFFER, colors, drawType);
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+	}
+
+	updateBuffers(): void {
+		if (this.dynamic === false) {
+			throw new SyntaxError(`Can not update a static Mesh.`);
+		}
+		Mesh.currentMesh = undefined;
+
+		const gl = this.gl;
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.positions);
+
+		if (this.data.sizes) {
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.sizeBuffer);
+			gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, this.data.sizes);
+		}
+
+		if (this.data.colors) {
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors);
+		}
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, null);
+	}
+
+	dispose(): void {
+		if (this.disposed === false) {
+			this.gl.deleteBuffer(this.positionBuffer);
+			this.gl.deleteBuffer(this.sizeBuffer);
+			this.gl.deleteBuffer(this.colorBuffer);
+			this.disposed = true;
+		}
+	}
+
+	isDisposed(): boolean {
+		return this.disposed;
+	}
+
+	bind(): void {
+		if (Mesh.currentMesh !== this) {
+			Mesh.currentMesh = this;
+
+			const material = Material.currentMaterial;
+			if (material) {
+				const gl = this.gl;
+
+				if (material.attributes.has('pointPosition')) {
+					const attribute = material.attributes.get('pointPosition')!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(attribute.location);
+				}
+				if (material.attributes.has('pointSize')) {
+					const attribute = material.attributes.get('pointSize')!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
+					gl.vertexAttribPointer(attribute.location, 1, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(attribute.location);
+				}
+				if (material.attributes.has('pointColor')) {
+					const attribute = material.attributes.get('pointColor')!;
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+					gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
+					gl.enableVertexAttribArray(attribute.location);
+				}
+			}
+		}
+	}
+
+	draw(): void {
+		if (Mesh.currentMesh !== this) {
+			this.bind();
+		}
+
+		this.gl.drawArrays(this.gl.POINTS, 0, this.data.count || 0);
+	}
 }

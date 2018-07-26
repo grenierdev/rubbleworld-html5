@@ -3,7 +3,7 @@ import { Matrix4 } from "../common/engine/math/Matrix4";
 import { CameraOrthographic, CameraPerspective } from "../common/engine/rendering/Camera";
 import { Vector3 } from "../common/engine/math/Vector3";
 import { Quaterion } from "../common/engine/math/Quaterion";
-import { Mesh } from "../common/engine/rendering/Mesh";
+import { Mesh, PointMesh } from "../common/engine/rendering/Mesh";
 import { Texture } from "../common/engine/rendering/Texture";
 import { Debug } from "../common/engine/Debug";
 import { Color } from "../common/engine/math/Color";
@@ -53,31 +53,31 @@ const material = new Material(
 const mesh = new Mesh(
 	gl,
 	{
-		vertices: [
+		vertices: new Float32Array([
 			1.0, 1.0, 0.0,
 			-1.0, 1.0, 0.0,
 			1.0, -1.0, 0.0,
 			-1.0, -1.0, 0.0
-		],
-		indices: [
+		]),
+		indices: new Uint16Array([
 			0, 1, 2,
 			2, 1, 3
-		],
+		]),
 		uvs: [
-			[
+			new Float32Array([
 				1, 0,
 				0, 0,
 				1, 1,
 				0, 1
-			]
+			])
 		],
 		colors: [
-			[
+			new Float32Array([
 				1, 0, 1, 1,
 				1, 0, 1, 1,
 				1, 0, 1, 1,
 				1, 0, 1, 1
-			]
+			])
 		]
 	}
 );
@@ -102,12 +102,52 @@ material.setUniform('viewMatrix', view.elements);
 material.setUniform('projectionMatrix', camera.projectionMatrix.elements);
 material.setUniform('sampler', tex);
 
-const point = new Vector3();
 
-Debug.setRenderingContext(gl);
-Debug.drawPoint(new Vector3(0, 2, -8), 3, { color: new Color(1, 0, 0) });
-Debug.drawPoint(new Vector3(1, 0, -8), 5, { color: new Color(0, 1, 0) });
-Debug.drawPoint(new Vector3(-1, 0, -8), 10, { color: new Color(0, 0, 1) });
+const pointMaterial = new Material(
+	gl,
+	`
+		attribute vec3 pointPosition;
+		attribute float pointSize;
+		attribute vec4 pointColor;
+
+		varying vec4 fragColor;
+
+		uniform mat4 projectionMatrix;
+		uniform mat4 viewMatrix;
+		uniform mat4 worldMatrix;
+
+		void main(void) {
+			fragColor = pointColor;
+			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(pointPosition, 1.0);
+			gl_PointSize = pointSize;
+		}
+	`,
+	`
+		precision mediump float;
+
+		varying vec4 fragColor;
+
+		void main(void) {
+			gl_FragColor = fragColor;
+		}
+	`
+);
+
+pointMaterial.setUniform('worldMatrix', world.elements);
+pointMaterial.setUniform('viewMatrix', view.elements);
+pointMaterial.setUniform('projectionMatrix', camera.projectionMatrix.elements);
+
+const pointMesh = new PointMesh(gl, {
+	count: 2,
+	positions: new Float32Array([0, 0, 0, 1, 0, 0]),
+	sizes: new Float32Array([10, 5]),
+	colors: new Float32Array([1, 0, 0, 1, 0, 1, 0, 1])
+});
+
+// Debug.setRenderingContext(gl);
+// Debug.drawPoint(new Vector3(0, 2, -8), 3, { color: new Color(1, 0, 0) });
+// Debug.drawPoint(new Vector3(1, 0, -8), 5, { color: new Color(0, 1, 0) });
+// Debug.drawPoint(new Vector3(-1, 0, -8), 10, { color: new Color(0, 0, 1) });
 
 let frameId = 0;
 (function draw() {
@@ -142,10 +182,13 @@ let frameId = 0;
 
 		// Debug.drawPoint(point, 1);
 
-		Debug.draw(view, camera.projectionMatrix);
+		// Debug.draw(view, camera.projectionMatrix);
 		// Debug.draw(Matrix4.Identity, Matrix4.Identity);
 
 	}
+
+	pointMaterial.bind();
+	pointMesh.draw();
 
 	requestAnimationFrame(draw);
 })();
