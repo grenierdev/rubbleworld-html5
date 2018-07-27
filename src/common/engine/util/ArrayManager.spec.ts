@@ -92,6 +92,7 @@ describe('Storage', () => {
 		m1.free(b3);
 		m1.free(b5);
 		m1.free(b4);
+		expect(Array.from(m1.data)).to.eql([1, 2, 9, 10, 11, 6, 7, 8, 0, 0]);
 	});
 
 	it('defrag', async () => {
@@ -106,6 +107,15 @@ describe('Storage', () => {
 		expect(Array.from(m1.data)).to.eql([1, 2, 7, 8, 5, 6, 7, 8, 0, 0]);
 		m1.alloc([9, 10, 11]);
 		expect(Array.from(m1.data)).to.eql([1, 2, 7, 8, 9, 10, 11, 8, 0, 0]);
+
+		const m2 = new TypedArrayManager(new Uint8Array(10));
+		const b3 = m2.alloc([1]);
+		const b4 = m2.alloc([1]);
+		const b5 = m2.alloc([1]);
+		b3.free();
+		b4.free();
+		b5.free();
+		m2.defrag();
 	});
 
 	it('shrink', async () => {

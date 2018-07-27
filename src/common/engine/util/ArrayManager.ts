@@ -67,8 +67,6 @@ export abstract class ArrayManager<T = any, I = any> {
 		if (block.freed === false) {
 			(block as Mutable<ArrayBlock<T, I>>).freed = true;
 
-			let destroyBlock = false;
-
 			if (block.left && block.left.freed) {
 				if (block.right && block.right.freed) {
 					(block.left as Mutable<ArrayBlock>).size += block.size + block.right.size;
@@ -76,6 +74,10 @@ export abstract class ArrayManager<T = any, I = any> {
 					if (block.right.right) {
 						swapBlock(block.right.right, block.left, block.right.right.right);
 					}
+					if (this.tail === block.right) {
+						(this as Mutable<ArrayManager>).tail = block.left;
+					}
+					destroy(block.right);
 				} else {
 					(block.left as Mutable<ArrayBlock>).size += block.size;
 					swapBlock(block.left, block.left.left, block.right);
@@ -83,22 +85,17 @@ export abstract class ArrayManager<T = any, I = any> {
 						swapBlock(block.right, block.left, block.right.right);
 					}
 				}
-				destroyBlock = true;
+				destroy(block);
 			}
 
 			else if (block.right && block.right.freed) {
-				(block.right as Mutable<ArrayBlock>).offset = block.offset;
-				(block.right as Mutable<ArrayBlock>).size += block.size;
-				swapBlock(block.right, block.left, block.right.right);
-				if (block.left) {
-					swapBlock(block.left, block.left.left, block.right);
+				(block as Mutable<ArrayBlock>).size += block.right.size;
+				const right = block.right;
+				if (right.right) {
+					swapBlock(right.right, block, right.right.right);
 				}
-				destroyBlock = true;
-			}
-
-			// Destroy block
-			if (destroyBlock) {
-				destroy(block);
+				swapBlock(block, block.left, right.right);
+				destroy(right);
 			}
 		}
 	}
@@ -109,6 +106,7 @@ export abstract class ArrayManager<T = any, I = any> {
 		}
 
 		let block: ArrayBlock<T, I> | undefined = this.head;
+		let head: ArrayBlock<T, I> | undefined;
 		let left: ArrayBlock<T, I> | undefined;
 		let offset = 0;
 		const currentSize = this.tail.offset + this.tail.size;
@@ -127,6 +125,9 @@ export abstract class ArrayManager<T = any, I = any> {
 				}
 
 				left = block;
+				if (head === undefined) {
+					head = block;
+				}
 				block = block.right;
 			} else {
 				const right = block.right;
@@ -134,6 +135,10 @@ export abstract class ArrayManager<T = any, I = any> {
 
 				block = right;
 			}
+		}
+
+		if (head) {
+			(this as Mutable<ArrayManager<T, I>>).head = head;
 		}
 
 		if (left) {
@@ -163,6 +168,10 @@ export class ArrayBlock<T = any, I = any> {
 		public readonly right: ArrayBlock<T, I> | undefined,
 	) {
 
+	}
+
+	free() {
+		this.manager.free(this);
 	}
 
 	set(index: number, ...values: I[]) {

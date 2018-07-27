@@ -4,7 +4,7 @@ import { Matrix4 } from "./math/Matrix4";
 import * as assert from "assert";
 import { Shader } from "./rendering/Shader";
 import { Material } from "./rendering/Material";
-import { Mesh, PointMesh } from "./rendering/Mesh";
+import { Mesh, PointMesh, LineMesh } from "./rendering/Mesh";
 import { ArrayVariableManager, ArrayBlock } from "./util/ArrayManager";
 
 enum DebugType {
@@ -21,11 +21,11 @@ interface DebugPrimitiveBase<T> {
 }
 
 interface DebugPrimitivePoint extends DebugPrimitiveBase<DebugType.Points> {
-	block: ArrayBlock<DataStruct, DataItem>
+	block: ArrayBlock<PointArray, PointItem>
 }
 
 interface DebugPrimitiveLine extends DebugPrimitiveBase<DebugType.Line> {
-	block: ArrayBlock<Float32Array>
+	block: ArrayBlock<LineArray, LineItem>
 }
 
 interface DebugPrimitiveTriangles extends DebugPrimitiveBase<DebugType.Triangles> {
@@ -33,18 +33,22 @@ interface DebugPrimitiveTriangles extends DebugPrimitiveBase<DebugType.Triangles
 }
 
 export interface DebugDrawOptions {
-	color?: Color
-	matrix?: Matrix4
+	color?: Color | [number, number, number, number]
+	matrix?: Matrix4 | [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
 	ttl?: number
 }
 
 export class Debug {
 	private static stack: DebugPrimitive[] = [];
+	private static lastTime = performance.now() / 1000;
 	private static gl: WebGLRenderingContext | undefined;
-	private static pointMaterial: Material | undefined;
+	private static material: Material | undefined;
 	private static pointManager: PointMeshManager | undefined;
 	private static pointMesh: PointMesh | undefined;
 	private static pointNeedsUpdate = false;
+	private static lineManager: LineMeshManager | undefined;
+	private static lineMesh: LineMesh | undefined;
+	private static lineNeedsUpdate = false;
 
 	public static log(...args: any[]) {
 		console.log.apply(console, args);
@@ -52,23 +56,23 @@ export class Debug {
 
 	public static setRenderingContext(gl: WebGLRenderingContext) {
 		Debug.gl = gl;
-		Debug.pointMaterial = new Material(
+
+		Debug.material = new Material(
 			gl,
 			`
-				attribute vec3 pointPosition;
-				attribute float pointSize;
-				attribute vec4 pointColor;
+				attribute vec3 vertPosition;
+				attribute float vertSize;
+				attribute vec4 vertColor;
 
 				varying vec4 fragColor;
 
 				uniform mat4 projectionMatrix;
 				uniform mat4 viewMatrix;
-				uniform mat4 worldMatrix;
 
 				void main(void) {
-					fragColor = pointColor;
-					gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(pointPosition, 1.0);
-					gl_PointSize = pointSize;
+					fragColor = vertColor;
+					gl_Position = projectionMatrix * viewMatrix * vec4(vertPosition, 1.0);
+					gl_PointSize = vertSize;
 				}
 			`,
 			`
@@ -94,6 +98,41 @@ export class Debug {
 			sizes: Debug.pointManager.data.sizes,
 			colors: Debug.pointManager.data.colors
 		}, true);
+
+		Debug.lineManager = new LineMeshManager({
+			positions: new Float32Array(1000 * 6),
+			colors: new Float32Array(1000 * 4)
+		}, 1000, 100);
+
+		Debug.lineMesh = new LineMesh(gl, {
+			count: 0,
+			positions: Debug.pointManager.data.positions,
+			colors: Debug.pointManager.data.colors
+		}, true);
+	}
+
+	public static update() {
+		const now = performance.now() / 1000;
+		const delta = now - Debug.lastTime;
+		Debug.lastTime = now;
+
+		const oldStack: DebugPrimitive[] = [];
+		Debug.stack = Debug.stack.reduce((stack, prim) => {
+			prim.ttl -= delta;
+			if (prim.ttl < 0) {
+				oldStack.push(prim);
+			} else {
+				stack.push(prim);
+			}
+			return stack;
+		}, [] as DebugPrimitive[]);
+
+		for (const prim of oldStack) {
+			if (prim.type === DebugType.Points) {
+				Debug.pointNeedsUpdate = true;
+			}
+			prim.block.free();
+		}
 	}
 
 	public static draw(viewMatrix: Matrix4, projMatrix: Matrix4) {
@@ -106,64 +145,79 @@ export class Debug {
 		gl.enable(gl.BLEND);
 
 		if (Debug.pointNeedsUpdate) {
+			Debug.pointNeedsUpdate = false;
 			Debug.pointManager!.defrag();
+			Debug.pointMesh!.data.count = Debug.pointManager!.tail.freed ? Debug.pointManager!.tail.offset : Debug.pointManager!.tail.offset + Debug.pointManager!.tail.size;
+			Debug.pointMesh!.data.positions = Debug.pointManager!.data.positions;
+			Debug.pointMesh!.data.sizes = Debug.pointManager!.data.sizes;
+			Debug.pointMesh!.data.colors = Debug.pointManager!.data.colors;
 			Debug.pointMesh!.updateBuffers();
 		}
+		if (Debug.lineNeedsUpdate) {
+			Debug.lineNeedsUpdate = false;
+			Debug.lineManager!.defrag();
+			Debug.lineMesh!.data.count = Debug.lineManager!.tail.freed ? Debug.lineManager!.tail.offset : Debug.lineManager!.tail.offset + Debug.lineManager!.tail.size;
+			Debug.lineMesh!.data.positions = Debug.lineManager!.data.positions;
+			Debug.lineMesh!.data.colors = Debug.lineManager!.data.colors;
+			Debug.lineMesh!.updateBuffers();
+		}
 
-		Debug.pointMaterial!.bind();
-		Debug.pointMesh!.data.count = Debug.pointManager!.tail.offset;
-		Debug.pointMesh!.draw();
+		Debug.material!.setUniform('viewMatrix', viewMatrix.elements);
+		Debug.material!.setUniform('projectionMatrix', projMatrix.elements);
+		Debug.material!.bind();
+
+		if (Debug.pointMesh!.data.count > 0) {
+			Debug.pointMesh!.draw();
+		}
+		if (Debug.lineMesh!.data.count > 0) {
+			Debug.lineMesh!.draw();
+		}
 	}
 
 	public static drawPrimitivePoints(positions: number[], radius: number, options: DebugDrawOptions = { }) {
 		assert(positions.length % 3 === 0, `Expected positions to contains a multiple of 3 number, one for each axis (x,y,z).`);
 		if (positions.length >= 3) {
 			const color = options.color || Color.White;
-			const matrix = options.matrix || Matrix4.Identity;
-			const points = [] as DataItem[];
+			// const matrix = options.matrix || Matrix4.Identity;
+			const points = [] as PointItem[];
 			for (let i = 0, l = positions.length; i < l; i += 3) {
 				points.push({
 					positions: [positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]],
-					colors: [color.r, color.g, color.b, color.a],
+					colors: color instanceof Color ? [color.r, color.g, color.b, color.a] : color,
 					size: radius
 				});
 			}
+			const block = Debug.pointManager!.alloc(points);
 			Debug.stack.push({
+				block,
 				ttl: options.ttl || 0,
 				type: DebugType.Points,
-				block: Debug.pointManager!.alloc(points)
 			} as DebugPrimitivePoint);
 			Debug.pointNeedsUpdate = true;
 		}
 	}
 
-	// public static drawPrimitiveLine(positions: number[], options: DebugDrawOptions = { }) {
-	// 	assert(positions.length % 3 === 0, `Expected positions to contains a multiple of 3 number, one for each axis (x,y,z).`);
-	// 	if (positions.length >= 6) {
-	// 		Debug.stack.push({
-	// 			type: DebugType.Line,
-	// 			block: Debug.vertexMemory.alloc(positions),
-	// 			color: options.color || Color.White,
-	// 			ttl: options.ttl || 0,
-	// 			matrix: options.matrix || Matrix4.Identity
-	// 		} as DebugPrimitiveLine);
-	// 	}
-	// }
-
-	// public static drawPrimitiveTriangles(positions: number[], indices: number[], options: DebugDrawOptions = { }) {
-	// 	assert(positions.length % 3 === 0, `Expected positions to contains a multiple of 3 number, one for each axis (x,y,z).`);
-	// 	if (positions.length >= 12) {
-	// 		Debug.stack.push({
-	// 			indices,
-	// 			type: DebugType.Triangles,
-	// 			block: Debug.vertexMemory.alloc(positions),
-	// 			color: options.color || Color.White,
-	// 			ttl: options.ttl || 0,
-	// 			matrix: options.matrix || Matrix4.Identity
-	// 		} as DebugPrimitiveTriangles);
-	// 	}
-	// }
-
+	public static drawPrimitiveLine(positions: number[], options: DebugDrawOptions = { }) {
+		assert(positions.length % 3 === 0, `Expected positions to contains a multiple of 3 number, one for each axis (x,y,z).`);
+		if (positions.length >= 3) {
+			const color = options.color || Color.White;
+			// const matrix = options.matrix || Matrix4.Identity;
+			const lines = [] as LineItem[];
+			for (let i = 0, l = positions.length; i < l; i += 6) {
+				lines.push({
+					positions: [positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2], positions[i * 3 + 3], positions[i * 3 + 4], positions[i * 3 + 5]],
+					colors: color instanceof Color ? [color.r, color.g, color.b, color.a, color.r, color.g, color.b, color.a] : [...color, ...color] as any
+				});
+			}
+			const block = Debug.lineManager!.alloc(lines);
+			Debug.stack.push({
+				block,
+				ttl: options.ttl || 0,
+				type: DebugType.Line,
+			} as DebugPrimitiveLine);
+			Debug.lineNeedsUpdate = true;
+		}
+	}
 
 	public static drawPoint(position: Vector3, radius: number, options: DebugDrawOptions = { }) {
 		return Debug.drawPrimitivePoints([position.x, position.y, position.z], radius, options);
@@ -183,33 +237,33 @@ export class Debug {
 
 }
 
-interface DataStruct {
+interface PointArray {
 	sizes: Float32Array
 	positions: Float32Array
 	colors: Float32Array
 }
 
-interface DataItem {
+interface PointItem {
 	size: number
 	positions: [number, number, number],
 	colors: [number, number, number, number]
 }
 
-class PointMeshManager extends ArrayVariableManager<DataStruct, DataItem> {
-	resize(data: DataStruct, size: number): DataStruct {
+class PointMeshManager extends ArrayVariableManager<PointArray, PointItem> {
+	resize(data: PointArray, size: number): PointArray {
 		data.sizes = resizeFloat32Array(data.sizes, size * 1);
 		data.positions = resizeFloat32Array(data.positions, size * 3);
 		data.colors = resizeFloat32Array(data.colors, size * 4);
 		return data;
 	}
 
-	move(data: DataStruct, block: ArrayBlock, offset: number) {
+	move(data: PointArray, block: ArrayBlock, offset: number) {
 		data.sizes.copyWithin(offset * 1, block.offset * 1, block.offset * 1 + block.size * 1);
 		data.positions.copyWithin(offset * 3, block.offset * 3, block.offset * 3 + block.size * 3);
 		data.colors.copyWithin(offset * 4, block.offset * 4, block.offset * 4 + block.size * 4);
 	}
 
-	set(data: DataStruct, index: number, value: DataItem) {
+	set(data: PointArray, index: number, value: PointItem) {
 		data.sizes[index * 1 + 0] = value.size;
 		data.positions[index * 3 + 0] = value.positions[0];
 		data.positions[index * 3 + 1] = value.positions[1];
@@ -220,11 +274,58 @@ class PointMeshManager extends ArrayVariableManager<DataStruct, DataItem> {
 		data.colors[index * 4 + 3] = value.colors[3];
 	}
 
-	get(data: DataStruct, index: number): DataItem {
+	get(data: PointArray, index: number): PointItem {
 		return {
 			size: data.sizes[index * 1 + 0],
 			positions: [data.positions[index * 3 + 0], data.positions[index * 3 + 1], data.positions[index * 3 + 2]],
 			colors: [data.colors[index * 4 + 0], data.colors[index * 4 + 1], data.colors[index * 4 + 2], data.colors[index * 4 + 3]]
+		};
+	}
+}
+
+interface LineArray {
+	positions: Float32Array
+	colors: Float32Array
+}
+
+interface LineItem {
+	positions: [number, number, number, number, number, number],
+	colors: [number, number, number, number, number, number, number, number]
+}
+
+class LineMeshManager extends ArrayVariableManager<LineArray, LineItem> {
+	resize(data: LineArray, size: number): LineArray {
+		data.positions = resizeFloat32Array(data.positions, size * 6);
+		data.colors = resizeFloat32Array(data.colors, size * 8);
+		return data;
+	}
+
+	move(data: LineArray, block: ArrayBlock, offset: number) {
+		data.positions.copyWithin(offset * 6, block.offset * 6, block.offset * 6 + block.size * 6);
+		data.colors.copyWithin(offset * 8, block.offset * 8, block.offset * 8 + block.size * 8);
+	}
+
+	set(data: LineArray, index: number, value: LineItem) {
+		data.positions[index * 3 + 0] = value.positions[0];
+		data.positions[index * 3 + 1] = value.positions[1];
+		data.positions[index * 3 + 2] = value.positions[2];
+		data.positions[index * 3 + 3] = value.positions[3];
+		data.positions[index * 3 + 4] = value.positions[4];
+		data.positions[index * 3 + 5] = value.positions[5];
+		data.colors[index * 4 + 0] = value.colors[0];
+		data.colors[index * 4 + 1] = value.colors[1];
+		data.colors[index * 4 + 2] = value.colors[2];
+		data.colors[index * 4 + 3] = value.colors[3];
+		data.colors[index * 4 + 5] = value.colors[5];
+		data.colors[index * 4 + 6] = value.colors[6];
+		data.colors[index * 4 + 7] = value.colors[7];
+		data.colors[index * 4 + 8] = value.colors[8];
+	}
+
+	get(data: LineArray, index: number): LineItem {
+		return {
+			positions: [data.positions[index * 3 + 0], data.positions[index * 3 + 1], data.positions[index * 3 + 2], data.positions[index * 3 + 3], data.positions[index * 3 + 4], data.positions[index * 3 + 5]],
+			colors: [data.colors[index * 4 + 0], data.colors[index * 4 + 1], data.colors[index * 4 + 2], data.colors[index * 4 + 3], data.colors[index * 4 + 4], data.colors[index * 4 + 5], data.colors[index * 4 + 6], data.colors[index * 4 + 7]]
 		};
 	}
 }
