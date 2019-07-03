@@ -9,9 +9,6 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"strict": true,
-		"jsx": "react",
-		"types": [
-			"webrtc"
-		]
+		"jsx": "react"
 	}
 }

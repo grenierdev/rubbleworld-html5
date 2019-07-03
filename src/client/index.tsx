@@ -1,16 +1,19 @@
-import { Material } from "../common/engine/rendering/Material";
-import { Matrix4 } from "../common/engine/math/Matrix4";
-import { CameraOrthographic, CameraPerspective } from "../common/engine/rendering/Camera";
-import { Vector3 } from "../common/engine/math/Vector3";
-import { Quaterion } from "../common/engine/math/Quaterion";
-import { Mesh, PointMesh } from "../common/engine/rendering/Mesh";
-import { Texture } from "../common/engine/rendering/Texture";
-import { Debug } from "../common/engine/Debug";
-import { Color } from "../common/engine/math/Color";
+import { Material } from '../common/engine/rendering/Material';
+import { Matrix4 } from '../common/engine/math/Matrix4';
+import {
+	CameraOrthographic,
+	CameraPerspective,
+} from '../common/engine/rendering/Camera';
+import { Vector3 } from '../common/engine/math/Vector3';
+import { Quaterion } from '../common/engine/math/Quaterion';
+import { Mesh, PointMesh } from '../common/engine/rendering/Mesh';
+import { Texture } from '../common/engine/rendering/Texture';
+import { Debug } from '../common/engine/Debug';
+import { Color } from '../common/engine/math/Color';
 
 // Source: http://learningwebgl.com/blog/?p=28
 
-const canvasEl = document.getElementById("canvas")! as HTMLCanvasElement;
+const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
 const width = canvasEl.width;
 const height = canvasEl.height;
 
@@ -18,7 +21,7 @@ const gl = canvasEl.getContext('webgl', {
 	alpha: false,
 	antialias: false,
 	depth: true,
-	stencil: false
+	stencil: false,
 })!;
 
 const material = new Material(
@@ -50,37 +53,25 @@ const material = new Material(
 	`
 );
 
-const mesh = new Mesh(
-	gl,
-	{
-		vertices: new Float32Array([
-			1.0, 1.0, 0.0,
-			-1.0, 1.0, 0.0,
-			1.0, -1.0, 0.0,
-			-1.0, -1.0, 0.0
-		]),
-		indices: new Uint16Array([
-			0, 1, 2,
-			2, 1, 3
-		]),
-		uvs: [
-			new Float32Array([
-				1, 0,
-				0, 0,
-				1, 1,
-				0, 1
-			])
-		],
-		colors: [
-			new Float32Array([
-				1, 0, 1, 1,
-				1, 0, 1, 1,
-				1, 0, 1, 1,
-				1, 0, 1, 1
-			])
-		]
-	}
-);
+const mesh = new Mesh(gl, {
+	vertices: new Float32Array([
+		1.0,
+		1.0,
+		0.0,
+		-1.0,
+		1.0,
+		0.0,
+		1.0,
+		-1.0,
+		0.0,
+		-1.0,
+		-1.0,
+		0.0,
+	]),
+	indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
+	uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
+	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
+});
 
 const tex = new Texture(
 	gl,
@@ -91,11 +82,14 @@ const tex = new Texture(
 
 const position = new Vector3(0, 0, -8);
 const rotation = new Quaterion();
-const view = new Matrix4().compose(position, rotation, Vector3.One);
+const view = new Matrix4().compose(
+	position,
+	rotation,
+	Vector3.One
+);
 const world = new Matrix4();
 const camera = new CameraPerspective(45, width / height, 0.1, 100.0, 2);
 // const camera = new CameraOrthographic(-250, 250, -250, 250, 0.1, 100, 1);
-
 
 material.setUniform('worldMatrix', world.elements);
 material.setUniform('viewMatrix', view.elements);
@@ -124,8 +118,7 @@ let frameId = 0;
 	gl.disable(gl.DEPTH_TEST);
 	gl.enable(gl.BLEND);
 
-	for (let i = 1; --i >= 0;) {
-
+	for (let i = 1; --i >= 0; ) {
 		// rotation.y = Math.sin(Math.max(0, frameId - i * 10) / 20);
 		// position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
 		// position.y = Math.cos(Math.max(0, frameId - i * 10) / 20);
@@ -141,19 +134,27 @@ let frameId = 0;
 
 		// Debug.drawPoint(point, 1);
 
-		Debug.drawPrimitivePoints([0 + Math.random(), -1 + Math.random() * 2, -1 + Math.random() * 2], 2, { ttl: 1.0, color: [Math.random(), Math.random(), Math.random(), 1] });
+		Debug.drawPrimitivePoints(
+			[0 + Math.random(), -1 + Math.random() * 2, -1 + Math.random() * 2],
+			2,
+			{ ttl: 2.0, color: [Math.random(), Math.random(), Math.random(), 1] }
+		);
 		Debug.drawPrimitiveLine(
 			[
-				-1 + Math.random() * 1, -1 + Math.random() * 2, -1 + Math.random() * 2,
-				-1 + Math.random() * 1, -1 + Math.random() * 2, -1 + Math.random() * 2
+				-1 + Math.random() * 1,
+				-1 + Math.random() * 2,
+				-1 + Math.random() * 2,
+				-1 + Math.random() * 1,
+				-1 + Math.random() * 2,
+				-1 + Math.random() * 2,
 			],
 			{
-				ttl: 1.0,
-				color: [Math.random(), Math.random(), Math.random(), 1]
+				ttl: 2.0,
+				color: [Math.random(), Math.random(), Math.random(), 1],
 			}
 		);
 	}
-	
+
 	Debug.draw(view, camera.projectionMatrix);
 	Debug.update();
 
