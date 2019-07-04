@@ -1,7 +1,6 @@
 import { IDisposable } from '@konstellio/disposable';
 
 export class PriorityList<T> implements IDisposable {
-
 	protected disposed: boolean;
 	protected list: [T, number][];
 
@@ -52,27 +51,32 @@ export class PriorityList<T> implements IDisposable {
 	}
 
 	forEach(callback: (item: T, priority: number) => void): void {
-		this.list.forEach((item) => {
+		this.list.forEach(item => {
 			callback(item[0], item[1]);
 		});
 	}
 
 	map<U>(callback: (item: T, priority: number) => U): U[] {
-		return this.list.map<U>((item) => {
+		return this.list.map<U>(item => {
 			return callback(item[0], item[1]);
 		});
 	}
 
-	reduce<U>(callback: (previousValue: U, item: T, priority: number) => U, initialValue: U): U {
+	reduce<U>(
+		callback: (previousValue: U, item: T, priority: number) => U,
+		initialValue: U
+	): U {
 		return this.list.reduce<U>((acc, item) => {
 			return callback(acc, item[0], item[1]);
 		}, initialValue);
 	}
 
-	reduceRight<U>(callback: (previousValue: U, item: T, priority: number) => U, initialValue: U): U {
+	reduceRight<U>(
+		callback: (previousValue: U, item: T, priority: number) => U,
+		initialValue: U
+	): U {
 		return this.list.reduceRight<U>((acc, item) => {
 			return callback(acc, item[0], item[1]);
 		}, initialValue);
 	}
-
 }

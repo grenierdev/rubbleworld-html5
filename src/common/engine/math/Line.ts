@@ -1,13 +1,8 @@
-import { Vector3 } from "./Vector3";
-import { clamp } from "./util";
+import { Vector3 } from './Vector3';
+import { clamp } from './util';
 
 export class Line {
-	constructor(
-		public start = new Vector3(),
-		public end = new Vector3()
-	) {
-
-	}
+	constructor(public start = new Vector3(), public end = new Vector3()) {}
 
 	getCenter(target: Vector3) {
 		return target.addVectors(this.start, this.end).multiplyScalar(0.5);
@@ -46,7 +41,9 @@ export class Line {
 	}
 
 	at(t: number, target: Vector3) {
-		return this.delta(target).multiplyScalar(t).add(this.start);
+		return this.delta(target)
+			.multiplyScalar(t)
+			.add(this.start);
 	}
 
 	closestPointToPointParameter(point: Vector3, clampToLine = true) {
@@ -65,7 +62,9 @@ export class Line {
 
 	closestPointToPoint(point: Vector3, target: Vector3, clampToLine = true) {
 		const t = this.closestPointToPointParameter(point, clampToLine);
-		return this.delta(target).multiplyScalar(t).add(this.start);
+		return this.delta(target)
+			.multiplyScalar(t)
+			.add(this.start);
 	}
 }
 

@@ -3,17 +3,17 @@ import { Material } from './Material';
 import { Mutable } from '../util/Mutable';
 
 export interface IMesh {
-	updateBuffers(): void
-	bind(): void
-	draw(): void
+	updateBuffers(): void;
+	bind(): void;
+	draw(): void;
 }
 
 export interface MeshData {
-	vertices: Float32Array
-	indices: Uint16Array
-	normals?: Float32Array
-	uvs?: Float32Array[]
-	colors?: Float32Array[]
+	vertices: Float32Array;
+	indices: Uint16Array;
+	normals?: Float32Array;
+	uvs?: Float32Array[];
+	colors?: Float32Array[];
 }
 
 export class Mesh implements IDisposable, IMesh {
@@ -45,7 +45,7 @@ export class Mesh implements IDisposable, IMesh {
 		this.indiceCount = data.indices.length;
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data.indices, drawType);
-		
+
 		this.normalBuffer = gl.createBuffer()!;
 		if (data.normals) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
@@ -143,7 +143,7 @@ export class Mesh implements IDisposable, IMesh {
 			if (material) {
 				const gl = this.gl;
 
-				if(material.attributes.has('vertPosition')) {
+				if (material.attributes.has('vertPosition')) {
 					const attribute = material.attributes.get('vertPosition')!;
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
@@ -159,7 +159,14 @@ export class Mesh implements IDisposable, IMesh {
 					if (material.attributes.has('vertUV' + (i + 1))) {
 						const attribute = material.attributes.get('vertUV' + (i + 1))!;
 						gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
-						gl.vertexAttribPointer(attribute.location, 2, gl.FLOAT, false, 0, 0);
+						gl.vertexAttribPointer(
+							attribute.location,
+							2,
+							gl.FLOAT,
+							false,
+							0,
+							0
+						);
 						gl.enableVertexAttribArray(attribute.location);
 					}
 				}
@@ -167,7 +174,14 @@ export class Mesh implements IDisposable, IMesh {
 					if (material.attributes.has('vertColor' + (i + 1))) {
 						const attribute = material.attributes.get('vertColor' + (i + 1))!;
 						gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
-						gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
+						gl.vertexAttribPointer(
+							attribute.location,
+							4,
+							gl.FLOAT,
+							false,
+							0,
+							0
+						);
 						gl.enableVertexAttribArray(attribute.location);
 					}
 				}
@@ -181,16 +195,20 @@ export class Mesh implements IDisposable, IMesh {
 			this.bind();
 		}
 
-		this.gl.drawElements(this.gl.TRIANGLES, this.indiceCount, this.gl.UNSIGNED_SHORT, 0);
+		this.gl.drawElements(
+			this.gl.TRIANGLES,
+			this.indiceCount,
+			this.gl.UNSIGNED_SHORT,
+			0
+		);
 	}
-    
 }
 
 export interface PointMeshData {
-	count: number
-	positions: Float32Array
-	sizes?: Float32Array
-	colors?: Float32Array
+	count: number;
+	positions: Float32Array;
+	sizes?: Float32Array;
+	colors?: Float32Array;
 }
 
 export class PointMesh implements IDisposable, IMesh {
@@ -215,7 +233,11 @@ export class PointMesh implements IDisposable, IMesh {
 
 		this.sizeBuffer = gl.createBuffer()!;
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, data.sizes || new Float32Array(data.positions.length).fill(1.0), drawType);
+		gl.bufferData(
+			gl.ARRAY_BUFFER,
+			data.sizes || new Float32Array(data.positions.length).fill(1.0),
+			drawType
+		);
 
 		this.colorBuffer = gl.createBuffer()!;
 		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
@@ -315,9 +337,9 @@ export class PointMesh implements IDisposable, IMesh {
 }
 
 export interface LineMeshData {
-	count: number
-	positions: Float32Array
-	colors?: Float32Array
+	count: number;
+	positions: Float32Array;
+	colors?: Float32Array;
 }
 
 export class LineMesh implements IDisposable, IMesh {
@@ -419,6 +441,6 @@ export class LineMesh implements IDisposable, IMesh {
 			this.bind();
 		}
 
-		this.gl.drawArrays(this.gl.LINES, 0, this.data.count);
+		this.gl.drawArrays(this.gl.LINES, 0, this.data.count * 2);
 	}
 }

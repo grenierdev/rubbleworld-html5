@@ -1,11 +1,10 @@
-
 // From https://fadden.com/tech/ShadowCast.cs.txt
 
 interface Octant {
-	xx: number
-	xy: number
-	yx: number
-	yy: number
+	xx: number;
+	xy: number;
+	yx: number;
+	yy: number;
 }
 
 const octant: Octant[] = [
@@ -20,18 +19,17 @@ const octant: Octant[] = [
 ];
 
 interface GridData {
-	data: Int8Array
-	width: number
-	height: number
+	data: Int8Array;
+	width: number;
+	height: number;
 }
 
 interface GridPosition {
-	x: number
-	y: number
+	x: number;
+	y: number;
 }
 
 export class Grid {
-
 	/**
 	 * Lights up cells visible from the source. Clear all lighting before calling.
 	 */
@@ -40,22 +38,21 @@ export class Grid {
 		source: GridPosition,
 		radius: number
 	): Float32Array {
-
 		const shadowMap = new Float32Array(grid.width * grid.height);
 
 		// Viewer's cell is always visible.
 		shadowMap[source.x + grid.width * source.y] = 0 << 0;
 
 		// Cast light into cells for each of 8 octants.
-        //
-        // The left/right inverse slope values are initially 1 and 0, indicating a diagonal
-        // and a horizontal line.  These aren't strictly correct, as the view area is supposed
-        // to be based on corners, not center points.  We only really care about one side of the
-        // wall at the edges of the octant though.
-        //
-        // NOTE: depending on the compiler, it's possible that passing the octant transform
-        // values as four integers rather than an object reference would speed things up.
-        // It's much tidier this way though.
+		//
+		// The left/right inverse slope values are initially 1 and 0, indicating a diagonal
+		// and a horizontal line.  These aren't strictly correct, as the view area is supposed
+		// to be based on corners, not center points.  We only really care about one side of the
+		// wall at the edges of the octant though.
+		//
+		// NOTE: depending on the compiler, it's possible that passing the octant transform
+		// values as four integers rather than an object reference would speed things up.
+		// It's much tidier this way though.
 		for (let idx = 0; idx < octant.length; ++idx) {
 			castShadow(grid, source, radius, 1, 1.0, 0.0, octant[idx]);
 		}
@@ -97,7 +94,7 @@ export class Grid {
 				//   the slopes, and iterate over that instead.
 				for (let yc = currentCol; yc >= 0; --yc) {
 					// Translate local coordinates to grid coordinates.  For the various octants
-              		// we need to invert one or both values, or swap X for Y.
+					// we need to invert one or both values, or swap X for Y.
 					const gridX = source.x + xc * octant.xx + yc * octant.xy;
 					const gridY = source.y + xc * octant.yx + yc * octant.yy;
 
@@ -170,7 +167,15 @@ export class Grid {
 							// corner will be greater than the initial view slope (1.0).  Handle
 							// that here.
 							if (leftBlockSlope <= leftViewSlope) {
-								castShadow(grid, source, radius, currentCol + 1, leftViewSlope, leftBlockSlope, octant);
+								castShadow(
+									grid,
+									source,
+									radius,
+									currentCol + 1,
+									leftViewSlope,
+									leftBlockSlope,
+									octant
+								);
 							}
 
 							// Once that's done, we keep searching to the right (down the column),
@@ -191,5 +196,4 @@ export class Grid {
 			}
 		}
 	}
-
 }

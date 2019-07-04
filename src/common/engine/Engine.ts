@@ -6,7 +6,6 @@ import { Scene } from './Scene';
 import { loadImageFromUrl } from './util/loadImage';
 
 export class Engine implements IDisposable {
-
 	readonly mainScene?: Scene;
 
 	constructor(public gl: WebGLRenderingContext, scene?: Scene) {
@@ -14,8 +13,7 @@ export class Engine implements IDisposable {
 		this.mainScene = scene;
 	}
 
-	dispose(): void {
-	}
+	dispose(): void {}
 
 	isDisposed(): boolean {
 		return true;
@@ -42,13 +40,16 @@ export class Engine implements IDisposable {
 		}
 	}
 
-	createMaterial(vertexShader: string, fragmentShader: string): Promise<Material> {
+	createMaterial(
+		vertexShader: string,
+		fragmentShader: string
+	): Promise<Material> {
 		return Promise.resolve(new Material(this, vertexShader, fragmentShader));
 	}
 
 	loadTexture(url: string): Promise<Texture> {
 		return loadImageFromUrl(url).then(image => {
-			return new Texture(this, image)
+			return new Texture(this, image);
 		});
 	}
 }

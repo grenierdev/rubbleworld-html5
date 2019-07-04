@@ -4,11 +4,15 @@ import { Gamepad } from '../engine/Gamepad';
 import { Vector3 } from '../engine/math/Vector3';
 import { Quaterion } from '../engine/math/Quaterion';
 
-export function PlayerPrefab (
+export function PlayerPrefab(
 	position = new Vector3(),
 	rotation = new Quaterion()
 ) {
-	return new Entity([new Transform(position, Vector3.One, rotation), new PlayerBehaviour(), new PlayerGun()]);
+	return new Entity([
+		new Transform(position, Vector3.One, rotation),
+		new PlayerBehaviour(),
+		new PlayerGun(),
+	]);
 }
 
 export class PlayerBehaviour extends Behaviour {
@@ -20,7 +24,7 @@ export class PlayerBehaviour extends Behaviour {
 
 	*onUpdate() {
 		const input = new Vector3();
-		
+
 		if (Gamepad.gamepad[0].getButton('right')) {
 			this.transform!.getRightVector(v0);
 			input.add(v0.multiplyScalar(2));

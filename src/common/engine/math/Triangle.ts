@@ -1,18 +1,20 @@
-import { Vector3 } from "./Vector3";
-import { Plane } from "./Plane";
-import { Box } from "./Box";
+import { Vector3 } from './Vector3';
+import { Plane } from './Plane';
+import { Box } from './Box';
 
 export class Triangle {
 	constructor(
 		public a = new Vector3(),
 		public b = new Vector3(),
-		public c = new Vector3(),
-	) {
-
-	}
+		public c = new Vector3()
+	) {}
 
 	equals(triangle: Triangle) {
-		return this.a.equals(triangle.a) && this.b.equals(triangle.b) && this.c.equals(triangle.c);
+		return (
+			this.a.equals(triangle.a) &&
+			this.b.equals(triangle.b) &&
+			this.c.equals(triangle.c)
+		);
 	}
 
 	set(a: Vector3, b: Vector3, c: Vector3) {
@@ -40,7 +42,10 @@ export class Triangle {
 	}
 
 	getMidpoint(target: Vector3) {
-		return target.addVectors(this.a, this.b).add(this.c).multiplyScalar(1 / 3);
+		return target
+			.addVectors(this.a, this.b)
+			.add(this.c)
+			.multiplyScalar(1 / 3);
 	}
 
 	getNormal(target: Vector3) {
@@ -103,22 +108,23 @@ export class Triangle {
 		if (vb <= 0 && d2 >= 0 && d6 <= 0) {
 			w = d2 / (d2 - d6);
 			return target.copy(a).add(vac.multiplyScalar(w));
-
 		}
 
 		const va = d3 * d6 - d5 * d4;
-		if (va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0) {
+		if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) {
 			vbc.subVectors(c, b);
-			w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+			w = (d4 - d3) / (d4 - d3 + (d5 - d6));
 			return target.copy(b).add(vbc.multiplyScalar(w));
-
 		}
 
 		const denom = 1 / (va + vb + vc);
 		// u = va * denom
 		v = vb * denom;
 		w = vc * denom;
-		return target.copy(a).add(vab.multiplyScalar(v)).add(vac.multiplyScalar(w));
+		return target
+			.copy(a)
+			.add(vab.multiplyScalar(v))
+			.add(vac.multiplyScalar(w));
 	}
 
 	static getNormal(a: Vector3, b: Vector3, c: Vector3, target: Vector3) {
@@ -133,7 +139,13 @@ export class Triangle {
 		return target.set(0, 0, 0);
 	}
 
-	static getBarycoord(point: Vector3, a: Vector3, b: Vector3, c: Vector3, target: Vector3) {
+	static getBarycoord(
+		point: Vector3,
+		a: Vector3,
+		b: Vector3,
+		c: Vector3,
+		target: Vector3
+	) {
 		v0.subVectors(c, a);
 		v1.subVectors(b, a);
 		v2.subVectors(point, a);
@@ -159,7 +171,7 @@ export class Triangle {
 
 	static containsPoint(point: Vector3, a: Vector3, b: Vector3, c: Vector3) {
 		Triangle.getBarycoord(point, a, b, c, v0);
-		return (v1.x >= 0) && (v1.y >= 0) && ((v1.x + v1.y) <= 1);
+		return v1.x >= 0 && v1.y >= 0 && v1.x + v1.y <= 1;
 	}
 }
 

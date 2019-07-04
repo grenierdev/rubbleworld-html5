@@ -4,16 +4,14 @@ should();
 import { Scene, Entity, Behaviour } from './Scene';
 
 describe('Scene', () => {
-
 	it('update order', async () => {
-
 		const behA = new DummyBehaviour();
 		const behB = new DummyBehaviour();
 		const behC = new DummyBehaviour();
 
 		const scene = new Scene([
 			new Entity([behA], [new Entity([behB])]),
-			new Entity([behC])
+			new Entity([behC]),
 		]);
 
 		expect(behA.count).to.equal(0);
@@ -54,14 +52,13 @@ describe('Scene', () => {
 	});
 
 	it('update breaks', async () => {
-
 		const behA = new DummyBehaviour();
 		const behB = new DummyBehaviour();
 		const behC = new DummyBehaviour();
 
 		const scene = new Scene([
 			new Entity([behA], [new Entity([behB])]),
-			new Entity([behC])
+			new Entity([behC]),
 		]);
 
 		expect(behA.count).to.equal(0);
@@ -97,15 +94,12 @@ describe('Scene', () => {
 		expect(behC.count).to.equal(1);
 		expect(stepper.next().done).to.equal(true);
 	});
-
 });
 
 class DummyBehaviour extends Behaviour {
-
-	count = 0
+	count = 0;
 
 	onUpdate() {
 		this.count += 1;
 	}
-
 }

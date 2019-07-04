@@ -111,11 +111,11 @@ export class Debug {
 
 		Debug.pointManager = new PointMeshManager(
 			{
-				positions: new Float32Array(1000 * 3),
-				sizes: new Float32Array(1000 * 1),
-				colors: new Float32Array(1000 * 4),
+				positions: new Float32Array(100000 * 3),
+				sizes: new Float32Array(100000 * 1),
+				colors: new Float32Array(100000 * 4),
 			},
-			1000,
+			100000,
 			100
 		);
 
@@ -132,10 +132,10 @@ export class Debug {
 
 		Debug.lineManager = new LineMeshManager(
 			{
-				positions: new Float32Array(1000 * 6),
-				colors: new Float32Array(1000 * 4),
+				positions: new Float32Array(100000 * 6),
+				colors: new Float32Array(100000 * 8),
 			},
-			1000,
+			100000,
 			100
 		);
 
@@ -437,6 +437,7 @@ class LineMeshManager extends ArrayVariableManager<LineArray, LineItem> {
 		data.colors[index * 8 + 1] = value.colors[1];
 		data.colors[index * 8 + 2] = value.colors[2];
 		data.colors[index * 8 + 3] = value.colors[3];
+		data.colors[index * 8 + 4] = value.colors[4];
 		data.colors[index * 8 + 5] = value.colors[5];
 		data.colors[index * 8 + 6] = value.colors[6];
 		data.colors[index * 8 + 7] = value.colors[7];

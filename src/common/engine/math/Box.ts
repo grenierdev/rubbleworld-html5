@@ -1,25 +1,35 @@
-import { Vector3 } from "./Vector3";
-import { Sphere } from "./Sphere";
-import { Plane } from "./Plane";
-import { Triangle } from "./Triangle";
+import { Vector3 } from './Vector3';
+import { Sphere } from './Sphere';
+import { Plane } from './Plane';
+import { Triangle } from './Triangle';
 
 export class Box {
 	constructor(
 		public min = new Vector3(-Infinity, -Infinity, -Infinity),
 		public max = new Vector3(+Infinity, +Infinity, +Infinity)
-	) {
-	}
+	) {}
 
 	get isEmpty() {
-		return (this.max.x < this.min.x) || (this.max.y < this.min.y) || (this.max.z < this.min.z);
+		return (
+			this.max.x < this.min.x ||
+			this.max.y < this.min.y ||
+			this.max.z < this.min.z
+		);
 	}
 
 	getCenter(target: Vector3) {
-		return this.isEmpty ? target.set(0, 0, 0) : target.copy(this.min).add(this.max).multiplyScalar(0.5);
+		return this.isEmpty
+			? target.set(0, 0, 0)
+			: target
+					.copy(this.min)
+					.add(this.max)
+					.multiplyScalar(0.5);
 	}
 
 	getSize(target: Vector3) {
-		return this.isEmpty ? target.set(0, 0, 0) : target.copy(this.min).sub(this.max);
+		return this.isEmpty
+			? target.set(0, 0, 0)
+			: target.copy(this.min).sub(this.max);
 	}
 
 	equals(box: Box) {
@@ -76,15 +86,36 @@ export class Box {
 	}
 
 	containsPoint(point: Vector3) {
-		return point.x < this.min.x || point.x > this.max.x || point.y < this.min.y || point.y > this.max.y || point.z < this.min.z || point.z > this.max.z ? false : true;
+		return point.x < this.min.x ||
+			point.x > this.max.x ||
+			point.y < this.min.y ||
+			point.y > this.max.y ||
+			point.z < this.min.z ||
+			point.z > this.max.z
+			? false
+			: true;
 	}
 
 	containsBox(box: Box) {
-		return this.min.x <= box.min.x && box.max.x <= this.max.x && this.min.y <= box.min.y && box.max.y <= this.max.y && this.min.z <= box.min.z && box.max.z <= this.max.z;
+		return (
+			this.min.x <= box.min.x &&
+			box.max.x <= this.max.x &&
+			this.min.y <= box.min.y &&
+			box.max.y <= this.max.y &&
+			this.min.z <= box.min.z &&
+			box.max.z <= this.max.z
+		);
 	}
 
 	intersectsBox(box: Box) {
-		return box.max.x < this.min.x || box.min.x > this.max.x || box.max.y < this.min.y || box.min.y > this.max.y || box.max.z < this.min.z || box.min.z > this.max.z ? false : true;
+		return box.max.x < this.min.x ||
+			box.min.x > this.max.x ||
+			box.max.y < this.min.y ||
+			box.min.y > this.max.y ||
+			box.max.z < this.min.z ||
+			box.min.z > this.max.z
+			? false
+			: true;
 	}
 
 	intersectsSphere(sphere: Sphere) {
@@ -93,7 +124,7 @@ export class Box {
 		this.clampPoint(c, tv0);
 		return tv0.distanceToSquared(c) <= r * r;
 	}
-	
+
 	intersectsPlane(plane: Plane) {
 		let min: number = 0;
 		let max: number = 0;
@@ -133,7 +164,7 @@ export class Box {
 			max += nz * minz;
 		}
 
-		return (min <= c && max >= c);
+		return min <= c && max >= c;
 	}
 
 	intersectsTriangle(triangle: Triangle) {
@@ -153,22 +184,49 @@ export class Box {
 		function satForAxes(axes: number[]): boolean {
 			for (let i = 0, j = axes.length - 3; i <= j; i += 3) {
 				a.set(axes[i + 0], axes[i + 1], axes[i + 2]);
-				const r = e.x * Math.abs(a.x) + e.y * Math.abs(a.y) + e.z * Math.abs(a.z);
+				const r =
+					e.x * Math.abs(a.x) + e.y * Math.abs(a.y) + e.z * Math.abs(a.z);
 				const p0 = v0.dot(a);
 				const p1 = v1.dot(a);
 				const p2 = v2.dot(a);
-				if (Math.max(- Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r) {
+				if (Math.max(-Math.max(p0, p1, p2), Math.min(p0, p1, p2)) > r) {
 					return false;
 				}
 			}
 			return true;
 		}
 
-		if (satForAxes([
-			0, - f0.z, f0.y, 0, - f1.z, f1.y, 0, - f2.z, f2.y,
-			f0.z, 0, - f0.x, f1.z, 0, - f1.x, f2.z, 0, - f2.x,
-			- f0.y, f0.x, 0, - f1.y, f1.x, 0, - f2.y, f2.x, 0
-		]) === false) {
+		if (
+			satForAxes([
+				0,
+				-f0.z,
+				f0.y,
+				0,
+				-f1.z,
+				f1.y,
+				0,
+				-f2.z,
+				f2.y,
+				f0.z,
+				0,
+				-f0.x,
+				f1.z,
+				0,
+				-f1.x,
+				f2.z,
+				0,
+				-f2.x,
+				-f0.y,
+				f0.x,
+				0,
+				-f1.y,
+				f1.x,
+				0,
+				-f2.y,
+				f2.x,
+				0,
+			]) === false
+		) {
 			return false;
 		}
 

@@ -1,6 +1,10 @@
 import { IDisposable } from '@konstellio/disposable';
 
-const LoadingImage = new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1);
+const LoadingImage = new ImageData(
+	new Uint8ClampedArray([255, 0, 255, 255]),
+	1,
+	1
+);
 
 export class Texture implements IDisposable {
 	private disposed: boolean;
@@ -29,7 +33,7 @@ export class Texture implements IDisposable {
 			data.onload = () => {
 				gl.bindTexture(gl.TEXTURE_2D, this.texture);
 				gl.texImage2D(gl.TEXTURE_2D, 0, format, format, type, data);
-			}
+			};
 		} else {
 			gl.texImage2D(gl.TEXTURE_2D, 0, format, format, type, data);
 		}

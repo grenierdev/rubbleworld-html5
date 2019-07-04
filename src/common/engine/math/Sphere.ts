@@ -1,14 +1,9 @@
-import { Vector3 } from "./Vector3";
-import { Box } from "./Box";
-import { Plane } from "./Plane";
+import { Vector3 } from './Vector3';
+import { Box } from './Box';
+import { Plane } from './Plane';
 
 export class Sphere {
-	constructor(
-		public center = new Vector3(),
-		public radius = 0
-	) {
-		
-	}
+	constructor(public center = new Vector3(), public radius = 0) {}
 
 	get isEmpty() {
 		return this.radius < 0;
@@ -74,7 +69,11 @@ export class Sphere {
 		const deltaLengthSq = c.distanceToSquared(point);
 		target.copy(point);
 		if (deltaLengthSq > r * r) {
-			target.sub(c).normalize().multiplyScalar(r).add(c);
+			target
+				.sub(c)
+				.normalize()
+				.multiplyScalar(r)
+				.add(c);
 		}
 		return target;
 	}

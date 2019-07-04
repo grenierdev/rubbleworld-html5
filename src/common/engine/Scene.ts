@@ -16,15 +16,14 @@ export abstract class Behaviour {
 		return undefined;
 	}
 
-	onStart(): void { }
-	onStop(): void { }
-	onUpdate(): IterableIterator<void> | void { }
-	onLateUpdate(): IterableIterator<void> | void { }
-	onRender(): void { }
+	onStart(): void {}
+	onStop(): void {}
+	onUpdate(): IterableIterator<void> | void {}
+	onLateUpdate(): IterableIterator<void> | void {}
+	onRender(): void {}
 }
 
 export class Entity {
-
 	public readonly parent: undefined | Entity;
 	public readonly enabled: boolean;
 
@@ -33,10 +32,7 @@ export class Entity {
 	private children: Entity[];
 	private behaviours: Behaviour[];
 
-	constructor(
-		behaviours: Behaviour[] = [],
-		children: Entity[] = []
-	) {
+	constructor(behaviours: Behaviour[] = [], children: Entity[] = []) {
 		this.enabled = true;
 		this.mounted = false;
 		this.children = [];
@@ -90,7 +86,9 @@ export class Entity {
 	}
 
 	getBehaviour<T extends Behaviour>(type: any): T | undefined {
-		const behaviour = this.behaviours.find(behaviour => behaviour.constructor === type);
+		const behaviour = this.behaviours.find(
+			behaviour => behaviour.constructor === type
+		);
 		if (behaviour) {
 			return behaviour as T;
 		}
@@ -109,14 +107,16 @@ export class Entity {
 			for (const behaviour of this.behaviours) {
 				if ((behaviour as any).cachedUpdateGenerator === false) {
 					behaviour.onUpdate();
-				}
-				else {
+				} else {
 					if ((behaviour as any).cachedUpdateGenerator === undefined) {
-						(behaviour as any).cachedUpdateGenerator = behaviour.onUpdate() || false;
+						(behaviour as any).cachedUpdateGenerator =
+							behaviour.onUpdate() || false;
 					}
 
 					if ((behaviour as any).cachedUpdateGenerator) {
-						const next = (behaviour as any).cachedUpdateGenerator.next() as IteratorResult<void>;
+						const next = (behaviour as any).cachedUpdateGenerator.next() as IteratorResult<
+							void
+						>;
 						if (next.done === true) {
 							(behaviour as any).cachedUpdateGenerator = undefined;
 						}
@@ -132,14 +132,16 @@ export class Entity {
 			for (const behaviour of this.behaviours) {
 				if ((behaviour as any).cachedLateUpdateGenerator === false) {
 					behaviour.onLateUpdate();
-				}
-				else {
+				} else {
 					if ((behaviour as any).cachedLateUpdateGenerator === undefined) {
-						(behaviour as any).cachedLateUpdateGenerator = behaviour.onLateUpdate() || false;
+						(behaviour as any).cachedLateUpdateGenerator =
+							behaviour.onLateUpdate() || false;
 					}
 
 					if ((behaviour as any).cachedLateUpdateGenerator) {
-						const next = (behaviour as any).cachedLateUpdateGenerator.next() as IteratorResult<void>;
+						const next = (behaviour as any).cachedLateUpdateGenerator.next() as IteratorResult<
+							void
+						>;
 						if (next.done === true) {
 							(behaviour as any).cachedLateUpdateGenerator = undefined;
 						}
@@ -152,9 +154,7 @@ export class Entity {
 }
 
 export class Scene extends Entity {
-	constructor(
-		children: Entity[] = []
-	) {
+	constructor(children: Entity[] = []) {
 		super([], children);
 	}
 }

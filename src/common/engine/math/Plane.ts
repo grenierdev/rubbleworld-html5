@@ -1,15 +1,10 @@
-import { Vector3 } from "./Vector3";
-import { Sphere } from "./Sphere";
-import { Line } from "./Line";
-import { Box } from "./Box";
+import { Vector3 } from './Vector3';
+import { Sphere } from './Sphere';
+import { Line } from './Line';
+import { Box } from './Box';
 
 export class Plane {
-	constructor(
-		public normal = new Vector3(1, 0, 0),
-		public constant = 0
-	) {
-
-	}
+	constructor(public normal = new Vector3(1, 0, 0), public constant = 0) {}
 
 	equals(plane: Plane) {
 		return this.normal.equals(plane.normal) && this.constant === plane.constant;
@@ -34,7 +29,10 @@ export class Plane {
 	}
 
 	setFromCoplanarPoints(a: Vector3, b: Vector3, c: Vector3) {
-		const normal = v0.subVectors(c, b).cross(v1.subVectors(a, b)).normalize();
+		const normal = v0
+			.subVectors(c, b)
+			.cross(v1.subVectors(a, b))
+			.normalize();
 		this.setFromNormalAndCoplanarPoint(normal, a);
 		return this;
 	}
@@ -71,7 +69,10 @@ export class Plane {
 	}
 
 	projectPoint(point: Vector3, target: Vector3) {
-		return target.copy(this.normal).multiplyScalar(-this.distanceToPoint(point)).add(point);
+		return target
+			.copy(this.normal)
+			.multiplyScalar(-this.distanceToPoint(point))
+			.add(point);
 	}
 
 	lineIntersection(line: Line, target: Vector3) {
@@ -81,14 +82,21 @@ export class Plane {
 			if (this.distanceToPoint(line.start) === 0) {
 				return target.copy(line.start);
 			}
-			throw new RangeError(`Line does not intersect this plane. Check Plane.intersectsLine first.`);
+			throw new RangeError(
+				`Line does not intersect this plane. Check Plane.intersectsLine first.`
+			);
 		}
 
 		const t = -(line.start.dot(this.normal) + this.constant) / denominator;
 		if (t < 0 || t > 1) {
-			throw new RangeError(`Line does not intersect this plane. Check Plane.intersectsLine first.`);
+			throw new RangeError(
+				`Line does not intersect this plane. Check Plane.intersectsLine first.`
+			);
 		}
-		return target.copy(direction).multiplyScalar(t).add(line.start);
+		return target
+			.copy(direction)
+			.multiplyScalar(t)
+			.add(line.start);
 	}
 
 	intersectsLine(line: Line) {

@@ -2,29 +2,33 @@ import { clamp } from './util';
 import { Matrix4 } from './Matrix4';
 
 export class Vector4 {
-	constructor(
-		public x = 0,
-		public y = 0,
-		public z = 0,
-		public w = 0
-	) {
-
-	}
+	constructor(public x = 0, public y = 0, public z = 0, public w = 0) {}
 
 	get length() {
-		return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w);
+		return Math.sqrt(
+			this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w
+		);
 	}
 
 	get lengthSquared() {
-		return this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w;
+		return (
+			this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w
+		);
 	}
 
 	get lengthManhattan() {
-		return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z) + Math.abs(this.w);
+		return (
+			Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z) + Math.abs(this.w)
+		);
 	}
 
 	equals(vector: Vector4) {
-		return this.x === vector.x && this.y === vector.y && this.z === vector.z && this.w === vector.w;
+		return (
+			this.x === vector.x &&
+			this.y === vector.y &&
+			this.z === vector.z &&
+			this.w === vector.w
+		);
 	}
 
 	set(x = 0, y = 0, z = 0, w = 0) {
@@ -213,7 +217,9 @@ export class Vector4 {
 
 	clampLength(min: number, max: number) {
 		const length = this.length;
-		return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
+		return this.divideScalar(length || 1).multiplyScalar(
+			Math.max(min, Math.min(max, length))
+		);
 	}
 
 	project(normal: Vector4) {
@@ -225,7 +231,12 @@ export class Vector4 {
 	}
 
 	dot(vector: Vector4) {
-		return this.x * vector.x + this.y * vector.y + this.z * vector.z + this.w * vector.w;
+		return (
+			this.x * vector.x +
+			this.y * vector.y +
+			this.z * vector.z +
+			this.w * vector.w
+		);
 	}
 
 	// cross(vector: Vector4) {
@@ -245,8 +256,9 @@ export class Vector4 {
 	// }
 
 	angleTo(vector: Vector4) {
-		const theta = this.dot(vector) / (Math.sqrt(this.lengthSquared * vector.lengthSquared));
-		return Math.acos(clamp(theta, - 1, 1));
+		const theta =
+			this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
+		return Math.acos(clamp(theta, -1, 1));
 	}
 
 	distanceTo(vector: Vector4) {
@@ -262,7 +274,12 @@ export class Vector4 {
 	}
 
 	manhattanDistanceTo(vector: Vector4) {
-		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y) + Math.abs(this.z - vector.z) + Math.abs(this.w - vector.w);
+		return (
+			Math.abs(this.x - vector.x) +
+			Math.abs(this.y - vector.y) +
+			Math.abs(this.z - vector.z) +
+			Math.abs(this.w - vector.w)
+		);
 	}
 
 	applyMatrix4(matrix: Matrix4) {
@@ -278,7 +295,6 @@ export class Vector4 {
 		this.w = me[3] * x + me[7] * y + me[11] * z + me[15] * w;
 
 		return this;
-
 	}
 }
 

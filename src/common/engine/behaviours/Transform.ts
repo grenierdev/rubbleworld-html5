@@ -1,7 +1,7 @@
-import { Behaviour } from "../Scene";
-import { Matrix4 } from "../math/Matrix4";
-import { Vector3 } from "../math/Vector3";
-import { Quaterion } from "../math/Quaterion";
+import { Behaviour } from '../Scene';
+import { Matrix4 } from '../math/Matrix4';
+import { Vector3 } from '../math/Vector3';
+import { Quaterion } from '../math/Quaterion';
 
 export class Transform extends Behaviour {
 	public localMatrix: Matrix4;
@@ -21,7 +21,11 @@ export class Transform extends Behaviour {
 		this.cachedPosition = new Vector3();
 		this.cachedRotation = new Quaterion();
 		this.cachedScale = new Vector3();
-		this.localMatrix = new Matrix4().compose(this.localPosition, this.localRotation, this.localScale);
+		this.localMatrix = new Matrix4().compose(
+			this.localPosition,
+			this.localRotation,
+			this.localScale
+		);
 		this.worldMatrix = new Matrix4().copy(this.localMatrix);
 	}
 
@@ -34,18 +38,28 @@ export class Transform extends Behaviour {
 			parentTransform = this.entity.parent.getBehaviour(Transform);
 		}
 
-		
 		// Did the transform changed ?
-		if (this.cachedPosition.equals(this.localPosition) === false || this.cachedRotation.equals(this.localRotation) === false || this.cachedScale.equals(this.localScale) === false) {
+		if (
+			this.cachedPosition.equals(this.localPosition) === false ||
+			this.cachedRotation.equals(this.localRotation) === false ||
+			this.cachedScale.equals(this.localScale) === false
+		) {
 			// Compose new matrix
-			this.localMatrix.compose(this.localPosition, this.localRotation, this.localScale);
+			this.localMatrix.compose(
+				this.localPosition,
+				this.localRotation,
+				this.localScale
+			);
 			changed = true;
 		}
-		
+
 		// Got a parent, maybe local changed
 		if (parentTransform) {
 			// Did the parent transform changed ?
-			if (this.cachedParentMatrix === undefined || this.cachedParentMatrix.equals(parentTransform.worldMatrix) === false) {
+			if (
+				this.cachedParentMatrix === undefined ||
+				this.cachedParentMatrix.equals(parentTransform.worldMatrix) === false
+			) {
 				this.cachedParentMatrix = parentTransform.worldMatrix;
 				changed = true;
 			}
@@ -53,7 +67,10 @@ export class Transform extends Behaviour {
 			// Either local or parent has changed
 			if (changed) {
 				// Compute world matrix
-				this.worldMatrix.multiplyMatrices(this.cachedParentMatrix, this.localMatrix);
+				this.worldMatrix.multiplyMatrices(
+					this.cachedParentMatrix,
+					this.localMatrix
+				);
 			}
 		}
 
@@ -72,14 +89,23 @@ export class Transform extends Behaviour {
 	}
 
 	getForwardVector(target: Vector3) {
-		return target.copy(Vector3.Forward).applyQuaternion(this.localRotation).applyMatrix4(this.worldMatrix);
+		return target
+			.copy(Vector3.Forward)
+			.applyQuaternion(this.localRotation)
+			.applyMatrix4(this.worldMatrix);
 	}
 
 	getRightVector(target: Vector3) {
-		return target.copy(Vector3.Right).applyQuaternion(this.localRotation).applyMatrix4(this.worldMatrix);
+		return target
+			.copy(Vector3.Right)
+			.applyQuaternion(this.localRotation)
+			.applyMatrix4(this.worldMatrix);
 	}
 
 	getUpVector(target: Vector3) {
-		return target.copy(Vector3.Up).applyQuaternion(this.localRotation).applyMatrix4(this.worldMatrix);
+		return target
+			.copy(Vector3.Up)
+			.applyQuaternion(this.localRotation)
+			.applyMatrix4(this.worldMatrix);
 	}
 }

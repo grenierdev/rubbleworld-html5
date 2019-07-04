@@ -1,10 +1,7 @@
-
 export abstract class Gamepad {
 	public static gamepad: Gamepad[] = [];
 
-	constructor() {
-
-	}
+	constructor() {}
 
 	abstract getButton(button: string): boolean;
 	abstract getButtonDown(button: string): boolean;

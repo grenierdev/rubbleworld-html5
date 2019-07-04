@@ -4,13 +4,7 @@ import { Quaterion } from './Quaterion';
 import { Matrix3 } from './Matrix3';
 
 export class Vector3 {
-	constructor(
-		public x = 0,
-		public y = 0,
-		public z = 0
-	) {
-
-	}
+	constructor(public x = 0, public y = 0, public z = 0) {}
 
 	get length() {
 		return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
@@ -190,7 +184,9 @@ export class Vector3 {
 
 	clampLength(min: number, max: number) {
 		const length = this.length;
-		return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
+		return this.divideScalar(length || 1).multiplyScalar(
+			Math.max(min, Math.min(max, length))
+		);
 	}
 
 	project(normal: Vector3) {
@@ -224,8 +220,9 @@ export class Vector3 {
 	}
 
 	angleTo(vector: Vector3) {
-		const theta = this.dot(vector) / (Math.sqrt(this.lengthSquared * vector.lengthSquared));
-		return Math.acos(clamp(theta, - 1, 1));
+		const theta =
+			this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
+		return Math.acos(clamp(theta, -1, 1));
 	}
 
 	distanceTo(vector: Vector3) {
@@ -240,7 +237,11 @@ export class Vector3 {
 	}
 
 	manhattanDistanceTo(vector: Vector3) {
-		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y) + Math.abs(this.z - vector.z);
+		return (
+			Math.abs(this.x - vector.x) +
+			Math.abs(this.y - vector.y) +
+			Math.abs(this.z - vector.z)
+		);
 	}
 
 	applyMatrix3(matrix: Matrix3) {
@@ -254,7 +255,6 @@ export class Vector3 {
 		this.z = me[2] * x + me[5] * y + me[8] * z;
 
 		return this;
-
 	}
 
 	applyMatrix4(matrix: Matrix4) {
@@ -284,11 +284,11 @@ export class Vector3 {
 		const ix = qw * x + qy * z - qz * y;
 		const iy = qw * y + qz * x - qx * z;
 		const iz = qw * z + qx * y - qy * x;
-		const iw = - qx * x - qy * y - qz * z;
+		const iw = -qx * x - qy * y - qz * z;
 
-		this.x = ix * qw + iw * - qx + iy * - qz - iz * - qy;
-		this.y = iy * qw + iw * - qy + iz * - qx - ix * - qz;
-		this.z = iz * qw + iw * - qz + ix * - qy - iy * - qx;
+		this.x = ix * qw + iw * -qx + iy * -qz - iz * -qy;
+		this.y = iy * qw + iw * -qy + iz * -qx - ix * -qz;
+		this.z = iz * qw + iw * -qz + ix * -qy - iy * -qx;
 
 		return this;
 	}

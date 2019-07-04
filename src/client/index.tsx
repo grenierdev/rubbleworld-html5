@@ -52,6 +52,7 @@ const material = new Material(
 		}
 	`
 );
+material.twoSided = true;
 
 const mesh = new Mesh(gl, {
 	vertices: new Float32Array([
@@ -80,15 +81,12 @@ const tex = new Texture(
 	gl.LINEAR
 );
 
-const position = new Vector3(0, 0, -8);
+const position = new Vector3(0, 0, 0);
 const rotation = new Quaterion();
-const view = new Matrix4().compose(
-	position,
-	rotation,
-	Vector3.One
-);
+const view = new Matrix4();
 const world = new Matrix4();
-const camera = new CameraPerspective(45, width / height, 0.1, 100.0, 2);
+const camera = new CameraPerspective(40, width / height, 0.1, 100.0, 2);
+const cameraPos = new Vector3(0, 0, -10);
 // const camera = new CameraOrthographic(-250, 250, -250, 250, 0.1, 100, 1);
 
 material.setUniform('worldMatrix', world.elements);
@@ -97,12 +95,9 @@ material.setUniform('projectionMatrix', camera.projectionMatrix.elements);
 material.setUniform('sampler', tex);
 
 Debug.setRenderingContext(gl);
-// Debug.drawPoint(new Vector3(0, 0, 0), 10, { ttl: 4.0, color: new Color(1, 1, 1) });
-// Debug.drawPoint(new Vector3(1, 0, 0), 5, { ttl: 8.0, color: new Color(0, 1, 0) });
-// Debug.drawPoint(new Vector3(-1, 0, 0), 10, { ttl: 12.0, color: new Color(0, 0, 1) });
 
 let frameId = 0;
-(function draw() {
+(window as any).step = function step() {
 	++frameId;
 
 	gl.viewport(0, 0, width, height);
@@ -118,45 +113,50 @@ let frameId = 0;
 	gl.disable(gl.DEPTH_TEST);
 	gl.enable(gl.BLEND);
 
-	for (let i = 1; --i >= 0; ) {
-		// rotation.y = Math.sin(Math.max(0, frameId - i * 10) / 20);
-		// position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
-		// position.y = Math.cos(Math.max(0, frameId - i * 10) / 20);
-		// world.compose(position, rotation, Vector3.One);
-		// view.elements[12] = Math.sin(Math.max(0, frameId - i * 10) / 60);
-		// view.elements[13] = Math.cos(Math.max(0, frameId - i * 10) / 60);
+	for (let i = 10; --i >= 0; ) {
+		rotation.z = Math.sin(Math.max(0, frameId - i * 10) / 20);
+		position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
+		position.y = Math.cos(Math.max(0, frameId - i * 10) / 20);
+		world.compose(
+			position,
+			rotation,
+			Vector3.One
+		);
 
+		cameraPos.z = Math.sin(frameId / 10) - 20;
+		view.compose(
+			cameraPos,
+			Quaterion.Identity,
+			Vector3.One
+		);
 		// Use material set attribute & uniform
-		// material.bind();
-		// material.setUniform('viewMatrix', view.elements);
-		// mesh.bind();
-		// mesh.draw();
+		material.bind();
+		material.setUniform('worldMatrix', world.elements);
+		material.setUniform('viewMatrix', view.elements);
+		mesh.bind();
+		mesh.draw();
 
-		// Debug.drawPoint(point, 1);
-
-		Debug.drawPrimitivePoints(
-			[0 + Math.random(), -1 + Math.random() * 2, -1 + Math.random() * 2],
-			2,
-			{ ttl: 2.0, color: [Math.random(), Math.random(), Math.random(), 1] }
-		);
-		Debug.drawPrimitiveLine(
-			[
-				-1 + Math.random() * 1,
-				-1 + Math.random() * 2,
-				-1 + Math.random() * 2,
-				-1 + Math.random() * 1,
-				-1 + Math.random() * 2,
-				-1 + Math.random() * 2,
-			],
-			{
-				ttl: 2.0,
-				color: [Math.random(), Math.random(), Math.random(), 1],
-			}
-		);
+		// Debug.drawPrimitivePoints(
+		// 	[0 + Math.random(), -1 + Math.random() * 2, -1 + Math.random() * 2],
+		// 	2,
+		// 	{ ttl: 0.0, color: [Math.random(), Math.random(), Math.random(), 1] }
+		// );
+		// Debug.drawPrimitiveLine(
+		// 	[
+		// 		-1 + Math.random() * 1,
+		// 		-1 + Math.random() * 2,
+		// 		-1 + Math.random() * 2,
+		// 		-1 + Math.random() * 1,
+		// 		-1 + Math.random() * 2,
+		// 		-1 + Math.random() * 2,
+		// 	],
+		// 	{
+		// 		ttl: 0.0,
+		// 		color: [Math.random(), Math.random(), Math.random(), 1],
+		// 	}
+		// );
 	}
 
 	Debug.draw(view, camera.projectionMatrix);
 	Debug.update();
-
-	requestAnimationFrame(draw);
-})();
+};

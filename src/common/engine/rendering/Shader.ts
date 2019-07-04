@@ -1,6 +1,5 @@
 import { IDisposable } from '@konstellio/disposable';
 
-
 export class Shader implements IDisposable {
 	private disposed: boolean;
 
@@ -19,7 +18,9 @@ export class Shader implements IDisposable {
 		gl.compileShader(this.shader);
 
 		if (!gl.getShaderParameter(this.shader, gl.COMPILE_STATUS)) {
-			throw new SyntaxError(`Could not compile shader : ${gl.getShaderInfoLog(this.shader)}.`);
+			throw new SyntaxError(
+				`Could not compile shader : ${gl.getShaderInfoLog(this.shader)}.`
+			);
 		}
 	}
 

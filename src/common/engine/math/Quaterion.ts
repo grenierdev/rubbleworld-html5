@@ -1,25 +1,27 @@
-import { Matrix4 } from "./Matrix4";
+import { Matrix4 } from './Matrix4';
 
 export class Quaterion {
-	constructor(
-		public x = 0,
-		public y = 0,
-		public z = 0,
-		public w = 1
-	) {
-
-	}
+	constructor(public x = 0, public y = 0, public z = 0, public w = 1) {}
 
 	get length() {
-		return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w);
+		return Math.sqrt(
+			this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w
+		);
 	}
 
 	get lengthSquared() {
-		return this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w;
+		return (
+			this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w
+		);
 	}
 
 	equals(quaterion: Quaterion) {
-		return this.x === quaterion.x && this.y === quaterion.y && this.z === quaterion.z && this.w === quaterion.w;
+		return (
+			this.x === quaterion.x &&
+			this.y === quaterion.y &&
+			this.z === quaterion.z &&
+			this.w === quaterion.w
+		);
 	}
 
 	set(x = 0, y = 0, z = 0, w = 0) {
@@ -33,9 +35,15 @@ export class Quaterion {
 	setFromRotationMatrix(matrix: Matrix4) {
 		const te = matrix.elements;
 
-		const m11 = te[0]; const m12 = te[4]; const m13 = te[8];
-		const m21 = te[1]; const m22 = te[5]; const m23 = te[9];
-		const m31 = te[2]; const m32 = te[6]; const m33 = te[10];
+		const m11 = te[0];
+		const m12 = te[4];
+		const m13 = te[8];
+		const m21 = te[1];
+		const m22 = te[5];
+		const m23 = te[9];
+		const m31 = te[2];
+		const m32 = te[6];
+		const m33 = te[10];
 
 		const trace = m11 + m22 + m33;
 		let s = 0;
@@ -47,7 +55,6 @@ export class Quaterion {
 			this.x = (m32 - m23) * s;
 			this.y = (m13 - m31) * s;
 			this.z = (m21 - m12) * s;
-
 		} else if (m11 > m22 && m11 > m33) {
 			s = 2.0 * Math.sqrt(1.0 + m11 - m22 - m33);
 
@@ -55,7 +62,6 @@ export class Quaterion {
 			this.x = 0.25 * s;
 			this.y = (m12 + m21) / s;
 			this.z = (m13 + m31) / s;
-
 		} else if (m22 > m33) {
 			s = 2.0 * Math.sqrt(1.0 + m22 - m11 - m33);
 
@@ -63,7 +69,6 @@ export class Quaterion {
 			this.x = (m12 + m21) / s;
 			this.y = 0.25 * s;
 			this.z = (m23 + m32) / s;
-
 		} else {
 			s = 2.0 * Math.sqrt(1.0 + m33 - m11 - m22);
 
@@ -71,9 +76,8 @@ export class Quaterion {
 			this.x = (m13 + m31) / s;
 			this.y = (m23 + m32) / s;
 			this.z = 0.25 * s;
-
 		}
-		
+
 		return this;
 	}
 
@@ -102,7 +106,6 @@ export class Quaterion {
 			this.y *= length;
 			this.z *= length;
 			this.w *= length;
-
 		}
 		return this;
 	}
@@ -119,7 +122,12 @@ export class Quaterion {
 	}
 
 	dot(quaterion: Quaterion) {
-		return this.x * quaterion.x + this.y * quaterion.y + this.z * quaterion.z + this.w * quaterion.w;
+		return (
+			this.x * quaterion.x +
+			this.y * quaterion.y +
+			this.z * quaterion.z +
+			this.w * quaterion.w
+		);
 	}
 
 	multiply(quaterion: Quaterion) {

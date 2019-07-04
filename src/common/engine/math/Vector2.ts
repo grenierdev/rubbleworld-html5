@@ -2,12 +2,7 @@ import { clamp } from './util';
 import { Matrix3 } from './Matrix3';
 
 export class Vector2 {
-	constructor(
-		public x = 0,
-		public y = 0
-	) {
-
-	}
+	constructor(public x = 0, public y = 0) {}
 
 	get length() {
 		return Math.sqrt(this.x * this.x + this.y * this.y);
@@ -168,7 +163,9 @@ export class Vector2 {
 
 	clampLength(min: number, max: number) {
 		const length = this.length;
-		return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
+		return this.divideScalar(length || 1).multiplyScalar(
+			Math.max(min, Math.min(max, length))
+		);
 	}
 
 	project(normal: Vector2) {
@@ -188,8 +185,9 @@ export class Vector2 {
 	}
 
 	angleTo(vector: Vector2) {
-		const theta = this.dot(vector) / (Math.sqrt(this.lengthSquared * vector.lengthSquared));
-		return Math.acos(clamp(theta, - 1, 1));
+		const theta =
+			this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
+		return Math.acos(clamp(theta, -1, 1));
 	}
 
 	distanceTo(vector: Vector2) {
