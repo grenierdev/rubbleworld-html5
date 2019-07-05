@@ -74,7 +74,7 @@ export class Debug {
 	private static lineNeedsUpdate = false;
 
 	public static log(...args: any[]) {
-		console.log.apply(console, args);
+		console.log(...args);
 	}
 
 	public static setRenderingContext(gl: WebGLRenderingContext) {

@@ -1,0 +1,22 @@
+{
+	"name": "lobby",
+	"private": true,
+	"version": "0.0.1",
+	"dependencies": {
+		"@fexel/core": "*",
+		"react": "16.8.6",
+		"react-dom": "16.8.6"
+	},
+	"devDependencies": {
+		"parcel-bundler": "^1.12.3",
+		"rimraf": "^2.6.3",
+		"tslint": "^5.18.0",
+		"tslint-config-airbnb": "^5.11.1",
+		"tslint-config-prettier": "^1.18.0",
+		"typescript": "^3.5.2"
+	},
+	"scripts": {
+		"start": "parcel -p 8080 ./src/index.html",
+		"build": "parcel build ./src/index.html --public-url '/'"
+	}
+}

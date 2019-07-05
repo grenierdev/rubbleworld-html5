@@ -1,15 +1,15 @@
-import { Material } from '../common/engine/rendering/Material';
-import { Matrix4 } from '../common/engine/math/Matrix4';
+import { Material } from '@fexel/core/rendering/Material';
+import { Matrix4 } from '@fexel/core/math/Matrix4';
 import {
 	CameraOrthographic,
 	CameraPerspective,
-} from '../common/engine/rendering/Camera';
-import { Vector3 } from '../common/engine/math/Vector3';
-import { Quaterion } from '../common/engine/math/Quaterion';
-import { Mesh, PointMesh } from '../common/engine/rendering/Mesh';
-import { Texture } from '../common/engine/rendering/Texture';
-import { Debug } from '../common/engine/Debug';
-import { Color } from '../common/engine/math/Color';
+} from '@fexel/core/rendering/Camera';
+import { Vector3 } from '@fexel/core/math/Vector3';
+import { Quaterion } from '@fexel/core/math/Quaterion';
+import { Mesh, PointMesh } from '@fexel/core/rendering/Mesh';
+import { Texture } from '@fexel/core/rendering/Texture';
+import { Debug } from '@fexel/core/Debug';
+import { Color } from '@fexel/core/math/Color';
 
 // Source: http://learningwebgl.com/blog/?p=28
 
@@ -113,8 +113,15 @@ let frameId = 0;
 	gl.disable(gl.DEPTH_TEST);
 	gl.enable(gl.BLEND);
 
-	for (let i = 10; --i >= 0; ) {
-		rotation.z = Math.sin(Math.max(0, frameId - i * 10) / 20);
+	cameraPos.z = Math.sin(frameId / 3) - 20;
+	view.compose(
+		cameraPos,
+		Quaterion.Identity,
+		Vector3.One
+	);
+
+	for (let i = 4; --i >= 0; ) {
+		// rotation.z = Math.sin(Math.max(0, frameId - i * 10) / 20);
 		position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
 		position.y = Math.cos(Math.max(0, frameId - i * 10) / 20);
 		world.compose(
@@ -123,17 +130,12 @@ let frameId = 0;
 			Vector3.One
 		);
 
-		cameraPos.z = Math.sin(frameId / 10) - 20;
-		view.compose(
-			cameraPos,
-			Quaterion.Identity,
-			Vector3.One
-		);
 		// Use material set attribute & uniform
-		material.bind();
 		material.setUniform('worldMatrix', world.elements);
 		material.setUniform('viewMatrix', view.elements);
-		mesh.bind();
+		material.bind();
+		// material.updateUniforms();
+		// mesh.bind();
 		mesh.draw();
 
 		// Debug.drawPrimitivePoints(

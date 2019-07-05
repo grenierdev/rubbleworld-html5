@@ -1,9 +1,9 @@
-import { Behaviour } from '../Scene';
+import { Component, Entity } from '../Scene';
 import { Matrix4 } from '../math/Matrix4';
 import { Vector3 } from '../math/Vector3';
 import { Quaterion } from '../math/Quaterion';
 
-export class Transform extends Behaviour {
+export class TransformComponent extends Component {
 	public localMatrix: Matrix4;
 	public worldMatrix: Matrix4;
 
@@ -21,6 +21,7 @@ export class Transform extends Behaviour {
 		this.cachedPosition = new Vector3();
 		this.cachedRotation = new Quaterion();
 		this.cachedScale = new Vector3();
+		this.cachedParentMatrix = new Matrix4();
 		this.localMatrix = new Matrix4().compose(
 			this.localPosition,
 			this.localRotation,
@@ -33,9 +34,9 @@ export class Transform extends Behaviour {
 		let changed = false;
 
 		// Get parent transform from parent entity if possible
-		let parentTransform: Transform | undefined;
+		let parentTransform: TransformComponent | undefined;
 		if (this.entity && this.entity.parent) {
-			parentTransform = this.entity.parent.getBehaviour(Transform);
+			parentTransform = this.entity.parent.getComponent(TransformComponent);
 		}
 
 		// Did the transform changed ?
@@ -50,17 +51,22 @@ export class Transform extends Behaviour {
 				this.localRotation,
 				this.localScale
 			);
+			this.cachedPosition.copy(this.localPosition);
+			this.cachedRotation.copy(this.localRotation);
+			this.cachedScale.copy(this.localScale);
 			changed = true;
 		}
 
-		// Got a parent, maybe local changed
+		// Got a parent, maybe parent changed
 		if (parentTransform) {
 			// Did the parent transform changed ?
 			if (
 				this.cachedParentMatrix === undefined ||
 				this.cachedParentMatrix.equals(parentTransform.worldMatrix) === false
 			) {
-				this.cachedParentMatrix = parentTransform.worldMatrix;
+				this.cachedParentMatrix = this.cachedParentMatrix
+					? this.cachedParentMatrix.copy(parentTransform.worldMatrix)
+					: parentTransform.worldMatrix.clone();
 				changed = true;
 			}
 
@@ -108,4 +114,14 @@ export class Transform extends Behaviour {
 			.applyQuaternion(this.localRotation)
 			.applyMatrix4(this.worldMatrix);
 	}
+}
+
+export function EmptyPrefab(
+	position = Vector3.Zero,
+	rotation = Quaterion.Identity,
+	scale = Vector3.One
+) {
+	return new Entity('EmptyPrefab', [
+		new TransformComponent(position.clone(), scale.clone(), rotation.clone()),
+	]);
 }

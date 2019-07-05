@@ -1,17 +1,17 @@
 import 'mocha';
 import { use, expect, should } from 'chai';
 should();
-import { Scene, Entity, Behaviour } from './Scene';
+import { Scene, Entity, Component } from './Scene';
 
 describe('Scene', () => {
 	it('update order', async () => {
-		const behA = new DummyBehaviour();
-		const behB = new DummyBehaviour();
-		const behC = new DummyBehaviour();
+		const behA = new DummyComponent();
+		const behB = new DummyComponent();
+		const behC = new DummyComponent();
 
 		const scene = new Scene([
-			new Entity([behA], [new Entity([behB])]),
-			new Entity([behC]),
+			new Entity('A', [behA], [new Entity('B', [behB])]),
+			new Entity('C', [behC]),
 		]);
 
 		expect(behA.count).to.equal(0);
@@ -52,13 +52,13 @@ describe('Scene', () => {
 	});
 
 	it('update breaks', async () => {
-		const behA = new DummyBehaviour();
-		const behB = new DummyBehaviour();
-		const behC = new DummyBehaviour();
+		const behA = new DummyComponent();
+		const behB = new DummyComponent();
+		const behC = new DummyComponent();
 
 		const scene = new Scene([
-			new Entity([behA], [new Entity([behB])]),
-			new Entity([behC]),
+			new Entity('A', [behA], [new Entity('B', [behB])]),
+			new Entity('C', [behC]),
 		]);
 
 		expect(behA.count).to.equal(0);
@@ -96,7 +96,7 @@ describe('Scene', () => {
 	});
 });
 
-class DummyBehaviour extends Behaviour {
+class DummyComponent extends Component {
 	count = 0;
 
 	onUpdate() {

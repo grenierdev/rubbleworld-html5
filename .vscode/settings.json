@@ -1,6 +1,10 @@
 {
 	"files.exclude": {
-		"**/node_modules": true
+		"**/.cache": true,
+		"**/node_modules": true,
+		"**/*.d.ts": true,
+		"**/*.js": true,
+		"**/*.js.map": true
 	},
 	"editor.formatOnPaste": true,
 	"editor.formatOnSave": true,

@@ -1,3 +1,11 @@
-/node_modules
-/dist/**
-/.cache/**
+# node
+**/node_modules
+**/.cache
+
+# typescript
+**/*.js
+**/*.js.map
+**/*.d.ts
+
+# misc
+npm-debug.log*

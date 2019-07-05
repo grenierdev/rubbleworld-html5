@@ -1,0 +1,29 @@
+{
+	"name": "@fexel/core",
+	"version": "0.0.1",
+	"dependencies": {
+		"@konstellio/disposable": "^0.2.9",
+		"@konstellio/eventemitter": "^0.2.9",
+		"reflect-metadata": "^0.1.13"
+	},
+	"devDependencies": {
+		"@types/chai": "4.1.3",
+		"@types/mocha": "^5.2.7",
+		"chai": "^4.2.0",
+		"mocha": "^6.1.4",
+		"rimraf": "^2.6.3",
+		"tslint": "^5.18.0",
+		"tslint-config-airbnb": "^5.11.1",
+		"tslint-config-prettier": "^1.18.0",
+		"typescript": "^3.5.2"
+	},
+	"scripts": {
+		"build": "npm run clean && npm run compile",
+		"clean": "rimraf **/*.{js,js.map,d.ts}",
+		"compile": "tsc",
+		"start": "tsc --build --watch",
+		"lint": "tslint --project ./tsconfig.json",
+		"test": "mocha --full-trace **/*.spec.js",
+		"test:ts": "mocha --require ts-node/register --full-trace **/*.spec.ts"
+	}
+}

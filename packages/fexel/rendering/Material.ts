@@ -226,22 +226,19 @@ export class Material implements IDisposable {
 			Material.currentMaterial = this;
 			Mesh.currentMesh = undefined;
 			this.gl.useProgram(this.program);
-			this.updateUniforms();
 			if (this.twoSided) {
 				this.gl.disable(this.gl.CULL_FACE);
 			} else {
 				this.gl.enable(this.gl.CULL_FACE);
 			}
 		}
+		this.updateUniforms();
 	}
 
 	setUniform(name: string, value: number | number[] | Texture): void {
 		if (this.uniforms.has(name)) {
 			const uniform = this.uniforms.get(name)!;
 			uniform.value = value;
-			if (Material.currentMaterial === this) {
-				this.updateUniform(uniform);
-			}
 		}
 	}
 

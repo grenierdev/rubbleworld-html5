@@ -3,7 +3,6 @@ import { IDisposable } from '@konstellio/disposable';
 import { Material } from './rendering/Material';
 import { Texture } from './rendering/Texture';
 import { Scene } from './Scene';
-import { loadImageFromUrl } from './util/loadImage';
 
 export class Engine implements IDisposable {
 	readonly mainScene?: Scene;
@@ -40,16 +39,16 @@ export class Engine implements IDisposable {
 		}
 	}
 
-	createMaterial(
-		vertexShader: string,
-		fragmentShader: string
-	): Promise<Material> {
-		return Promise.resolve(new Material(this, vertexShader, fragmentShader));
-	}
+	// createMaterial(
+	// 	vertexShader: string,
+	// 	fragmentShader: string
+	// ): Promise<Material> {
+	// 	return Promise.resolve(new Material(this, vertexShader, fragmentShader));
+	// }
 
-	loadTexture(url: string): Promise<Texture> {
-		return loadImageFromUrl(url).then(image => {
-			return new Texture(this, image);
-		});
-	}
+	// loadTexture(url: string): Promise<Texture> {
+	// 	return loadImageFromUrl(url).then(image => {
+	// 		return new Texture(this, image);
+	// 	});
+	// }
 }

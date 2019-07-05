@@ -530,10 +530,48 @@ export class Matrix4 {
 		return this;
 	}
 
+	lookAt(eye: Vector3, target: Vector3, up: Vector3) {
+		const te = this.elements;
+
+		tv0.subVectors(eye, target);
+
+		// eye and target are in the same position
+		if (tv0.lengthSquared === 0) {
+			tv0.z = 1;
+		}
+
+		tv0.normalize();
+		tv1.crossVectors(up, tv0);
+
+		// up and tv0 are parallel
+		if (tv1.lengthSquared === 0) {
+			tv0.z += Math.abs(up.z) === 1 ? 0.0001 : -0.0001;
+			tv0.normalize();
+			tv1.crossVectors(up, tv0);
+		}
+
+		tv1.normalize();
+		tv2.crossVectors(tv0, tv1);
+
+		te[0] = tv1.x;
+		te[1] = tv1.y;
+		te[2] = tv1.z;
+		te[4] = tv2.x;
+		te[5] = tv2.y;
+		te[6] = tv2.z;
+		te[8] = tv0.x;
+		te[9] = tv0.y;
+		te[10] = tv0.z;
+
+		return this;
+	}
+
 	static readonly Identity = new Matrix4();
 }
 
 Object.freeze(Matrix4.Identity);
 
 const tv0 = new Vector3();
+const tv1 = new Vector3();
+const tv2 = new Vector3();
 const tm0 = new Matrix4();
