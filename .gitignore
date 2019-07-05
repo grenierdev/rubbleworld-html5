@@ -9,3 +9,6 @@
 
 # misc
 npm-debug.log*
+
+# parcel + typescript
+/examples/*/dist
