@@ -1,12 +1,17 @@
+import { Mutable } from './util/Mutable';
+
 export abstract class Component {
+	public static readonly executionOrder = 0;
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
+	public readonly mounted: boolean;
 
 	private cachedUpdateGenerator: IterableIterator<any> | false | undefined;
 	private cachedLateUpdateGenerator: IterableIterator<any> | false | undefined;
 
 	constructor() {
 		this.enabled = true;
+		this.mounted = false;
 	}
 
 	getComponent<T extends Component>(type: any): T | undefined {
@@ -23,14 +28,18 @@ export abstract class Component {
 	onRender(): void {}
 }
 
+interface ComponentCachedGenerator {
+	cachedUpdateGenerator: undefined | false | IterableIterator<void>;
+	cachedLateUpdateGenerator: undefined | false | IterableIterator<void>;
+	cachedFixedUpdateGenerator: undefined | false | IterableIterator<void>;
+}
+
 export class Entity {
 	public readonly parent: undefined | Entity;
 	public readonly enabled: boolean;
-
-	private mounted: boolean;
-
-	private children: Entity[];
-	private components: Component[];
+	public readonly children: Entity[];
+	public readonly components: Component[];
+	public readonly mounted: boolean;
 
 	constructor(
 		public name: string,
@@ -43,7 +52,8 @@ export class Entity {
 		this.components = [];
 
 		for (const component of components) {
-			this.addComponent(component);
+			this.components.push(component);
+			(component as any).entity = this;
 		}
 
 		for (const child of children) {
@@ -67,26 +77,23 @@ export class Entity {
 		if (idx > -1) {
 			this.children.splice(idx, 1);
 			(entity as any).parent = undefined;
-			(entity as any).mounted = false;
 			for (const component of entity.components) {
 				component.onStop();
 			}
 		}
 	}
 
-	addComponent(component: Component) {
-		if (this.components.indexOf(component) === -1) {
-			this.components.push(component);
-			(component as any).entity = this;
+	getChildren(recursive = false) {
+		if (!recursive) {
+			return [...this.children];
 		}
-	}
-
-	removeComponent(component: Component) {
-		const idx = this.components.indexOf(component);
-		if (idx > -1) {
-			this.components.splice(idx, 1);
-			(component as any).entity = undefined;
-		}
+		return this.children.reduce(
+			(children, child) => {
+				children.push(child, ...child.getChildren(true));
+				return children;
+			},
+			[] as Entity[]
+		);
 	}
 
 	getComponent<T extends Component>(type: any): T | undefined {
@@ -97,68 +104,126 @@ export class Entity {
 			return component as T;
 		}
 	}
+}
+
+export class Scene extends Entity {
+	protected readonly allComponents: Component[];
+
+	constructor(children: Entity[] = []) {
+		super('Scene', [], children);
+		this.allComponents = [];
+	}
 
 	*update(): IterableIterator<void> {
-		if (this.enabled) {
-			if (this.mounted === false && this.parent) {
-				this.mounted = true;
-
-				for (const component of this.components) {
-					component.onStart();
-				}
+		const entities: Entity[] = this.getChildren(true);
+		for (const entity of entities) {
+			// Entity is part of the tree and is not yet mounted
+			if (entity.parent && !entity.mounted) {
+				(entity as Mutable<Entity>).mounted = true;
+				this.allComponents.push(
+					...entity.components.sort(
+						(a, b) =>
+							(a.constructor as typeof Component).executionOrder -
+							(b.constructor as typeof Component).executionOrder
+					)
+				);
 			}
+		}
 
-			for (const component of this.components) {
-				if ((component as any).cachedUpdateGenerator === false) {
-					component.onUpdate();
-				} else {
-					if ((component as any).cachedUpdateGenerator === undefined) {
-						(component as any).cachedUpdateGenerator =
-							component.onUpdate() || false;
-					}
+		const activeComponents: Component[] = [];
+		const inactiveComponents: Component[] = [];
+		for (const component of this.allComponents) {
+			// Component no longer attached to entity (?) and no longer part of the tree
+			if (!component.entity || !component.entity.parent) {
+				inactiveComponents.push(component);
+			} else {
+				activeComponents.push(component);
+			}
+		}
 
-					if ((component as any).cachedUpdateGenerator) {
-						const next = (component as any).cachedUpdateGenerator.next() as IteratorResult<
-							void
-						>;
-						if (next.done === true) {
-							(component as any).cachedUpdateGenerator = undefined;
-						}
-					}
+		for (const component of inactiveComponents) {
+			component.onStop();
+			(component as Mutable<Component>).mounted = false;
+		}
+
+		for (const component of activeComponents) {
+			if (component.enabled && component.entity && component.entity.enabled) {
+				if (!component.mounted) {
+					component.onStart();
+					(component as Mutable<Component>).mounted = true;
 				}
+				callIteratorAndCacheResult(
+					component,
+					'onUpdate',
+					'cachedUpdateGenerator'
+				);
 				yield;
 			}
+		}
 
-			for (const child of this.children) {
-				yield* child.update();
+		this.allComponents.splice(
+			0,
+			this.allComponents.length,
+			...activeComponents
+		);
+
+		for (const component of activeComponents) {
+			if (component.enabled && component.entity && component.entity.enabled) {
+				callIteratorAndCacheResult(
+					component,
+					'onLateUpdate',
+					'cachedLateUpdateGenerator'
+				);
+				yield;
 			}
+		}
+	}
 
-			for (const component of this.components) {
-				if ((component as any).cachedLateUpdateGenerator === false) {
-					component.onLateUpdate();
-				} else {
-					if ((component as any).cachedLateUpdateGenerator === undefined) {
-						(component as any).cachedLateUpdateGenerator =
-							component.onLateUpdate() || false;
-					}
+	*fixedUpdate(): IterableIterator<void> {
+		for (const component of this.allComponents) {
+			if (component.enabled && component.entity && component.entity.enabled) {
+				callIteratorAndCacheResult(
+					component,
+					'onFixedUpdate',
+					'cachedFixedUpdateGenerator'
+				);
+				yield;
+			}
+		}
+	}
 
-					if ((component as any).cachedLateUpdateGenerator) {
-						const next = (component as any).cachedLateUpdateGenerator.next() as IteratorResult<
-							void
-						>;
-						if (next.done === true) {
-							(component as any).cachedLateUpdateGenerator = undefined;
-						}
-					}
-				}
+	*render(): IterableIterator<void> {
+		for (const component of this.allComponents) {
+			if (component.enabled && component.entity && component.entity.enabled) {
+				component.onRender();
 				yield;
 			}
 		}
 	}
 }
 
-export class Scene extends Entity {
-	constructor(children: Entity[] = []) {
-		super('Scene', [], children);
+function callIteratorAndCacheResult(
+	component: Component,
+	method: 'onUpdate' | 'onLateUpdate' | 'onFixedUpdate',
+	cache:
+		| 'cachedUpdateGenerator'
+		| 'cachedLateUpdateGenerator'
+		| 'cachedFixedUpdateGenerator'
+) {
+	const componentCachedGenerator: ComponentCachedGenerator = (component as unknown) as ComponentCachedGenerator;
+	const cached = componentCachedGenerator[cache];
+
+	if (cached === false) {
+		component[method]();
+	} else {
+		if (cached === undefined) {
+			componentCachedGenerator[cache] = component[method]() || false;
+		}
+		if (cached) {
+			const next = cached.next();
+			if (next.done === true) {
+				componentCachedGenerator[cache] = undefined;
+			}
+		}
 	}
 }

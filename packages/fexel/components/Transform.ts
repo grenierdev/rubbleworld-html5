@@ -2,15 +2,17 @@ import { Component, Entity } from '../Scene';
 import { Matrix4 } from '../math/Matrix4';
 import { Vector3 } from '../math/Vector3';
 import { Quaterion } from '../math/Quaterion';
+import { Mutable } from '../util/Mutable';
 
 export class TransformComponent extends Component {
-	public localMatrix: Matrix4;
-	public worldMatrix: Matrix4;
+	public readonly localMatrix: Matrix4;
+	public readonly worldMatrix: Matrix4;
+	public readonly parentTransform: TransformComponent | undefined;
 
-	private cachedPosition: Vector3;
-	private cachedRotation: Quaterion;
-	private cachedScale: Vector3;
-	private cachedParentMatrix: Matrix4 | undefined;
+	private lastParent: Entity | undefined;
+	private lastLocalMatrix: Matrix4;
+	private lastParentTransform: TransformComponent | undefined;
+	private lastParentWorldMatrix: Matrix4 | undefined;
 
 	constructor(
 		public localPosition = new Vector3(),
@@ -18,101 +20,62 @@ export class TransformComponent extends Component {
 		public localRotation = new Quaterion()
 	) {
 		super();
-		this.cachedPosition = new Vector3();
-		this.cachedRotation = new Quaterion();
-		this.cachedScale = new Vector3();
-		this.cachedParentMatrix = new Matrix4();
 		this.localMatrix = new Matrix4().compose(
 			this.localPosition,
 			this.localRotation,
 			this.localScale
 		);
-		this.worldMatrix = new Matrix4().copy(this.localMatrix);
+		this.worldMatrix = this.localMatrix.clone();
+
+		this.lastLocalMatrix = this.localMatrix.clone();
 	}
 
 	onUpdate() {
-		let changed = false;
+		this.localMatrix.compose(
+			this.localPosition,
+			this.localRotation,
+			this.localScale
+		);
 
-		// Get parent transform from parent entity if possible
-		let parentTransform: TransformComponent | undefined;
-		if (this.entity && this.entity.parent) {
-			parentTransform = this.entity.parent.getComponent(TransformComponent);
+		if (this.entity && this.lastParent !== this.entity.parent) {
+			this.lastParent = this.entity.parent;
+			(this as Mutable<TransformComponent>).parentTransform =
+				(this.entity.parent &&
+					this.entity.parent.getComponent(TransformComponent)) ||
+				undefined;
 		}
-
-		// Did the transform changed ?
-		if (
-			this.cachedPosition.equals(this.localPosition) === false ||
-			this.cachedRotation.equals(this.localRotation) === false ||
-			this.cachedScale.equals(this.localScale) === false
-		) {
-			// Compose new matrix
-			this.localMatrix.compose(
-				this.localPosition,
-				this.localRotation,
-				this.localScale
-			);
-			this.cachedPosition.copy(this.localPosition);
-			this.cachedRotation.copy(this.localRotation);
-			this.cachedScale.copy(this.localScale);
-			changed = true;
-		}
-
-		// Got a parent, maybe parent changed
-		if (parentTransform) {
-			// Did the parent transform changed ?
+		if (this.parentTransform) {
 			if (
-				this.cachedParentMatrix === undefined ||
-				this.cachedParentMatrix.equals(parentTransform.worldMatrix) === false
+				this.lastParentTransform !== this.parentTransform ||
+				!this.lastParentWorldMatrix ||
+				!this.lastParentWorldMatrix.equals(this.parentTransform.worldMatrix) ||
+				!this.lastLocalMatrix.equals(this.localMatrix)
 			) {
-				this.cachedParentMatrix = this.cachedParentMatrix
-					? this.cachedParentMatrix.copy(parentTransform.worldMatrix)
-					: parentTransform.worldMatrix.clone();
-				changed = true;
-			}
-
-			// Either local or parent has changed
-			if (changed) {
-				// Compute world matrix
 				this.worldMatrix.multiplyMatrices(
-					this.cachedParentMatrix,
+					this.parentTransform.worldMatrix,
 					this.localMatrix
 				);
+				this.lastParentWorldMatrix = this.lastParentWorldMatrix
+					? this.lastParentWorldMatrix.copy(this.parentTransform.worldMatrix)
+					: this.parentTransform.worldMatrix.clone();
 			}
-		}
-
-		// Had a parent, but no more
-		else if (this.cachedParentMatrix) {
-			this.cachedParentMatrix = undefined;
-			// Set world matrix to local one
+		} else if (!this.lastLocalMatrix.equals(this.localMatrix)) {
 			this.worldMatrix.copy(this.localMatrix);
 		}
 
-		// No parent, but something changed
-		else if (changed) {
-			// Update world matrix to reflect local one
-			this.worldMatrix.copy(this.localMatrix);
-		}
+		this.lastLocalMatrix.copy(this.localMatrix);
 	}
 
 	getForwardVector(target: Vector3) {
-		return target
-			.copy(Vector3.Forward)
-			.applyQuaternion(this.localRotation)
-			.applyMatrix4(this.worldMatrix);
+		return target.copy(Vector3.Forward).applyMatrix4(this.worldMatrix);
 	}
 
 	getRightVector(target: Vector3) {
-		return target
-			.copy(Vector3.Right)
-			.applyQuaternion(this.localRotation)
-			.applyMatrix4(this.worldMatrix);
+		return target.copy(Vector3.Right).applyMatrix4(this.worldMatrix);
 	}
 
 	getUpVector(target: Vector3) {
-		return target
-			.copy(Vector3.Up)
-			.applyQuaternion(this.localRotation)
-			.applyMatrix4(this.worldMatrix);
+		return target.copy(Vector3.Up).applyMatrix4(this.worldMatrix);
 	}
 }
 
