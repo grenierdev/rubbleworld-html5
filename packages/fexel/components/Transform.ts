@@ -3,8 +3,13 @@ import { Matrix4 } from '../math/Matrix4';
 import { Vector3 } from '../math/Vector3';
 import { Quaterion } from '../math/Quaterion';
 import { Mutable } from '../util/Mutable';
+import { Euler } from '../math/Euler';
 
 export class TransformComponent extends Component {
+	public static executionOrder = -1000;
+
+	public localQuaterion = new Quaterion();
+
 	public readonly localMatrix: Matrix4;
 	public readonly worldMatrix: Matrix4;
 	public readonly parentTransform: TransformComponent | undefined;
@@ -17,23 +22,30 @@ export class TransformComponent extends Component {
 	constructor(
 		public localPosition = new Vector3(),
 		public localScale = new Vector3(1, 1, 1),
-		public localRotation = new Quaterion()
+		public localRotation = new Euler()
 	) {
 		super();
+		this.localQuaterion.setFromEuler(this.localRotation);
 		this.localMatrix = new Matrix4().compose(
 			this.localPosition,
-			this.localRotation,
+			this.localQuaterion,
 			this.localScale
 		);
 		this.worldMatrix = this.localMatrix.clone();
+		(this as Mutable<TransformComponent>).parentTransform =
+			(this.entity &&
+				this.entity.parent &&
+				this.entity.parent.getComponent(TransformComponent)) ||
+			undefined;
 
 		this.lastLocalMatrix = this.localMatrix.clone();
 	}
 
 	onUpdate() {
+		this.localQuaterion.setFromEuler(this.localRotation);
 		this.localMatrix.compose(
 			this.localPosition,
-			this.localRotation,
+			this.localQuaterion,
 			this.localScale
 		);
 
@@ -51,6 +63,7 @@ export class TransformComponent extends Component {
 				!this.lastParentWorldMatrix.equals(this.parentTransform.worldMatrix) ||
 				!this.lastLocalMatrix.equals(this.localMatrix)
 			) {
+				this.lastLocalMatrix.copy(this.localMatrix);
 				this.worldMatrix.multiplyMatrices(
 					this.parentTransform.worldMatrix,
 					this.localMatrix
@@ -60,31 +73,44 @@ export class TransformComponent extends Component {
 					: this.parentTransform.worldMatrix.clone();
 			}
 		} else if (!this.lastLocalMatrix.equals(this.localMatrix)) {
+			this.lastLocalMatrix.copy(this.localMatrix);
 			this.worldMatrix.copy(this.localMatrix);
 		}
-
-		this.lastLocalMatrix.copy(this.localMatrix);
 	}
 
 	getForwardVector(target: Vector3) {
-		return target.copy(Vector3.Forward).applyMatrix4(this.worldMatrix);
+		// return target.copy(Vector3.Forward).applyMatrix4(this.localMatrix);
+		const e = this.worldMatrix.elements;
+		return target.set(e[8], e[9], e[10]).normalize();
 	}
 
 	getRightVector(target: Vector3) {
-		return target.copy(Vector3.Right).applyMatrix4(this.worldMatrix);
+		// return target.copy(Vector3.Right).applyMatrix4(this.localMatrix);
+		const e = this.worldMatrix.elements;
+		return target.set(e[0], e[4], e[8]).normalize();
 	}
 
 	getUpVector(target: Vector3) {
-		return target.copy(Vector3.Up).applyMatrix4(this.worldMatrix);
+		// return target.copy(Vector3.Up).applyMatrix4(this.localMatrix);
+		const e = this.worldMatrix.elements;
+		return target.set(e[1], e[5], e[9]).normalize();
 	}
 }
 
-export function EmptyPrefab(
+export function EmptyPrefab({
 	position = Vector3.Zero,
-	rotation = Quaterion.Identity,
-	scale = Vector3.One
-) {
-	return new Entity('EmptyPrefab', [
-		new TransformComponent(position.clone(), scale.clone(), rotation.clone()),
-	]);
+	rotation = Euler.Zero,
+	scale = Vector3.One,
+	children = [],
+}: {
+	position?: Vector3;
+	rotation?: Euler;
+	scale?: Vector3;
+	children?: Entity[];
+}) {
+	return new Entity(
+		'EmptyPrefab',
+		[new TransformComponent(position.clone(), scale.clone(), rotation.clone())],
+		[...children]
+	);
 }

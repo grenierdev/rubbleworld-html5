@@ -1,79 +1,213 @@
 import 'mocha';
-import { use, expect, should } from 'chai';
-should();
+import { expect } from 'chai';
 import { Scene, Entity, Component } from './Scene';
 
 describe('Scene', () => {
-	it('update generator', async () => {
-		const behA = new DummyComponent();
-		const behB = new DummyComponent();
-		const behC = new DummyComponent();
+	it('update iterator', async () => {
+		const A = new DummyComponent();
+		const scene = new Scene([new Entity('A', [A])]);
 
-		const scene = new Scene([
-			new Entity('A', [behA], [new Entity('B', [behB])]),
-			new Entity('C', [behC]),
-		]);
-
-		expect(behA.count).to.equal(0);
-		expect(behB.count).to.equal(0);
-		expect(behC.count).to.equal(0);
-
-		// Update #1
 		let stepper = scene.update();
-		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(1);
-		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(2);
-		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(3);
 
-		// Update #2
-		stepper = scene.update();
+		// onStart
 		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(4);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(0);
+		expect(A.lateUpdate).to.equal(0);
+
+		// onUpdate
 		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(5);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+
+		// onLateUpdate
 		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(6);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(1);
+
+		expect(stepper.next().done).to.equal(true);
 	});
 
-	it('update generator interruption', async () => {
-		const behA = new DummyComponent();
-		const behB = new DummyComponent();
-		const behC = new DummyComponent();
+	it('component entity order', async () => {
+		const A = new DummyComponent();
+		const B = new DummyComponent();
+		const C = new DummyComponent();
 
 		const scene = new Scene([
-			new Entity('A', [behA], [new Entity('B', [behB])]),
-			new Entity('C', [behC]),
+			new Entity('A', [A], [new Entity('B', [B])]),
+			new Entity('C', [C]),
 		]);
 
-		expect(behA.count).to.equal(0);
-		expect(behB.count).to.equal(0);
-		expect(behC.count).to.equal(0);
-
-		// Update #1
 		let stepper = scene.update();
-		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(1);
-		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(2);
-		// Update #1 ignored
 
-		// Update #2
-		stepper = scene.update();
 		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(3);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(0);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(0);
+		expect(B.update).to.equal(0);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(0);
+		expect(C.update).to.equal(0);
+		expect(C.lateUpdate).to.equal(0);
 		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(4);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(0);
+		expect(B.update).to.equal(0);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(0);
+		expect(C.update).to.equal(0);
+		expect(C.lateUpdate).to.equal(0);
 		expect(stepper.next().done).to.equal(false);
-		expect(behA.count + behB.count + behC.count).to.equal(5);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(0);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(0);
+		expect(C.update).to.equal(0);
+		expect(C.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(0);
+		expect(C.update).to.equal(0);
+		expect(C.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(1);
+		expect(C.update).to.equal(0);
+		expect(C.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(1);
+		expect(C.update).to.equal(1);
+		expect(C.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(1);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(C.start).to.equal(1);
+		expect(C.update).to.equal(1);
+		expect(C.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(1);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(1);
+		expect(C.start).to.equal(1);
+		expect(C.update).to.equal(1);
+		expect(C.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(1);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(1);
+		expect(C.start).to.equal(1);
+		expect(C.update).to.equal(1);
+		expect(C.lateUpdate).to.equal(1);
+
+		expect(stepper.next().done).to.equal(true);
+	});
+
+	it('component execution order', async () => {
+		const A = new DummyComponent();
+		const B = new PriorityComponent();
+
+		const scene = new Scene([new Entity('A', [A]), new Entity('B', [B])]);
+
+		let stepper = scene.update();
+
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(0);
+		expect(A.update).to.equal(0);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(0);
+		expect(B.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(0);
+		expect(A.update).to.equal(0);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(0);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(0);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(0);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(1);
+		expect(stepper.next().done).to.equal(false);
+		expect(A.start).to.equal(1);
+		expect(A.update).to.equal(1);
+		expect(A.lateUpdate).to.equal(1);
+		expect(B.start).to.equal(1);
+		expect(B.update).to.equal(1);
+		expect(B.lateUpdate).to.equal(1);
+		expect(stepper.next().done).to.equal(true);
 	});
 });
 
 class DummyComponent extends Component {
-	count = 0;
+	start = 0;
+	update = 0;
+	lateUpdate = 0;
+
+	onStart() {
+		this.start += 1;
+	}
 
 	onUpdate() {
-		this.count += 1;
+		this.update += 1;
 	}
+
+	onLateUpdate() {
+		this.lateUpdate += 1;
+	}
+}
+
+class PriorityComponent extends DummyComponent {
+	public static executionOrder = -10;
 }

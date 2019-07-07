@@ -1,7 +1,7 @@
 import { Mutable } from './util/Mutable';
 
 export abstract class Component {
-	public static readonly executionOrder = 0;
+	public static readonly executionOrder: number = 0;
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
 	public readonly mounted: boolean;
@@ -115,18 +115,14 @@ export class Scene extends Entity {
 	}
 
 	*update(): IterableIterator<void> {
+		let newComponents = false;
 		const entities: Entity[] = this.getChildren(true);
 		for (const entity of entities) {
 			// Entity is part of the tree and is not yet mounted
 			if (entity.parent && !entity.mounted) {
+				newComponents = true;
 				(entity as Mutable<Entity>).mounted = true;
-				this.allComponents.push(
-					...entity.components.sort(
-						(a, b) =>
-							(a.constructor as typeof Component).executionOrder -
-							(b.constructor as typeof Component).executionOrder
-					)
-				);
+				this.allComponents.push(...entity.components);
 			}
 		}
 
@@ -141,6 +137,14 @@ export class Scene extends Entity {
 			}
 		}
 
+		if (newComponents) {
+			activeComponents.sort(
+				(a, b) =>
+					(a.constructor as typeof Component).executionOrder -
+					(b.constructor as typeof Component).executionOrder
+			);
+		}
+
 		for (const component of inactiveComponents) {
 			component.onStop();
 			(component as Mutable<Component>).mounted = false;
@@ -151,6 +155,7 @@ export class Scene extends Entity {
 				if (!component.mounted) {
 					component.onStart();
 					(component as Mutable<Component>).mounted = true;
+					yield;
 				}
 				callIteratorAndCacheResult(
 					component,
