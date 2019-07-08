@@ -21,27 +21,17 @@ export class TransformComponent extends Component {
 
 	constructor(
 		public localPosition = new Vector3(),
-		public localScale = new Vector3(1, 1, 1),
-		public localRotation = new Euler()
+		public localRotation = new Euler(),
+		public localScale = new Vector3(1, 1, 1)
 	) {
 		super();
-		this.localQuaterion.setFromEuler(this.localRotation);
-		this.localMatrix = new Matrix4().compose(
-			this.localPosition,
-			this.localQuaterion,
-			this.localScale
-		);
-		this.worldMatrix = this.localMatrix.clone();
-		(this as Mutable<TransformComponent>).parentTransform =
-			(this.entity &&
-				this.entity.parent &&
-				this.entity.parent.getComponent(TransformComponent)) ||
-			undefined;
-
-		this.lastLocalMatrix = this.localMatrix.clone();
+		this.localMatrix = new Matrix4();
+		this.worldMatrix = new Matrix4();
+		this.lastLocalMatrix = new Matrix4();
+		this.update();
 	}
 
-	onUpdate() {
+	update() {
 		this.localQuaterion.setFromEuler(this.localRotation);
 		this.localMatrix.compose(
 			this.localPosition,
@@ -108,9 +98,9 @@ export function EmptyPrefab({
 	scale?: Vector3;
 	children?: Entity[];
 }) {
-	return new Entity(
-		'EmptyPrefab',
-		[new TransformComponent(position.clone(), scale.clone(), rotation.clone())],
-		[...children]
-	);
+	return new Entity('EmptyPrefab')
+		.addComponent(
+			new TransformComponent(position.clone(), rotation.clone(), scale.clone())
+		)
+		.addChild(...children);
 }

@@ -4,14 +4,14 @@ export abstract class Component {
 	public static readonly executionOrder: number = 0;
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
-	public readonly mounted: boolean;
-
-	private cachedUpdateGenerator: IterableIterator<any> | false | undefined;
-	private cachedLateUpdateGenerator: IterableIterator<any> | false | undefined;
 
 	constructor() {
 		this.enabled = true;
-		this.mounted = false;
+	}
+
+	setEnable(enabled: boolean) {
+		(this as Mutable<Component>).enabled = !!enabled;
+		return this;
 	}
 
 	getComponent<T extends Component>(type: any): T | undefined {
@@ -21,17 +21,10 @@ export abstract class Component {
 		return undefined;
 	}
 
-	onStart(): void {}
-	onStop(): void {}
-	onUpdate(): IterableIterator<void> | void {}
-	onLateUpdate(): IterableIterator<void> | void {}
-	onRender(): void {}
-}
-
-interface ComponentCachedGenerator {
-	cachedUpdateGenerator: undefined | false | IterableIterator<void>;
-	cachedLateUpdateGenerator: undefined | false | IterableIterator<void>;
-	cachedFixedUpdateGenerator: undefined | false | IterableIterator<void>;
+	willMount?(): void;
+	willUnmount?(): void;
+	update?(): IterableIterator<void> | void;
+	// render?(): void;
 }
 
 export class Entity {
@@ -39,48 +32,67 @@ export class Entity {
 	public readonly enabled: boolean;
 	public readonly children: Entity[];
 	public readonly components: Component[];
-	public readonly mounted: boolean;
 
-	constructor(
-		public name: string,
-		components: Component[] = [],
-		children: Entity[] = []
-	) {
+	public static build({
+		name,
+		enabled,
+		children,
+		components,
+	}: {
+		name: string;
+		enabled?: boolean;
+		children?: Entity[];
+		components?: Component[];
+	}) {
+		return new Entity(name)
+			.setEnable(enabled === undefined ? true : enabled)
+			.addChild(...(children || []))
+			.addComponent(...(components || []));
+	}
+
+	constructor(public name: string) {
 		this.enabled = true;
-		this.mounted = false;
 		this.children = [];
 		this.components = [];
+	}
 
-		for (const component of components) {
-			this.components.push(component);
-			(component as any).entity = this;
-		}
-
-		for (const child of children) {
-			this.addChild(child);
+	get scene(): Scene | undefined {
+		if (this.parent) {
+			return this.parent instanceof Scene ? this.parent : this.parent.scene;
 		}
 	}
 
 	setEnable(enabled: boolean) {
-		(this as any).enabled = enabled;
+		(this as Mutable<Entity>).enabled = !!enabled;
+		return this;
 	}
 
-	addChild(entity: Entity) {
-		if (this.children.indexOf(entity) === -1) {
-			this.children.push(entity);
-			(entity as any).parent = this;
-		}
-	}
-
-	removeChild(entity: Entity) {
-		const idx = this.children.indexOf(entity);
-		if (idx > -1) {
-			this.children.splice(idx, 1);
-			(entity as any).parent = undefined;
-			for (const component of entity.components) {
-				component.onStop();
+	addChild(...entities: Entity[]) {
+		for (const entity of entities) {
+			if (this.children.indexOf(entity) === -1) {
+				this.children.push(entity);
+				(entity as Mutable<Entity>).parent = this;
+				const scene = this.scene;
+				if (scene) {
+					(scene as any).entitiesToAdd.push(entity);
+				}
 			}
 		}
+		return this;
+	}
+
+	removeChild(...entities: Entity[]) {
+		for (const entity of entities) {
+			const idx = this.children.indexOf(entity);
+			if (idx > -1) {
+				this.children.splice(idx, 1);
+				const scene = this.scene;
+				if (scene) {
+					(scene as any).entitiesToRemove.push(entity);
+				}
+			}
+		}
+		return this;
 	}
 
 	getChildren(recursive = false) {
@@ -104,131 +116,95 @@ export class Entity {
 			return component as T;
 		}
 	}
+
+	addComponent(...components: Component[]) {
+		for (const component of components) {
+			this.components.push(component);
+			(component as Mutable<Component>).entity = this;
+		}
+		return this;
+	}
 }
 
 export class Scene extends Entity {
-	protected readonly allComponents: Component[];
+	protected readonly everyComponentsInTree: Component[];
+	protected readonly entitiesToAdd: Entity[];
+	protected readonly entitiesToRemove: Entity[];
 
-	constructor(children: Entity[] = []) {
-		super('Scene', [], children);
-		this.allComponents = [];
+	constructor() {
+		super('Scene');
+		this.everyComponentsInTree = [];
+		this.entitiesToAdd = [];
+		this.entitiesToRemove = [];
 	}
 
-	*update(): IterableIterator<void> {
-		let newComponents = false;
-		const entities: Entity[] = this.getChildren(true);
-		for (const entity of entities) {
-			// Entity is part of the tree and is not yet mounted
-			if (entity.parent && !entity.mounted) {
-				newComponents = true;
-				(entity as Mutable<Entity>).mounted = true;
-				this.allComponents.push(...entity.components);
+	get scene(): Scene {
+		return this;
+	}
+
+	*update() {
+		let changed = false;
+
+		// Add newly added entities to the scene
+		if (this.entitiesToAdd.length) {
+			for (const entityToAdd of this.entitiesToAdd) {
+				const entities = [entityToAdd, ...entityToAdd.getChildren(true)];
+				for (const entity of entities) {
+					for (const component of entity.components) {
+						changed = true;
+						this.everyComponentsInTree.push(component);
+						component.willMount && component.willMount();
+						yield;
+					}
+				}
 			}
+			this.entitiesToAdd.splice(0, this.entitiesToAdd.length);
 		}
 
-		const activeComponents: Component[] = [];
-		const inactiveComponents: Component[] = [];
-		for (const component of this.allComponents) {
-			// Component no longer attached to entity (?) and no longer part of the tree
-			if (!component.entity || !component.entity.parent) {
-				inactiveComponents.push(component);
-			} else {
-				activeComponents.push(component);
+		// Remove entities of the scene
+		if (this.entitiesToRemove.length) {
+			for (const entityToRemove of this.entitiesToRemove) {
+				const entities = [entityToRemove, ...entityToRemove.getChildren(true)];
+				for (const entity of entities) {
+					for (const component of entity.components) {
+						const i = this.everyComponentsInTree.indexOf(component);
+						if (i > -1) {
+							changed = true;
+							component.willUnmount && component.willUnmount();
+							this.everyComponentsInTree.splice(i, 1);
+							yield;
+						}
+					}
+					(entity as Mutable<Entity>).parent = undefined;
+				}
 			}
+			this.entitiesToRemove.splice(0, this.entitiesToRemove.length);
 		}
 
-		if (newComponents) {
-			activeComponents.sort(
+		// Something changed, reorder components
+		if (changed) {
+			this.everyComponentsInTree.sort(
 				(a, b) =>
 					(a.constructor as typeof Component).executionOrder -
 					(b.constructor as typeof Component).executionOrder
 			);
 		}
 
-		for (const component of inactiveComponents) {
-			component.onStop();
-			(component as Mutable<Component>).mounted = false;
-		}
-
-		for (const component of activeComponents) {
+		// Update component
+		for (const component of this.everyComponentsInTree) {
 			if (component.enabled && component.entity && component.entity.enabled) {
-				if (!component.mounted) {
-					component.onStart();
-					(component as Mutable<Component>).mounted = true;
-					yield;
-				}
-				callIteratorAndCacheResult(
-					component,
-					'onUpdate',
-					'cachedUpdateGenerator'
-				);
-				yield;
-			}
-		}
-
-		this.allComponents.splice(
-			0,
-			this.allComponents.length,
-			...activeComponents
-		);
-
-		for (const component of activeComponents) {
-			if (component.enabled && component.entity && component.entity.enabled) {
-				callIteratorAndCacheResult(
-					component,
-					'onLateUpdate',
-					'cachedLateUpdateGenerator'
-				);
+				component.update && component.update();
 				yield;
 			}
 		}
 	}
 
-	*fixedUpdate(): IterableIterator<void> {
-		for (const component of this.allComponents) {
-			if (component.enabled && component.entity && component.entity.enabled) {
-				callIteratorAndCacheResult(
-					component,
-					'onFixedUpdate',
-					'cachedFixedUpdateGenerator'
-				);
-				yield;
-			}
-		}
-	}
-
-	*render(): IterableIterator<void> {
-		for (const component of this.allComponents) {
-			if (component.enabled && component.entity && component.entity.enabled) {
-				component.onRender();
-				yield;
-			}
-		}
-	}
-}
-
-function callIteratorAndCacheResult(
-	component: Component,
-	method: 'onUpdate' | 'onLateUpdate' | 'onFixedUpdate',
-	cache:
-		| 'cachedUpdateGenerator'
-		| 'cachedLateUpdateGenerator'
-		| 'cachedFixedUpdateGenerator'
-) {
-	const componentCachedGenerator: ComponentCachedGenerator = (component as unknown) as ComponentCachedGenerator;
-	const cached = componentCachedGenerator[cache];
-
-	if (cached === false) {
-		component[method]();
-	} else {
-		if (cached === undefined) {
-			componentCachedGenerator[cache] = component[method]() || false;
-		}
-		if (cached) {
-			const next = cached.next();
-			if (next.done === true) {
-				componentCachedGenerator[cache] = undefined;
-			}
-		}
-	}
+	// *render() {
+	// 	for (const component of this.everyComponentsInTree) {
+	// 		if (component.enabled && component.entity && component.entity.enabled) {
+	// 			component.render && component.render();
+	// 			yield;
+	// 		}
+	// 	}
+	// }
 }
