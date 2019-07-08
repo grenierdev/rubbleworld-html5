@@ -1,6 +1,6 @@
 import { Vector3 } from './Vector3';
 import { Plane } from './Plane';
-import { Box } from './Box';
+import { Cube } from './Cube';
 
 export class Triangle {
 	constructor(
@@ -64,7 +64,7 @@ export class Triangle {
 		return Triangle.containsPoint(point, this.a, this.b, this.c);
 	}
 
-	intersectsBox(box: Box) {
+	intersectsBox(box: Cube) {
 		return box.intersectsTriangle(this);
 	}
 

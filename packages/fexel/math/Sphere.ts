@@ -1,5 +1,5 @@
 import { Vector3 } from './Vector3';
-import { Box } from './Box';
+import { Cube } from './Cube';
 import { Plane } from './Plane';
 
 export class Sphere {
@@ -55,7 +55,7 @@ export class Sphere {
 		return sphere.center.distanceToSquared(this.center) <= s * s;
 	}
 
-	intersectsBox(box: Box) {
+	intersectsBox(box: Cube) {
 		return box.intersectsSphere(this);
 	}
 
@@ -78,7 +78,7 @@ export class Sphere {
 		return target;
 	}
 
-	getBoundingBox(target: Box) {
+	getBoundingBox(target: Cube) {
 		target.set(this.center, this.center);
 		target.expandByScalar(this.radius);
 		return target;
@@ -95,4 +95,4 @@ export class Sphere {
 	}
 }
 
-const tb0 = new Box();
+const tb0 = new Cube();

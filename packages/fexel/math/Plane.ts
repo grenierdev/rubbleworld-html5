@@ -1,7 +1,7 @@
 import { Vector3 } from './Vector3';
 import { Sphere } from './Sphere';
 import { Line } from './Line';
-import { Box } from './Box';
+import { Cube } from './Cube';
 
 export class Plane {
 	constructor(public normal = new Vector3(1, 0, 0), public constant = 0) {}
@@ -105,7 +105,7 @@ export class Plane {
 		return (startSign < 0 && endSign > 0) || (endSign < 0 && startSign > 0);
 	}
 
-	intersectsBox(box: Box) {
+	intersectsBox(box: Cube) {
 		return box.intersectsPlane(this);
 	}
 
