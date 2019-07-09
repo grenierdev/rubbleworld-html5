@@ -14,9 +14,9 @@ export abstract class Component {
 		return this;
 	}
 
-	getComponent<T extends Component>(type: any): T | undefined {
+	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
 		if (this.entity) {
-			return this.entity.getComponent(type);
+			return this.entity.getComponent(type) as any;
 		}
 		return undefined;
 	}
@@ -108,12 +108,12 @@ export class Entity {
 		);
 	}
 
-	getComponent<T extends Component>(type: any): T | undefined {
+	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
 		const component = this.components.find(
 			component => component.constructor === type
 		);
 		if (component) {
-			return component as T;
+			return component as any;
 		}
 	}
 

@@ -91,7 +91,7 @@ function isSampler(type: string): boolean {
 }
 
 export class Material implements IDisposable {
-	private disposed: boolean;
+	private disposed: boolean = false;
 
 	public readonly vertexShader: Shader;
 	public readonly fragmentShader: Shader;
@@ -102,16 +102,14 @@ export class Material implements IDisposable {
 
 	public static currentMaterial: Material | undefined;
 
-	public twoSided: boolean;
+	public twoSided: boolean = false;
+	public transparent: boolean = false;
 
 	constructor(
 		public gl: WebGLRenderingContext,
 		vertex: string | Shader,
 		fragment: string | Shader
 	) {
-		this.disposed = false;
-		this.twoSided = false;
-
 		this.vertexShader =
 			typeof vertex === 'string'
 				? new Shader(gl, vertex, gl.VERTEX_SHADER)
@@ -230,6 +228,13 @@ export class Material implements IDisposable {
 				this.gl.disable(this.gl.CULL_FACE);
 			} else {
 				this.gl.enable(this.gl.CULL_FACE);
+			}
+			if (this.transparent) {
+				this.gl.disable(this.gl.DEPTH_TEST);
+				this.gl.enable(this.gl.BLEND);
+			} else {
+				this.gl.enable(this.gl.DEPTH_TEST);
+				this.gl.disable(this.gl.BLEND);
 			}
 		}
 		this.updateUniforms();

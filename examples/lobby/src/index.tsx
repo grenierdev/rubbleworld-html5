@@ -1,15 +1,12 @@
 import { Material } from '@fexel/core/rendering/Material';
-import { Matrix4 } from '@fexel/core/math/Matrix4';
-import {
-	CameraOrthographic,
-	CameraPerspective,
-} from '@fexel/core/rendering/Camera';
 import { Vector3 } from '@fexel/core/math/Vector3';
-import { Quaterion } from '@fexel/core/math/Quaterion';
-import { Mesh, PointMesh } from '@fexel/core/rendering/Mesh';
+import { Mesh } from '@fexel/core/rendering/Mesh';
 import { Texture } from '@fexel/core/rendering/Texture';
 import { Debug } from '@fexel/core/Debug';
-import { Color } from '@fexel/core/math/Color';
+import { Scene, Entity, Component } from '@fexel/core/Scene';
+import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
+import { CameraPerspectiveComponent } from '@fexel/core/components/Camera';
+import { TransformComponent } from '@fexel/core/components/Transform';
 
 // Source: http://learningwebgl.com/blog/?p=28
 
@@ -53,6 +50,7 @@ const material = new Material(
 	`
 );
 material.twoSided = true;
+material.transparent = false;
 
 const mesh = new Mesh(gl, {
 	vertices: new Float32Array([
@@ -81,18 +79,41 @@ const tex = new Texture(
 	gl.LINEAR
 );
 
-const position = new Vector3(0, 0, 0);
-const rotation = new Quaterion();
-const view = new Matrix4();
-const world = new Matrix4();
-const camera = new CameraPerspective(40, width / height, 0.1, 100.0, 2);
-const cameraPos = new Vector3(0, 0, -10);
-// const camera = new CameraOrthographic(-250, 250, -250, 250, 0.1, 100, 1);
+class MoverComponent extends Component {
+	public transform: TransformComponent | undefined;
+	willMount() {
+		this.transform = this.getComponent(TransformComponent);
+	}
+	update() {
+		if (this.transform) {
+			this.transform.localPosition.x = Math.sin(
+				Math.max(0, performance.now()) / 1000
+			);
+			this.transform.localPosition.y = Math.cos(
+				Math.max(0, performance.now()) / 1000
+			);
+		}
+	}
+}
 
-material.setUniform('worldMatrix', world.elements);
-material.setUniform('viewMatrix', view.elements);
-material.setUniform('projectionMatrix', camera.projectionMatrix.elements);
-material.setUniform('sampler', tex);
+const cam = new Entity('Cam')
+	.addComponent(new TransformComponent(new Vector3(0, 0, -10)))
+	.addComponent(
+		new CameraPerspectiveComponent({
+			fov: 40,
+			aspect: width / height,
+			near: 0.1,
+			far: 100.0,
+			zoom: 2,
+		})
+	);
+
+const obj = new Entity('UV')
+	.addComponent(new TransformComponent())
+	.addComponent(new MoverComponent())
+	.addComponent(new MeshRendererComponent(mesh, material));
+
+const scene = new Scene().addChild(cam).addChild(obj);
 
 Debug.setRenderingContext(gl);
 
@@ -109,56 +130,44 @@ let frameId = 0;
 	gl.depthFunc(gl.LESS);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 
-	// Enable transparency
-	gl.disable(gl.DEPTH_TEST);
-	gl.enable(gl.BLEND);
+	const camCamera = cam.getComponent(CameraPerspectiveComponent)!;
+	const objRenderer = obj.getComponent(MeshRendererComponent)!;
 
-	cameraPos.z = Math.sin(frameId / 3) - 20;
-	view.compose(
-		cameraPos,
-		Quaterion.Identity,
-		Vector3.One
-	);
-
-	for (let i = 4; --i >= 0; ) {
-		// rotation.z = Math.sin(Math.max(0, frameId - i * 10) / 20);
-		position.x = Math.sin(Math.max(0, frameId - i * 10) / 20);
-		position.y = Math.cos(Math.max(0, frameId - i * 10) / 20);
-		world.compose(
-			position,
-			rotation,
-			Vector3.One
-		);
-
-		// Use material set attribute & uniform
-		material.setUniform('worldMatrix', world.elements);
-		material.setUniform('viewMatrix', view.elements);
-		material.bind();
-		// material.updateUniforms();
-		// mesh.bind();
-		mesh.draw();
-
-		// Debug.drawPrimitivePoints(
-		// 	[0 + Math.random(), -1 + Math.random() * 2, -1 + Math.random() * 2],
-		// 	2,
-		// 	{ ttl: 0.0, color: [Math.random(), Math.random(), Math.random(), 1] }
-		// );
-		// Debug.drawPrimitiveLine(
-		// 	[
-		// 		-1 + Math.random() * 1,
-		// 		-1 + Math.random() * 2,
-		// 		-1 + Math.random() * 2,
-		// 		-1 + Math.random() * 1,
-		// 		-1 + Math.random() * 2,
-		// 		-1 + Math.random() * 2,
-		// 	],
-		// 	{
-		// 		ttl: 0.0,
-		// 		color: [Math.random(), Math.random(), Math.random(), 1],
-		// 	}
-		// );
+	const updater = scene.update();
+	while (updater.next().done !== true) {
+		// noop;
 	}
 
-	Debug.draw(view, camera.projectionMatrix);
+	objRenderer.material.setUniform('sampler', tex);
+	objRenderer.render(camCamera);
+
+	objRenderer.material.bind();
+	objRenderer.mesh.draw();
+
+	Debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 0.0, color: [1, 1, 1, 1] });
+
+	// Debug.drawPrimitivePoints([0 + Math.random(), -1 + Math.random() * 2, 0], 2, {
+	// 	ttl: 1.0,
+	// 	color: [Math.random(), Math.random(), Math.random(), 1],
+	// });
+	// Debug.drawPrimitiveLine(
+	// 	[
+	// 		-1 + Math.random() * 1,
+	// 		-1 + Math.random() * 2,
+	// 		0,
+	// 		-1 + Math.random() * 1,
+	// 		-1 + Math.random() * 2,
+	// 		0,
+	// 	],
+	// 	{
+	// 		ttl: 1.0,
+	// 		color: [Math.random(), Math.random(), Math.random(), 1],
+	// 	}
+	// );
+
+	Debug.draw(
+		camCamera.transform.worldMatrix,
+		camCamera.camera.projectionMatrix
+	);
 	Debug.update();
 };

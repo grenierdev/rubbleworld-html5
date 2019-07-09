@@ -108,6 +108,8 @@ export class Debug {
 				}
 			`
 		);
+		Debug.material.twoSided = true;
+		Debug.material.transparent = true;
 
 		Debug.pointManager = new PointMeshManager(
 			{
