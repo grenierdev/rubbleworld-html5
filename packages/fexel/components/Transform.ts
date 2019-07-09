@@ -88,17 +88,19 @@ export class TransformComponent extends Component {
 }
 
 export function EmptyPrefab({
+	name = 'EmptyPrefab',
 	position = Vector3.Zero,
 	rotation = Euler.Zero,
 	scale = Vector3.One,
 	children = [],
 }: {
+	name?: string;
 	position?: Vector3;
 	rotation?: Euler;
 	scale?: Vector3;
 	children?: Entity[];
 }) {
-	return new Entity('EmptyPrefab')
+	return new Entity(name)
 		.addComponent(
 			new TransformComponent(position.clone(), rotation.clone(), scale.clone())
 		)

@@ -5,7 +5,10 @@ import { Texture } from '@fexel/core/rendering/Texture';
 import { Debug } from '@fexel/core/Debug';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
-import { CameraPerspectiveComponent } from '@fexel/core/components/Camera';
+import {
+	CameraPerspectiveComponent,
+	CameraPerspectivePrefab,
+} from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
 
 // Source: http://learningwebgl.com/blog/?p=28
@@ -96,17 +99,16 @@ class MoverComponent extends Component {
 	}
 }
 
-const cam = new Entity('Cam')
-	.addComponent(new TransformComponent(new Vector3(0, 0, -10)))
-	.addComponent(
-		new CameraPerspectiveComponent({
-			fov: 40,
-			aspect: width / height,
-			near: 0.1,
-			far: 100.0,
-			zoom: 2,
-		})
-	);
+const cam = CameraPerspectivePrefab({
+	position: new Vector3(0, 0, -10),
+	camera: {
+		fov: 40,
+		aspect: width / height,
+		near: 0.1,
+		far: 100.0,
+		zoom: 2,
+	},
+});
 
 const obj = new Entity('UV')
 	.addComponent(new TransformComponent())
