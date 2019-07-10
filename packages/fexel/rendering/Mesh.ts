@@ -4,8 +4,8 @@ import { Mutable } from '../util/Mutable';
 
 export interface IMesh {
 	updateBuffers(): void;
-	bind(): void;
-	draw(): void;
+	bind(gl: WebGLRenderingContext): void;
+	draw(gl: WebGLRenderingContext): void;
 }
 
 export interface MeshData {
@@ -17,44 +17,56 @@ export interface MeshData {
 }
 
 export class Mesh implements IDisposable, IMesh {
-	private disposed: boolean;
+	public static currentMesh?: IMesh;
 
-	public readonly vertexBuffer: WebGLBuffer;
-	public readonly indiceBuffer: WebGLBuffer;
-	public readonly indiceCount: number;
-	public readonly normalBuffer: WebGLBuffer;
-	public readonly uvsBuffer: WebGLBuffer[];
-	public readonly colorsBuffer: WebGLBuffer[];
+	private disposed: boolean = false;
+	protected gl?: WebGLRenderingContext;
 
-	public static currentMesh: IMesh | undefined;
+	public readonly vertexBuffer?: WebGLBuffer;
+	public readonly indiceBuffer?: WebGLBuffer;
+	public readonly indiceCount: number = 0;
+	public readonly normalBuffer?: WebGLBuffer;
+	public readonly uvsBuffer: WebGLBuffer[] = [];
+	public readonly colorsBuffer: WebGLBuffer[] = [];
 
 	constructor(
-		public readonly gl: WebGLRenderingContext,
 		public readonly data: MeshData,
 		public readonly dynamic = false
-	) {
-		this.disposed = false;
+	) {}
 
-		const drawType = dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
-
-		this.vertexBuffer = gl.createBuffer()!;
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, data.vertices, drawType);
-
-		this.indiceBuffer = gl.createBuffer()!;
-		this.indiceCount = data.indices.length;
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data.indices, drawType);
-
-		this.normalBuffer = gl.createBuffer()!;
-		if (data.normals) {
-			gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, data.normals, drawType);
+	protected createBuffers(gl: WebGLRenderingContext) {
+		if (this.gl && this.gl !== gl) {
+			throw new ReferenceError(
+				`Mesh already compiled with an other WebGLRenderingContext.`
+			);
 		}
 
-		this.uvsBuffer = [];
-		if (data.uvs) {
-			for (const uv of data.uvs) {
+		if (this.vertexBuffer) {
+			return;
+		}
+
+		this.gl = gl;
+
+		const drawType = this.dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+
+		(this as Mutable<Mesh>).vertexBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer!);
+		gl.bufferData(gl.ARRAY_BUFFER, this.data.vertices, drawType);
+
+		(this as Mutable<Mesh>).indiceBuffer = gl.createBuffer()!;
+		(this as Mutable<Mesh>).indiceCount = this.data.indices.length;
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer!);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.data.indices, drawType);
+
+		(this as Mutable<Mesh>).normalBuffer = gl.createBuffer()!;
+		if (this.data.normals) {
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer!);
+			gl.bufferData(gl.ARRAY_BUFFER, this.data.normals, drawType);
+		}
+
+		(this as Mutable<Mesh>).uvsBuffer = [];
+		if (this.data.uvs) {
+			for (const uv of this.data.uvs) {
 				const uvBuffer = gl.createBuffer()!;
 				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 				gl.bufferData(gl.ARRAY_BUFFER, uv, drawType);
@@ -62,9 +74,9 @@ export class Mesh implements IDisposable, IMesh {
 			}
 		}
 
-		this.colorsBuffer = [];
-		if (data.colors) {
-			for (const color of data.colors) {
+		(this as Mutable<Mesh>).colorsBuffer = [];
+		if (this.data.colors) {
+			for (const color of this.data.colors) {
 				const colorBuffer = gl.createBuffer()!;
 				gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
 				gl.bufferData(gl.ARRAY_BUFFER, color, drawType);
@@ -77,55 +89,68 @@ export class Mesh implements IDisposable, IMesh {
 	}
 
 	updateBuffers(): void {
-		if (this.dynamic === false) {
-			throw new SyntaxError(`Can not update a static Mesh.`);
-		}
-		Mesh.currentMesh = undefined;
-
-		const gl = this.gl;
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-		gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.vertices);
-
-		(this as Mutable<Mesh>).indiceCount = this.data.indices.length;
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
-		gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, this.data.indices);
-
-		if (this.data.normals) {
-			gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
-			gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.normals);
-		}
-
-		if (this.data.uvs) {
-			for (let i = 0, l = this.data.uvs.length; i < l; ++i) {
-				gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
-				gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.uvs[i]);
+		if (this.gl) {
+			if (this.dynamic === false) {
+				throw new SyntaxError(`Can not update a static Mesh.`);
 			}
-		}
+			Mesh.currentMesh = undefined;
 
-		if (this.data.colors) {
-			for (let i = 0, l = this.data.colors.length; i < l; ++i) {
-				gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
-				gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors[i]);
+			const gl = this.gl;
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer!);
+			gl.bufferData(gl.ARRAY_BUFFER, this.data.vertices, gl.DYNAMIC_DRAW);
+			// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.vertices);
+
+			(this as Mutable<Mesh>).indiceCount = this.data.indices.length;
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer!);
+			gl.bufferData(
+				gl.ELEMENT_ARRAY_BUFFER,
+				this.data.indices,
+				gl.DYNAMIC_DRAW
+			);
+			// gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, this.data.indices);
+
+			if (this.data.normals) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer!);
+				gl.bufferData(gl.ARRAY_BUFFER, this.data.normals, gl.DYNAMIC_DRAW);
+				// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.normals);
 			}
-		}
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, null);
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+			if (this.data.uvs) {
+				for (let i = 0, l = this.data.uvs.length; i < l; ++i) {
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
+					gl.bufferData(gl.ARRAY_BUFFER, this.data.uvs[i], gl.DYNAMIC_DRAW);
+					// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.uvs[i]);
+				}
+			}
+
+			if (this.data.colors) {
+				for (let i = 0, l = this.data.colors.length; i < l; ++i) {
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
+					gl.bufferData(gl.ARRAY_BUFFER, this.data.colors[i], gl.DYNAMIC_DRAW);
+					// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors[i]);
+				}
+			}
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+		}
 	}
 
 	dispose(): void {
 		if (this.disposed === false) {
-			this.gl.deleteBuffer(this.vertexBuffer);
-			this.gl.deleteBuffer(this.indiceBuffer);
-			if (this.normalBuffer) {
-				this.gl.deleteBuffer(this.normalBuffer);
-			}
-			for (const uvBuffer of this.uvsBuffer) {
-				this.gl.deleteBuffer(uvBuffer);
-			}
-			for (const colorBuffer of this.colorsBuffer) {
-				this.gl.deleteBuffer(colorBuffer);
+			if (this.gl) {
+				this.gl.deleteBuffer(this.vertexBuffer!);
+				this.gl.deleteBuffer(this.indiceBuffer!);
+				if (this.normalBuffer) {
+					this.gl.deleteBuffer(this.normalBuffer);
+				}
+				for (const uvBuffer of this.uvsBuffer) {
+					this.gl.deleteBuffer(uvBuffer);
+				}
+				for (const colorBuffer of this.colorsBuffer) {
+					this.gl.deleteBuffer(colorBuffer);
+				}
 			}
 			this.disposed = true;
 		}
@@ -135,17 +160,19 @@ export class Mesh implements IDisposable, IMesh {
 		return this.disposed;
 	}
 
-	bind(): void {
+	bind(gl: WebGLRenderingContext): void {
+		this.createBuffers(gl);
+
 		if (Mesh.currentMesh !== this) {
 			Mesh.currentMesh = this;
 
 			const material = Material.currentMaterial;
 			if (material) {
-				const gl = this.gl;
+				const gl = this.gl!;
 
 				if (material.attributes.has('vertPosition')) {
 					const attribute = material.attributes.get('vertPosition')!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer!);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
@@ -185,22 +212,17 @@ export class Mesh implements IDisposable, IMesh {
 						gl.enableVertexAttribArray(attribute.location);
 					}
 				}
-				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer!);
 			}
 		}
 	}
 
-	draw(): void {
+	draw(gl: WebGLRenderingContext): void {
 		if (Mesh.currentMesh !== this) {
-			this.bind();
+			this.bind(gl);
 		}
 
-		this.gl.drawElements(
-			this.gl.TRIANGLES,
-			this.indiceCount,
-			this.gl.UNSIGNED_SHORT,
-			0
-		);
+		gl.drawElements(gl.TRIANGLES, this.indiceCount, gl.UNSIGNED_SHORT, 0);
 	}
 }
 
@@ -212,45 +234,60 @@ export interface PointMeshData {
 }
 
 export class PointMesh implements IDisposable, IMesh {
-	private disposed: boolean;
+	private disposed: boolean = false;
+	protected gl?: WebGLRenderingContext;
 
-	public readonly positionBuffer: WebGLBuffer;
-	public readonly sizeBuffer: WebGLBuffer;
-	public readonly colorBuffer: WebGLBuffer;
+	public readonly positionBuffer?: WebGLBuffer;
+	public readonly sizeBuffer?: WebGLBuffer;
+	public readonly colorBuffer?: WebGLBuffer;
 
 	constructor(
-		public readonly gl: WebGLRenderingContext,
 		public readonly data: PointMeshData,
 		public readonly dynamic = false
-	) {
-		this.disposed = false;
+	) {}
 
-		const drawType = dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+	protected createBuffers(gl: WebGLRenderingContext) {
+		if (this.gl && this.gl !== gl) {
+			throw new ReferenceError(
+				`PointMesh already compiled with an other WebGLRenderingContext.`
+			);
+		}
 
-		this.positionBuffer = gl.createBuffer()!;
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, data.positions, drawType);
+		if (this.positionBuffer) {
+			return;
+		}
 
-		this.sizeBuffer = gl.createBuffer()!;
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
+		this.gl = gl;
+
+		const drawType = this.dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+
+		(this as Mutable<PointMesh>).positionBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
+		gl.bufferData(gl.ARRAY_BUFFER, this.data.positions, drawType);
+
+		(this as Mutable<PointMesh>).sizeBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer!);
 		gl.bufferData(
 			gl.ARRAY_BUFFER,
-			data.sizes || new Float32Array(data.positions.length).fill(1.0),
+			this.data.sizes || new Float32Array(this.data.positions.length).fill(1.0),
 			drawType
 		);
 
-		this.colorBuffer = gl.createBuffer()!;
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-		if (data.colors) {
-			gl.bufferData(gl.ARRAY_BUFFER, data.colors, drawType);
+		(this as Mutable<PointMesh>).colorBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
+		if (this.data.colors) {
+			gl.bufferData(gl.ARRAY_BUFFER, this.data.colors, drawType);
 		} else {
-			const colors = data.positions.reduce<Float32Array>((colors, pos, i) => {
-				colors[i * 4 + 0] = 1;
-				colors[i * 4 + 1] = 1;
-				colors[i * 4 + 2] = 1;
-				colors[i * 4 + 3] = 1;
-				return colors;
-			}, new Float32Array(data.positions.length * 4));
+			const colors = this.data.positions.reduce<Float32Array>(
+				(colors, pos, i) => {
+					colors[i * 4 + 0] = 1;
+					colors[i * 4 + 1] = 1;
+					colors[i * 4 + 2] = 1;
+					colors[i * 4 + 3] = 1;
+					return colors;
+				},
+				new Float32Array(this.data.positions.length * 4)
+			);
 			gl.bufferData(gl.ARRAY_BUFFER, colors, drawType);
 		}
 
@@ -258,37 +295,41 @@ export class PointMesh implements IDisposable, IMesh {
 	}
 
 	updateBuffers(): void {
-		if (this.dynamic === false) {
-			throw new SyntaxError(`Can not update a static Mesh.`);
+		if (this.gl) {
+			if (this.dynamic === false) {
+				throw new SyntaxError(`Can not update a static Mesh.`);
+			}
+			Mesh.currentMesh = undefined;
+
+			const gl = this.gl;
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
+			gl.bufferData(gl.ARRAY_BUFFER, this.data.positions, gl.DYNAMIC_DRAW);
+			// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.positions);
+
+			if (this.data.sizes) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer!);
+				gl.bufferData(gl.ARRAY_BUFFER, this.data.sizes, gl.DYNAMIC_DRAW);
+				// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.sizes);
+			}
+
+			if (this.data.colors) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
+				gl.bufferData(gl.ARRAY_BUFFER, this.data.colors, gl.DYNAMIC_DRAW);
+				// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors);
+			}
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		}
-		Mesh.currentMesh = undefined;
-
-		const gl = this.gl;
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, this.data.positions, gl.DYNAMIC_DRAW);
-		// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.positions);
-
-		if (this.data.sizes) {
-			gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, this.data.sizes, gl.DYNAMIC_DRAW);
-			// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.sizes);
-		}
-
-		if (this.data.colors) {
-			gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, this.data.colors, gl.DYNAMIC_DRAW);
-			// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors);
-		}
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 	}
 
 	dispose(): void {
 		if (this.disposed === false) {
-			this.gl.deleteBuffer(this.positionBuffer);
-			this.gl.deleteBuffer(this.sizeBuffer);
-			this.gl.deleteBuffer(this.colorBuffer);
+			if (this.gl) {
+				this.gl.deleteBuffer(this.positionBuffer!);
+				this.gl.deleteBuffer(this.sizeBuffer!);
+				this.gl.deleteBuffer(this.colorBuffer!);
+			}
 			this.disposed = true;
 		}
 	}
@@ -297,29 +338,31 @@ export class PointMesh implements IDisposable, IMesh {
 		return this.disposed;
 	}
 
-	bind(): void {
+	bind(gl: WebGLRenderingContext): void {
+		this.createBuffers(gl);
+
 		if (Mesh.currentMesh !== this) {
 			Mesh.currentMesh = this;
 
 			const material = Material.currentMaterial;
 			if (material) {
-				const gl = this.gl;
+				const gl = this.gl!;
 
 				if (material.attributes.has('vertPosition')) {
 					const attribute = material.attributes.get('vertPosition')!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
 				if (material.attributes.has('vertSize')) {
 					const attribute = material.attributes.get('vertSize')!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer!);
 					gl.vertexAttribPointer(attribute.location, 1, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
 				if (material.attributes.has('vertColor')) {
 					const attribute = material.attributes.get('vertColor')!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
 					gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
@@ -327,12 +370,12 @@ export class PointMesh implements IDisposable, IMesh {
 		}
 	}
 
-	draw(): void {
+	draw(gl: WebGLRenderingContext): void {
 		if (Mesh.currentMesh !== this) {
-			this.bind();
+			this.bind(gl);
 		}
 
-		this.gl.drawArrays(this.gl.POINTS, 0, this.data.count);
+		gl.drawArrays(gl.POINTS, 0, this.data.count);
 	}
 }
 
@@ -343,36 +386,51 @@ export interface LineMeshData {
 }
 
 export class LineMesh implements IDisposable, IMesh {
-	private disposed: boolean;
+	private disposed: boolean = false;
+	protected gl?: WebGLRenderingContext;
 
-	public readonly positionBuffer: WebGLBuffer;
-	public readonly colorBuffer: WebGLBuffer;
+	public readonly positionBuffer?: WebGLBuffer;
+	public readonly colorBuffer?: WebGLBuffer;
 
 	constructor(
-		public readonly gl: WebGLRenderingContext,
 		public readonly data: LineMeshData,
 		public readonly dynamic = false
-	) {
-		this.disposed = false;
+	) {}
 
-		const drawType = dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+	protected createBuffers(gl: WebGLRenderingContext) {
+		if (this.gl && this.gl !== gl) {
+			throw new ReferenceError(
+				`LineMesh already compiled with an other WebGLRenderingContext.`
+			);
+		}
 
-		this.positionBuffer = gl.createBuffer()!;
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, data.positions, drawType);
+		if (this.positionBuffer) {
+			return;
+		}
 
-		this.colorBuffer = gl.createBuffer()!;
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-		if (data.colors) {
-			gl.bufferData(gl.ARRAY_BUFFER, data.colors, drawType);
+		this.gl = gl;
+
+		const drawType = this.dynamic ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW;
+
+		(this as Mutable<LineMesh>).positionBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
+		gl.bufferData(gl.ARRAY_BUFFER, this.data.positions, drawType);
+
+		(this as Mutable<LineMesh>).colorBuffer = gl.createBuffer()!;
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
+		if (this.data.colors) {
+			gl.bufferData(gl.ARRAY_BUFFER, this.data.colors, drawType);
 		} else {
-			const colors = data.positions.reduce<Float32Array>((colors, pos, i) => {
-				colors[i * 4 + 0] = 1;
-				colors[i * 4 + 1] = 1;
-				colors[i * 4 + 2] = 1;
-				colors[i * 4 + 3] = 1;
-				return colors;
-			}, new Float32Array(data.positions.length * 4));
+			const colors = this.data.positions.reduce<Float32Array>(
+				(colors, pos, i) => {
+					colors[i * 4 + 0] = 1;
+					colors[i * 4 + 1] = 1;
+					colors[i * 4 + 2] = 1;
+					colors[i * 4 + 3] = 1;
+					return colors;
+				},
+				new Float32Array(this.data.positions.length * 4)
+			);
 			gl.bufferData(gl.ARRAY_BUFFER, colors, drawType);
 		}
 
@@ -380,30 +438,34 @@ export class LineMesh implements IDisposable, IMesh {
 	}
 
 	updateBuffers(): void {
-		if (this.dynamic === false) {
-			throw new SyntaxError(`Can not update a static Mesh.`);
+		if (this.gl) {
+			if (this.dynamic === false) {
+				throw new SyntaxError(`Can not update a static Mesh.`);
+			}
+			Mesh.currentMesh = undefined;
+
+			const gl = this.gl;
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
+			gl.bufferData(gl.ARRAY_BUFFER, this.data.positions, gl.DYNAMIC_DRAW);
+			// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.positions);
+
+			if (this.data.colors) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
+				gl.bufferData(gl.ARRAY_BUFFER, this.data.colors, gl.DYNAMIC_DRAW);
+				// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors);
+			}
+
+			gl.bindBuffer(gl.ARRAY_BUFFER, null);
 		}
-		Mesh.currentMesh = undefined;
-
-		const gl = this.gl;
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, this.data.positions, gl.DYNAMIC_DRAW);
-		// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.positions);
-
-		if (this.data.colors) {
-			gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, this.data.colors, gl.DYNAMIC_DRAW);
-			// gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.data.colors);
-		}
-
-		gl.bindBuffer(gl.ARRAY_BUFFER, null);
 	}
 
 	dispose(): void {
 		if (this.disposed === false) {
-			this.gl.deleteBuffer(this.positionBuffer);
-			this.gl.deleteBuffer(this.colorBuffer);
+			if (this.gl) {
+				this.gl.deleteBuffer(this.positionBuffer!);
+				this.gl.deleteBuffer(this.colorBuffer!);
+			}
 			this.disposed = true;
 		}
 	}
@@ -412,23 +474,25 @@ export class LineMesh implements IDisposable, IMesh {
 		return this.disposed;
 	}
 
-	bind(): void {
+	bind(gl: WebGLRenderingContext): void {
+		this.createBuffers(gl);
+
 		if (Mesh.currentMesh !== this) {
 			Mesh.currentMesh = this;
 
 			const material = Material.currentMaterial;
 			if (material) {
-				const gl = this.gl;
+				const gl = this.gl!;
 
 				if (material.attributes.has('vertPosition')) {
 					const attribute = material.attributes.get('vertPosition')!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
 				if (material.attributes.has('vertColor')) {
 					const attribute = material.attributes.get('vertColor')!;
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
 					gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
@@ -436,11 +500,11 @@ export class LineMesh implements IDisposable, IMesh {
 		}
 	}
 
-	draw(): void {
+	draw(gl: WebGLRenderingContext): void {
 		if (Mesh.currentMesh !== this) {
-			this.bind();
+			this.bind(gl);
 		}
 
-		this.gl.drawArrays(this.gl.LINES, 0, this.data.count * 2);
+		gl.drawArrays(gl.LINES, 0, this.data.count * 2);
 	}
 }

@@ -1,7 +1,11 @@
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
-import { Texture } from '@fexel/core/rendering/Texture';
+import {
+	Texture,
+	TextureWrap,
+	TextureFilter,
+} from '@fexel/core/rendering/Texture';
 import { Debug } from '@fexel/core/Debug';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
@@ -10,6 +14,7 @@ import {
 	CameraPerspectivePrefab,
 } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
+import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
 
 // Source: http://learningwebgl.com/blog/?p=28
 
@@ -25,8 +30,8 @@ const gl = canvasEl.getContext('webgl', {
 })!;
 
 const material = new Material(
-	gl,
-	`
+	new Shader(
+		`
 		attribute vec3 vertPosition;
 		attribute vec2 vertUV1;
 
@@ -41,7 +46,10 @@ const material = new Material(
 			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1.0);
 		}
 	`,
-	`
+		ShaderType.Vertex
+	),
+	new Shader(
+		`
 		precision mediump float;
 
 		varying vec2 fragUV;
@@ -50,12 +58,14 @@ const material = new Material(
 		void main(void) {
 			gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);
 		}
-	`
+	`,
+		ShaderType.Fragment
+	)
 );
 material.twoSided = true;
 material.transparent = false;
 
-const mesh = new Mesh(gl, {
+const mesh = new Mesh({
 	vertices: new Float32Array([
 		1.0,
 		1.0,
@@ -76,10 +86,9 @@ const mesh = new Mesh(gl, {
 });
 
 const tex = new Texture(
-	gl,
 	document.getElementById('uvdebug')! as HTMLImageElement,
-	gl.CLAMP_TO_EDGE,
-	gl.LINEAR
+	TextureWrap.CLAMP_TO_EDGE,
+	TextureFilter.LINEAR
 );
 
 class MoverComponent extends Component {
@@ -143,8 +152,8 @@ let frameId = 0;
 	objRenderer.material.setUniform('sampler', tex);
 	objRenderer.render(camCamera);
 
-	objRenderer.material.bind();
-	objRenderer.mesh.draw();
+	objRenderer.material.bind(gl);
+	objRenderer.mesh.draw(gl);
 
 	Debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 0.0, color: [1, 1, 1, 1] });
 
@@ -168,7 +177,7 @@ let frameId = 0;
 	// );
 
 	Debug.draw(
-		camCamera.transform.worldMatrix,
+		camCamera.transform!.worldMatrix,
 		camCamera.camera.projectionMatrix
 	);
 	Debug.update();

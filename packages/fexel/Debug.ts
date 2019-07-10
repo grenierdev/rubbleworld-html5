@@ -2,7 +2,7 @@ import { Vector3 } from './math/Vector3';
 import { Color } from './math/Color';
 import { Matrix4 } from './math/Matrix4';
 import { ok as assert } from 'assert';
-import { Shader } from './rendering/Shader';
+import { Shader, ShaderType } from './rendering/Shader';
 import { Material } from './rendering/Material';
 import { Mesh, PointMesh, LineMesh } from './rendering/Mesh';
 import { ArrayVariableManager, ArrayBlock } from './util/ArrayManager';
@@ -81,8 +81,8 @@ export class Debug {
 		Debug.gl = gl;
 
 		Debug.material = new Material(
-			gl,
-			`
+			new Shader(
+				`
 				attribute vec3 vertPosition;
 				attribute float vertSize;
 				attribute vec4 vertColor;
@@ -98,7 +98,10 @@ export class Debug {
 					gl_PointSize = vertSize;
 				}
 			`,
-			`
+				ShaderType.Vertex
+			),
+			new Shader(
+				`
 				precision mediump float;
 
 				varying vec4 fragColor;
@@ -106,7 +109,9 @@ export class Debug {
 				void main(void) {
 					gl_FragColor = fragColor;
 				}
-			`
+			`,
+				ShaderType.Fragment
+			)
 		);
 		Debug.material.twoSided = true;
 		Debug.material.transparent = true;
@@ -122,7 +127,6 @@ export class Debug {
 		);
 
 		Debug.pointMesh = new PointMesh(
-			gl,
 			{
 				count: 0,
 				positions: Debug.pointManager.data.positions,
@@ -142,7 +146,6 @@ export class Debug {
 		);
 
 		Debug.lineMesh = new LineMesh(
-			gl,
 			{
 				count: 0,
 				positions: Debug.pointManager.data.positions,
@@ -212,13 +215,13 @@ export class Debug {
 
 		Debug.material!.setUniform('viewMatrix', viewMatrix.elements);
 		Debug.material!.setUniform('projectionMatrix', projMatrix.elements);
-		Debug.material!.bind();
+		Debug.material!.bind(gl);
 
 		if (Debug.pointMesh!.data.count > 0) {
-			Debug.pointMesh!.draw();
+			Debug.pointMesh!.draw(gl);
 		}
 		if (Debug.lineMesh!.data.count > 0) {
-			Debug.lineMesh!.draw();
+			Debug.lineMesh!.draw(gl);
 		}
 	}
 
