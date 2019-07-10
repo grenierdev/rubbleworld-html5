@@ -138,7 +138,10 @@ export class Scene extends Entity {
 		this.entitiesToRemove = [];
 	}
 
-	get scene(): Scene {
+	get scene(): Scene | undefined {
+		if (this.parent) {
+			return this.parent.scene;
+		}
 		return this;
 	}
 
