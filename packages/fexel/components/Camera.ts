@@ -1,4 +1,4 @@
-import { Component, Entity } from '../Scene';
+import { Component, Entity } from '../Scene'; // hack circular dependency
 import {
 	Camera,
 	CameraPerspective,
@@ -7,10 +7,24 @@ import {
 import { TransformComponent } from './Transform';
 import { Mutable } from '../util/Mutable';
 import { Vector3 } from '../math/Vector3';
+import { Box2 } from '../math/Box2';
 import { Euler } from '../math/Euler';
+import { Vector2 } from '../math/Vector2';
+import { Color } from '../math/Color';
+
+export enum Clear {
+	Nothing = 0,
+	Background = WebGLRenderingContext.COLOR_BUFFER_BIT,
+	Depth = WebGLRenderingContext.DEPTH_BUFFER_BIT,
+}
 
 export abstract class CameraComponent extends Component {
 	public readonly transform: TransformComponent | undefined;
+
+	public viewport: Box2 = new Box2(Vector2.Zero.clone(), Vector2.One.clone());
+	public order: number = 0;
+	public backgroundColor: Color = Color.Black.clone();
+	public clear: Clear = Clear.Background | Clear.Depth;
 
 	constructor(public readonly camera: Camera) {
 		super();

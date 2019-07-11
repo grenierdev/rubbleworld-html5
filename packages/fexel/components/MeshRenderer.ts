@@ -14,13 +14,12 @@ export class MeshRendererComponent extends Component {
 	}
 
 	willMount() {
-		// debugger;
 		(this as Mutable<MeshRendererComponent>).transform = this.getComponent(
 			TransformComponent
 		);
 	}
 
-	render(viewpoint: CameraComponent) {
+	render(camera: CameraComponent) {
 		this.material.setUniform(
 			'worldMatrix',
 			this.transform
@@ -29,13 +28,13 @@ export class MeshRendererComponent extends Component {
 		);
 		this.material.setUniform(
 			'viewMatrix',
-			viewpoint.transform
-				? viewpoint.transform.worldMatrix.elements
+			camera.transform
+				? camera.transform.worldMatrix.elements
 				: Matrix4.Identity.elements
 		);
 		this.material.setUniform(
 			'projectionMatrix',
-			viewpoint.camera.projectionMatrix.elements
+			camera.camera.projectionMatrix.elements
 		);
 	}
 }

@@ -24,7 +24,7 @@ export abstract class Component {
 	willMount?(): void;
 	willUnmount?(): void;
 	update?(): IterableIterator<void> | void;
-	// render?(): void;
+	render?(camera: CameraComponent): void;
 }
 
 export class Entity {
@@ -74,7 +74,7 @@ export class Entity {
 				(entity as Mutable<Entity>).parent = this;
 				const scene = this.scene;
 				if (scene) {
-					(scene as any).entitiesToAdd.push(entity);
+					scene.entitiesToAdd.push(entity);
 				}
 			}
 		}
@@ -88,7 +88,7 @@ export class Entity {
 				this.children.splice(idx, 1);
 				const scene = this.scene;
 				if (scene) {
-					(scene as any).entitiesToRemove.push(entity);
+					scene.entitiesToRemove.push(entity);
 				}
 			}
 		}
@@ -127,9 +127,11 @@ export class Entity {
 }
 
 export class Scene extends Entity {
-	protected readonly everyComponentsInTree: Component[];
-	protected readonly entitiesToAdd: Entity[];
-	protected readonly entitiesToRemove: Entity[];
+	public readonly everyComponentsInTree: ReadonlyArray<Component>;
+	/** @internal */
+	public readonly entitiesToAdd: Entity[];
+	/** @internal */
+	public readonly entitiesToRemove: Entity[];
 
 	constructor() {
 		super('Scene');
@@ -155,9 +157,11 @@ export class Scene extends Entity {
 				for (const entity of entities) {
 					for (const component of entity.components) {
 						changed = true;
-						this.everyComponentsInTree.push(component);
-						component.willMount && component.willMount();
-						yield;
+						(this.everyComponentsInTree as Component[]).push(component);
+						if (component.willMount) {
+							component.willMount();
+							yield component;
+						}
 					}
 				}
 			}
@@ -173,9 +177,11 @@ export class Scene extends Entity {
 						const i = this.everyComponentsInTree.indexOf(component);
 						if (i > -1) {
 							changed = true;
-							component.willUnmount && component.willUnmount();
-							this.everyComponentsInTree.splice(i, 1);
-							yield;
+							(this.everyComponentsInTree as Component[]).splice(i, 1);
+							if (component.willUnmount) {
+								component.willUnmount();
+								yield component;
+							}
 						}
 					}
 					(entity as Mutable<Entity>).parent = undefined;
@@ -186,7 +192,7 @@ export class Scene extends Entity {
 
 		// Something changed, reorder components
 		if (changed) {
-			this.everyComponentsInTree.sort(
+			(this.everyComponentsInTree as Component[]).sort(
 				(a, b) =>
 					(a.constructor as typeof Component).executionOrder -
 					(b.constructor as typeof Component).executionOrder
@@ -197,17 +203,24 @@ export class Scene extends Entity {
 		for (const component of this.everyComponentsInTree) {
 			if (component.enabled && component.entity && component.entity.enabled) {
 				component.update && component.update();
-				yield;
+				yield component;
 			}
 		}
 	}
 
-	// *render() {
-	// 	for (const component of this.everyComponentsInTree) {
-	// 		if (component.enabled && component.entity && component.entity.enabled) {
-	// 			component.render && component.render();
-	// 			yield;
-	// 		}
-	// 	}
-	// }
+	*render(camera: CameraComponent) {
+		for (const component of this.everyComponentsInTree) {
+			if (
+				component.enabled &&
+				component.render &&
+				component.entity &&
+				component.entity.enabled
+			) {
+				component.render(camera);
+				yield component;
+			}
+		}
+	}
 }
+
+import { CameraComponent } from './components/Camera'; // hack circular dependency

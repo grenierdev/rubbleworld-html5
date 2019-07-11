@@ -9,6 +9,7 @@
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"strict": true,
-		"jsx": "react"
+		"jsx": "react",
+		"stripInternal": true
 	}
 }

@@ -94,6 +94,14 @@ function isSampler(type: string): boolean {
 	return type === 'sampler' || type === 'sampler2d' || type === 'samplercube';
 }
 
+export enum MaterialQueue {
+	Background = 1000,
+	Geometry = 2000,
+	AlphaTest = 2450,
+	Transparent = 3000,
+	Overlay = 4000,
+}
+
 export class Material implements IDisposable {
 	public static currentMaterial?: Material;
 
@@ -102,6 +110,7 @@ export class Material implements IDisposable {
 
 	public readonly attributes: Map<string, Attribute>;
 	public readonly program?: WebGLProgram;
+	public queue: MaterialQueue | number = 0;
 	public transparent: boolean = false;
 	public twoSided: boolean = false;
 	public readonly uniforms: Map<string, Uniform>;
@@ -142,6 +151,7 @@ export class Material implements IDisposable {
 			if (this.transparent) {
 				gl.disable(gl.DEPTH_TEST);
 				gl.enable(gl.BLEND);
+				gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 			} else {
 				gl.enable(gl.DEPTH_TEST);
 				gl.disable(gl.BLEND);

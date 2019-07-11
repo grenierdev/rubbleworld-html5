@@ -3,7 +3,7 @@ import { Sphere } from './Sphere';
 import { Plane } from './Plane';
 import { Triangle } from './Triangle';
 
-export class Cube {
+export class Box3 {
 	constructor(
 		public min = new Vector3(-Infinity, -Infinity, -Infinity),
 		public max = new Vector3(+Infinity, +Infinity, +Infinity)
@@ -32,7 +32,7 @@ export class Cube {
 			: target.copy(this.min).sub(this.max);
 	}
 
-	equals(box: Cube) {
+	equals(box: Box3) {
 		return box.min.equals(this.min) && box.max.equals(this.max);
 	}
 
@@ -58,12 +58,12 @@ export class Cube {
 	}
 
 	clone() {
-		return new Cube(this.min.clone(), this.max.clone());
+		return new Box3(this.min.clone(), this.max.clone());
 	}
 
 	makeEmpty() {
-		this.min.x = this.min.y = this.min.z = -Infinity;
-		this.max.x = this.max.y = this.max.z = +Infinity;
+		this.min.x = this.min.y = this.min.z = +Infinity;
+		this.max.x = this.max.y = this.max.z = -Infinity;
 		return this;
 	}
 
@@ -96,7 +96,7 @@ export class Cube {
 			: true;
 	}
 
-	containsBox(box: Cube) {
+	containsBox(box: Box3) {
 		return (
 			this.min.x <= box.min.x &&
 			box.max.x <= this.max.x &&
@@ -107,7 +107,7 @@ export class Cube {
 		);
 	}
 
-	intersectsBox(box: Cube) {
+	intersectsBox(box: Box3) {
 		return box.max.x < this.min.x ||
 			box.min.x > this.max.x ||
 			box.max.y < this.min.y ||
@@ -254,13 +254,13 @@ export class Cube {
 		return clampedPoint.sub(point).length;
 	}
 
-	intersection(box: Cube) {
+	intersection(box: Box3) {
 		this.min.max(box.min);
 		this.max.min(box.max);
 		return this;
 	}
 
-	union(box: Cube) {
+	union(box: Box3) {
 		this.min.min(box.min);
 		this.max.max(box.max);
 		return this;

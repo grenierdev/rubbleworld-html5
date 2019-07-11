@@ -1,3 +1,4 @@
+import { Engine } from '@fexel/core/Engine';
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
@@ -9,25 +10,18 @@ import {
 import { Debug } from '@fexel/core/Debug';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
-import {
-	CameraPerspectiveComponent,
-	CameraPerspectivePrefab,
-} from '@fexel/core/components/Camera';
+import { CameraPerspectivePrefab } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
 
-// Source: http://learningwebgl.com/blog/?p=28
-
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
-const width = canvasEl.width;
-const height = canvasEl.height;
+const engine = new Engine(canvasEl);
 
-const gl = canvasEl.getContext('webgl', {
-	alpha: false,
-	antialias: false,
-	depth: true,
-	stencil: false,
-})!;
+const tex = new Texture(
+	document.getElementById('uvdebug')! as HTMLImageElement,
+	TextureWrap.CLAMP_TO_EDGE,
+	TextureFilter.LINEAR
+);
 
 const material = new Material(
 	new Shader(
@@ -64,6 +58,7 @@ const material = new Material(
 );
 material.twoSided = true;
 material.transparent = false;
+material.setUniform('sampler', tex);
 
 const mesh = new Mesh({
 	vertices: new Float32Array([
@@ -85,12 +80,6 @@ const mesh = new Mesh({
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
 });
 
-const tex = new Texture(
-	document.getElementById('uvdebug')! as HTMLImageElement,
-	TextureWrap.CLAMP_TO_EDGE,
-	TextureFilter.LINEAR
-);
-
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;
 	willMount() {
@@ -98,11 +87,10 @@ class MoverComponent extends Component {
 	}
 	update() {
 		if (this.transform) {
-			this.transform.localPosition.x = Math.sin(
-				Math.max(0, performance.now()) / 1000
-			);
-			this.transform.localPosition.y = Math.cos(
-				Math.max(0, performance.now()) / 1000
+			this.transform.localPosition.set(
+				Math.sin(Math.max(0, performance.now()) / 500),
+				Math.cos(Math.max(0, performance.now()) / 500),
+				Math.cos(Math.max(0, performance.now()) / 100)
 			);
 		}
 	}
@@ -112,7 +100,7 @@ const cam = CameraPerspectivePrefab({
 	position: new Vector3(0, 0, -10),
 	camera: {
 		fov: 40,
-		aspect: width / height,
+		aspect: canvasEl.width / canvasEl.height,
 		near: 0.1,
 		far: 100.0,
 		zoom: 2,
@@ -126,59 +114,33 @@ const obj = new Entity('UV')
 
 const scene = new Scene().addChild(cam).addChild(obj);
 
-Debug.setRenderingContext(gl);
+engine.loadScene(scene);
+engine.start();
 
-let frameId = 0;
-(window as any).step = function step() {
-	++frameId;
+// Debug.setRenderingContext(engine.gl);
+// Debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 0.0, color: [1, 1, 1, 1] });
 
-	gl.viewport(0, 0, width, height);
-	gl.clearColor(0.0, 0.0, 0.0, 1.0);
-	gl.enable(gl.DEPTH_TEST);
-	gl.enable(gl.CULL_FACE);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+// 	// Debug.drawPrimitivePoints([0 + Math.random(), -1 + Math.random() * 2, 0], 2, {
+// 	// 	ttl: 1.0,
+// 	// 	color: [Math.random(), Math.random(), Math.random(), 1],
+// 	// });
+// 	// Debug.drawPrimitiveLine(
+// 	// 	[
+// 	// 		-1 + Math.random() * 1,
+// 	// 		-1 + Math.random() * 2,
+// 	// 		0,
+// 	// 		-1 + Math.random() * 1,
+// 	// 		-1 + Math.random() * 2,
+// 	// 		0,
+// 	// 	],
+// 	// 	{
+// 	// 		ttl: 1.0,
+// 	// 		color: [Math.random(), Math.random(), Math.random(), 1],
+// 	// 	}
+// 	// );
 
-	gl.depthFunc(gl.LESS);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-
-	const camCamera = cam.getComponent(CameraPerspectiveComponent)!;
-	const objRenderer = obj.getComponent(MeshRendererComponent)!;
-
-	const updater = scene.update();
-	while (updater.next().done !== true) {
-		// noop;
-	}
-
-	objRenderer.material.setUniform('sampler', tex);
-	objRenderer.render(camCamera);
-
-	objRenderer.material.bind(gl);
-	objRenderer.mesh.draw(gl);
-
-	Debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 0.0, color: [1, 1, 1, 1] });
-
-	// Debug.drawPrimitivePoints([0 + Math.random(), -1 + Math.random() * 2, 0], 2, {
-	// 	ttl: 1.0,
-	// 	color: [Math.random(), Math.random(), Math.random(), 1],
-	// });
-	// Debug.drawPrimitiveLine(
-	// 	[
-	// 		-1 + Math.random() * 1,
-	// 		-1 + Math.random() * 2,
-	// 		0,
-	// 		-1 + Math.random() * 1,
-	// 		-1 + Math.random() * 2,
-	// 		0,
-	// 	],
-	// 	{
-	// 		ttl: 1.0,
-	// 		color: [Math.random(), Math.random(), Math.random(), 1],
-	// 	}
-	// );
-
-	Debug.draw(
-		camCamera.transform!.worldMatrix,
-		camCamera.camera.projectionMatrix
-	);
-	Debug.update();
-};
+// 	Debug.draw(
+// 		camCamera.transform!.worldMatrix,
+// 		camCamera.camera.projectionMatrix
+// 	);
+// 	Debug.update();
