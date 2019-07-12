@@ -1,21 +1,30 @@
 import { Engine } from '@fexel/core/Engine';
+import { Stats } from '@fexel/core/Stats';
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
-import {
-	Texture,
-	TextureWrap,
-	TextureFilter,
-} from '@fexel/core/rendering/Texture';
+import { Texture, TextureWrap, TextureFilter } from '@fexel/core/rendering/Texture';
 import { Debug } from '@fexel/core/Debug';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
-import { CameraPerspectivePrefab } from '@fexel/core/components/Camera';
+import { CameraPerspectivePrefab, CameraPerspectiveComponent } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
 
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
-const engine = new Engine(canvasEl);
+const engine = ((window as any).engine = new Engine(canvasEl));
+const stats = new Stats();
+document.body.appendChild(stats.canvas);
+
+const t1 = stats.addGraph({ label: 'SIN', color: '#0ff' });
+setInterval(() => t1(Math.sin(Math.max(0, performance.now()) / 500).toFixed(3)), 1000 / 60);
+const t2 = stats.addGraph({ label: 'COS', color: '#0f0' });
+setInterval(
+	// () => t2(Math.cos(Math.max(0, performance.now()) / 500).toFixed(3)),
+	() => t2(10),
+	1000 / 60
+);
+setInterval(() => stats.update(), 1000);
 
 const tex = new Texture(
 	document.getElementById('uvdebug')! as HTMLImageElement,
@@ -61,20 +70,7 @@ material.transparent = false;
 material.setUniform('sampler', tex);
 
 const mesh = new Mesh({
-	vertices: new Float32Array([
-		1.0,
-		1.0,
-		0.0,
-		-1.0,
-		1.0,
-		0.0,
-		1.0,
-		-1.0,
-		0.0,
-		-1.0,
-		-1.0,
-		0.0,
-	]),
+	vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
 	indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
 	uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
@@ -106,6 +102,7 @@ const cam = CameraPerspectivePrefab({
 		zoom: 2,
 	},
 });
+// cam.getComponent(CameraPerspectiveComponent)!.viewport.max.set(0.5, 0.5);
 
 const obj = new Entity('UV')
 	.addComponent(new TransformComponent())
@@ -116,6 +113,8 @@ const scene = new Scene().addChild(cam).addChild(obj);
 
 engine.loadScene(scene);
 engine.start();
+
+// setInterval(() => console.log(engine.stats.drawCalls), 1000);
 
 // Debug.setRenderingContext(engine.gl);
 // Debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 0.0, color: [1, 1, 1, 1] });

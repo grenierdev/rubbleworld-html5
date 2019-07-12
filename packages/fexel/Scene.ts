@@ -160,7 +160,7 @@ export class Scene extends Entity {
 						(this.everyComponentsInTree as Component[]).push(component);
 						if (component.willMount) {
 							component.willMount();
-							yield component;
+							yield;
 						}
 					}
 				}
@@ -180,7 +180,7 @@ export class Scene extends Entity {
 							(this.everyComponentsInTree as Component[]).splice(i, 1);
 							if (component.willUnmount) {
 								component.willUnmount();
-								yield component;
+								yield;
 							}
 						}
 					}
@@ -201,9 +201,13 @@ export class Scene extends Entity {
 
 		// Update component
 		for (const component of this.everyComponentsInTree) {
-			if (component.enabled && component.entity && component.entity.enabled) {
-				component.update && component.update();
-				yield component;
+			if (
+				component.enabled &&
+				component.entity &&
+				component.entity.enabled &&
+				component.update
+			) {
+				yield component.update();
 			}
 		}
 	}
@@ -217,7 +221,7 @@ export class Scene extends Entity {
 				component.entity.enabled
 			) {
 				component.render(camera);
-				yield component;
+				yield;
 			}
 		}
 	}
