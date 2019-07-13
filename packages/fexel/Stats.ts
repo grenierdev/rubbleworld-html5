@@ -4,89 +4,100 @@ interface Graph {
 	label: string;
 	buffer: number[];
 	color: string;
-	order: number;
 	min: number;
 	max: number;
 }
 
-const PR = Math.round(window.devicePixelRatio || 1);
-const WIDTH = 400;
-const HEIGHT = 10;
-const GRAPH_WIDTH = 270;
-const GRAPH_X = WIDTH - GRAPH_WIDTH;
+const LABEL_HEIGHT = 10;
+const LABEL_PADDING = 2;
 
 export class Stats {
 	public readonly canvas: HTMLCanvasElement;
 	protected ctx: CanvasRenderingContext2D;
 	protected graph: Graph[] = [];
+	protected selected: number = 0;
 
-	constructor() {
+	constructor(width = 200, height = 100) {
 		this.canvas = document.createElement('canvas');
 		this.canvas.style.cssText = 'position:fixed;top:0;left:0;cursor:pointer;opacity:0.9;z-index:90000';
-		this.canvas.width = WIDTH * PR;
+		this.canvas.width = width;
+		this.canvas.height = height;
+		this.canvas.addEventListener('click', e => {
+			e.preventDefault();
+			this.selected = ++this.selected % this.graph.length;
+		});
 
 		this.ctx = this.canvas.getContext('2d')!;
+		this.ctx.font = 'bold 9px Helvetica,Arial,sans-serif';
+		this.ctx.textBaseline = 'top';
+		this.ctx.globalAlpha = 0.9;
+		this.ctx.fillStyle = '#000';
+		this.ctx.fillRect(0, 0, width, height);
 	}
 
-	addGraph({ label, color, order = 0 }: Pick<Graph, 'label' | 'color'> & { order?: number }) {
+	addGraph({
+		label,
+		color,
+		min = Number.MAX_VALUE,
+		max = Number.MIN_VALUE,
+	}: Pick<Graph, 'label' | 'color'> & { min?: number; max?: number }) {
 		const buffer: number[] = [];
 		this.graph.push({
 			label,
-			order,
 			color,
 			buffer,
-			min: Number.MAX_VALUE,
-			max: Number.MIN_VALUE,
+			min,
+			max,
 		});
-		this.graph.sort((a, b) => a.order - b.order);
-		this.canvas.height = HEIGHT * PR * this.graph.length;
+		// this.graph.sort((a, b) => a.order - b.order);
 		return value => {
 			buffer.push(value);
 		};
 	}
 
 	update() {
-		this.ctx.font = 'bold ' + HEIGHT * PR + 'px monospace';
-		this.ctx.textBaseline = 'top';
+		const {
+			ctx,
+			canvas,
+			canvas: { width, height },
+		} = this;
 
-		this.ctx.clearRect(0, 0, GRAPH_X, this.canvas.height);
-		for (let i = 0, l = this.graph.length; i < l; ++i) {
-			const graph = this.graph[i];
+		const graph = this.graph[this.selected];
+		const graphY = LABEL_HEIGHT + LABEL_PADDING * 2;
+		const graphHeight = height - graphY;
 
-			const value = Math.max(...graph.buffer);
-			const newMin = Math.min(graph.min, value);
-			const newMax = Math.max(graph.max, value);
+		const value = Math.max(...graph.buffer);
+		const newMin = Math.min(graph.min, value);
+		const newMax = Math.max(graph.max, value);
 
-			const h = 1 - mapLinear(newMin, newMax, 0, 1, value) || 0;
-			const label = `${strPadRight(value.toString(), 6)} ${graph.label} (${newMin}-${newMax})`;
+		const h = 1 - mapLinear(newMin - (newMax - newMin) * 0.1, newMax + (newMax - newMin) * 0.1, 0, 1, value) || -1;
+		const label = `${strPadRight(value.toString(), 6)} ${graph.label} (${newMin}-${newMax})`;
 
-			this.ctx.fillStyle = graph.color;
-			this.ctx.fillText(label, 0, i * HEIGHT * PR);
+		ctx.globalAlpha = 1;
+		ctx.drawImage(canvas, 1, graphY, width - 1, graphHeight, 0, graphY, width - 1, graphHeight);
+		ctx.globalAlpha = 0.9;
+		ctx.fillStyle = '#000';
+		ctx.fillRect(0, 0, width, graphY);
+		ctx.fillRect(width - 1, graphY, 1, graphHeight);
 
-			this.ctx.drawImage(
-				this.canvas,
-				GRAPH_X + 1,
-				i * HEIGHT,
-				GRAPH_WIDTH - 1,
-				HEIGHT,
-				GRAPH_X,
-				i * HEIGHT,
-				GRAPH_WIDTH - 1,
-				HEIGHT
-			);
+		ctx.globalAlpha = 1;
+		ctx.fillStyle = graph.color;
+		ctx.fillText(label, LABEL_PADDING, LABEL_PADDING);
 
-			this.ctx.fillRect(WIDTH - PR, i * HEIGHT * PR, PR, HEIGHT * PR);
+		// Plot
+		ctx.fillStyle = graph.color;
+		ctx.globalAlpha = 1;
+		ctx.fillRect(width - 1, graphY + Math.round(h * graphHeight), 1, 1);
+		ctx.globalAlpha = 0.5;
+		ctx.fillRect(width - 1, graphY + Math.round(h * graphHeight) + 1, 1, graphHeight - 1 - Math.round(h * graphHeight));
 
-			this.ctx.clearRect(WIDTH - PR, i * HEIGHT * PR, PR, Math.round(h * HEIGHT));
-
-			graph.buffer.splice(0, graph.buffer.length);
-			graph.min = newMin;
-			graph.max = newMax;
-		}
+		graph.buffer.splice(0, graph.buffer.length);
+		graph.min = newMin;
+		graph.max = newMax;
 	}
 }
 
 function strPadRight(str: string, length: number, pad = ' ') {
-	for (; str.length < length; str = pad + str);
+	for (; str.length <= length; str = pad + str);
 	return str;
 }
