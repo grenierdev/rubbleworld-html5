@@ -16,14 +16,10 @@ const engine = ((window as any).engine = new Engine(canvasEl));
 const stats = new Stats();
 document.body.appendChild(stats.canvas);
 
-const t1 = stats.addGraph({ label: 'SIN', color: '#0ff', min: 0, max: 2000 });
+const t1 = stats.addGraph({ label: 'SIN', color: '#cb6b9b', min: 0, max: 2000 });
 setInterval(() => t1(+(Math.sin(performance.now() / 1000) + 1).toFixed(3) * 1000), 1000 / 60);
-const t2 = stats.addGraph({ label: 'COS', color: '#0f0', min: 5, max: 15 });
-setInterval(
-	// () => t2(Math.cos(Math.max(0, performance.now()) / 500).toFixed(3)),
-	() => t2(10),
-	1000 / 60
-);
+const t2 = stats.addGraph({ label: 'COS', color: '#3eb7ef', min: 0, max: 2000 });
+setInterval(() => t2(+(Math.cos(performance.now() / 1000 + 1000) + 1).toFixed(3) * 1000), 1000 / 60);
 setInterval(() => stats.update(), 1000 / 30);
 
 const tex = new Texture(
