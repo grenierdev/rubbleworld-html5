@@ -149,24 +149,6 @@ export class Scene extends Entity {
 	*update() {
 		let changed = false;
 
-		// Add newly added entities to the scene
-		if (this.entitiesToAdd.length) {
-			for (const entityToAdd of this.entitiesToAdd) {
-				const entities = [entityToAdd, ...entityToAdd.getChildren(true)];
-				for (const entity of entities) {
-					for (const component of entity.components) {
-						changed = true;
-						(this.everyComponentsInTree as Component[]).push(component);
-						if (component.willMount) {
-							component.willMount();
-							yield;
-						}
-					}
-				}
-			}
-			this.entitiesToAdd.splice(0, this.entitiesToAdd.length);
-		}
-
 		// Remove entities of the scene
 		if (this.entitiesToRemove.length) {
 			for (const entityToRemove of this.entitiesToRemove) {
@@ -187,6 +169,24 @@ export class Scene extends Entity {
 				}
 			}
 			this.entitiesToRemove.splice(0, this.entitiesToRemove.length);
+		}
+
+		// Add newly added entities to the scene
+		if (this.entitiesToAdd.length) {
+			for (const entityToAdd of this.entitiesToAdd) {
+				const entities = [entityToAdd, ...entityToAdd.getChildren(true)];
+				for (const entity of entities) {
+					for (const component of entity.components) {
+						changed = true;
+						(this.everyComponentsInTree as Component[]).push(component);
+						if (component.willMount) {
+							component.willMount();
+							yield;
+						}
+					}
+				}
+			}
+			this.entitiesToAdd.splice(0, this.entitiesToAdd.length);
 		}
 
 		// Something changed, reorder components
