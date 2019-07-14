@@ -2,13 +2,18 @@ import { IDisposable } from '@konstellio/disposable';
 import { Scene, Component } from './Scene';
 import { CameraComponent } from './components/Camera';
 import { MeshRendererComponent } from './components/MeshRenderer';
+import { Stats } from './Stats';
 
 export interface EngineStats {
+	frames: number;
 	drawCalls: number;
 	updates: number;
 	fixedUpdates: number;
 	render: number;
+	lastUpdate: number;
 }
+
+const HAS_MEMORY = !!(performance as any).memory;
 
 export class Engine implements IDisposable {
 	protected mainScene?: Scene;
@@ -19,9 +24,9 @@ export class Engine implements IDisposable {
 
 	public fixedUpdateRate: number = 1000 / 15;
 	public readonly gl: WebGLRenderingContext;
-	public readonly stats: EngineStats;
+	public readonly statsData: EngineStats;
 
-	constructor(protected readonly canvas: HTMLCanvasElement) {
+	constructor(protected readonly canvas: HTMLCanvasElement, public readonly stats?: Stats) {
 		const gl = canvas.getContext('webgl', {
 			alpha: false,
 			antialias: false,
@@ -34,11 +39,13 @@ export class Engine implements IDisposable {
 		}
 
 		this.gl = gl;
-		const stats = (this.stats = {
+		const statsData = (this.statsData = {
+			frames: 0,
 			drawCalls: 0,
 			updates: 0,
 			fixedUpdates: 0,
 			render: 0,
+			lastUpdate: 0,
 		});
 		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
 		this.bindedRenderMethod = this.render.bind(this);
@@ -48,21 +55,28 @@ export class Engine implements IDisposable {
 
 		gl.drawArrays = (function(fn) {
 			return function(mode: GLenum, first: GLint, count: GLsizei) {
-				stats.drawCalls++;
+				statsData.drawCalls++;
 				return fn.call(gl, mode, first, count);
 			};
 		})(gl.drawArrays);
 		gl.drawElements = (function(fn) {
-			return function(
-				mode: GLenum,
-				count: GLsizei,
-				type: GLenum,
-				offset: GLintptr
-			) {
-				stats.drawCalls++;
+			return function(mode: GLenum, count: GLsizei, type: GLenum, offset: GLintptr) {
+				statsData.drawCalls++;
 				return fn.call(gl, mode, count, type, offset);
 			};
 		})(gl.drawElements);
+
+		if (stats) {
+			stats.addGraph({ id: 'fps', label: 'fps', min: 0, max: 60 });
+			stats.addGraph({ id: 'ms', label: 'ms', min: 0, max: 50 });
+			if (HAS_MEMORY) {
+				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: (performance as any).memory.jsHeapSizeLimit / 1048576 });
+			}
+			stats.addGraph({ id: 'update', label: ' updates', min: 0, max: 0 });
+			stats.addGraph({ id: 'render', label: ' renders', min: 0, max: 0 });
+			stats.addGraph({ id: 'fixedupdate', label: ' fupdates', min: 0, max: 0 });
+			stats.addGraph({ id: 'draw', label: ' draws', min: 0, max: 0 });
+		}
 	}
 
 	dispose(): void {}
@@ -73,10 +87,7 @@ export class Engine implements IDisposable {
 
 	start() {
 		this.renderRequestId = requestAnimationFrame(this.bindedRenderMethod);
-		this.fixedUpdateRequestId = setInterval(
-			this.bindedFixedUpdateMethod,
-			this.fixedUpdateRate
-		);
+		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate);
 	}
 
 	stop() {
@@ -91,13 +102,28 @@ export class Engine implements IDisposable {
 	}
 
 	fixedUpdate() {
-		this.stats.fixedUpdates = 0;
+		this.statsData.fixedUpdates = 0;
+
+		if (this.mainScene) {
+			const ticker = this.mainScene.fixedUpdate();
+			while (ticker.next().done !== true) {
+				this.statsData.fixedUpdates++;
+				// TODO bail if frame took too long, emit warning ?
+			}
+		}
+
+		if (this.stats) {
+			this.stats.updateGraph('fixedupdate', this.statsData.fixedUpdates);
+		}
 	}
 
 	render() {
 		this.renderRequestId = requestAnimationFrame(this.bindedRenderMethod);
 
-		this.stats.drawCalls = this.stats.updates = this.stats.render = 0;
+		this.statsData.frames++;
+		this.statsData.drawCalls = this.statsData.updates = this.statsData.render = 0;
+
+		const startTime = (performance || Date).now();
 
 		if (this.mainScene) {
 			const gl = this.gl;
@@ -106,7 +132,7 @@ export class Engine implements IDisposable {
 
 			const ticker = this.mainScene.update();
 			while (ticker.next().done !== true) {
-				this.stats.updates++;
+				this.statsData.updates++;
 				// TODO bail if frame took too long, emit warning ?
 			}
 
@@ -124,10 +150,8 @@ export class Engine implements IDisposable {
 				gl.viewport(
 					cameraComponent.viewport.min.x * width,
 					cameraComponent.viewport.min.y * height,
-					(cameraComponent.viewport.max.x - cameraComponent.viewport.min.x) *
-						width,
-					(cameraComponent.viewport.max.y - cameraComponent.viewport.min.y) *
-						height
+					(cameraComponent.viewport.max.x - cameraComponent.viewport.min.x) * width,
+					(cameraComponent.viewport.max.y - cameraComponent.viewport.min.y) * height
 				);
 				if (cameraComponent.clear) {
 					gl.clearColor(
@@ -140,18 +164,15 @@ export class Engine implements IDisposable {
 				}
 
 				const meshRendererComponents = this.mainScene.everyComponentsInTree.filter(
-					(component): component is MeshRendererComponent =>
-						component instanceof MeshRendererComponent
+					(component): component is MeshRendererComponent => component instanceof MeshRendererComponent
 				);
 				const ticker = this.mainScene.render(cameraComponent);
 				while (ticker.next().done !== true) {
-					this.stats.render++;
+					this.statsData.render++;
 					// TODO bail if frame took too long, emit warning ?
 				}
 
-				meshRendererComponents.sort(
-					(a, b) => a.material.queue - b.material.queue
-				);
+				meshRendererComponents.sort((a, b) => a.material.queue - b.material.queue);
 
 				for (const meshRendererComponent of meshRendererComponents) {
 					meshRendererComponent.material.bind(gl);
@@ -160,7 +181,24 @@ export class Engine implements IDisposable {
 			}
 
 			gl.flush();
-			console.log(this.stats.drawCalls, this.stats.updates, this.stats.render);
+		}
+		if (this.stats) {
+			const time = (performance || Date).now();
+			if (time >= this.statsData.lastUpdate + 1000) {
+				this.stats.updateGraph(
+					'fps',
+					+((this.statsData.frames * 1000) / (time - this.statsData.lastUpdate)).toFixed(0)
+				);
+				this.statsData.lastUpdate = time;
+				this.statsData.frames = 0;
+			}
+			this.stats.updateGraph('ms', +(time - startTime).toFixed(1));
+			if (HAS_MEMORY) {
+				this.stats.updateGraph('mem', +((performance as any).memory.usedJSHeapSize / 1048576).toFixed(1));
+			}
+			this.stats.updateGraph('update', this.statsData.updates);
+			this.stats.updateGraph('render', this.statsData.render);
+			this.stats.updateGraph('draw', this.statsData.drawCalls);
 		}
 	}
 

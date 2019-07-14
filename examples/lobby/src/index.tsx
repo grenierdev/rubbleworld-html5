@@ -11,16 +11,13 @@ import { CameraPerspectivePrefab, CameraPerspectiveComponent } from '@fexel/core
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
 
-const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
-const engine = ((window as any).engine = new Engine(canvasEl));
-const stats = new Stats();
+const stats = new Stats(340);
+stats.canvas.style.opacity = '0.9';
 document.body.appendChild(stats.canvas);
-
-const t1 = stats.addGraph({ label: 'SIN', color: '#cb6b9b', min: 0, max: 2000 });
-setInterval(() => t1(+(Math.sin(performance.now() / 1000) + 1).toFixed(3) * 1000), 1000 / 60);
-const t2 = stats.addGraph({ label: 'COS', color: '#3eb7ef', min: 0, max: 2000 });
-setInterval(() => t2(+(Math.cos(performance.now() / 1000 + 1000) + 1).toFixed(3) * 1000), 1000 / 60);
 setInterval(() => stats.update(), 1000 / 30);
+
+const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
+const engine = ((window as any).engine = new Engine(canvasEl, stats));
 
 const tex = new Texture(
 	document.getElementById('uvdebug')! as HTMLImageElement,

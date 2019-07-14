@@ -24,6 +24,7 @@ export abstract class Component {
 	willMount?(): void;
 	willUnmount?(): void;
 	update?(): IterableIterator<void> | void;
+	fixedUpdate?(): IterableIterator<void> | void;
 	render?(camera: CameraComponent): void;
 }
 
@@ -109,9 +110,7 @@ export class Entity {
 	}
 
 	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
-		const component = this.components.find(
-			component => component.constructor === type
-		);
+		const component = this.components.find(component => component.constructor === type);
 		if (component) {
 			return component as any;
 		}
@@ -194,19 +193,13 @@ export class Scene extends Entity {
 		if (changed) {
 			(this.everyComponentsInTree as Component[]).sort(
 				(a, b) =>
-					(a.constructor as typeof Component).executionOrder -
-					(b.constructor as typeof Component).executionOrder
+					(a.constructor as typeof Component).executionOrder - (b.constructor as typeof Component).executionOrder
 			);
 		}
 
 		// Update component
 		for (const component of this.everyComponentsInTree) {
-			if (
-				component.enabled &&
-				component.entity &&
-				component.entity.enabled &&
-				component.update
-			) {
+			if (component.enabled && component.entity && component.entity.enabled && component.update) {
 				yield component.update();
 			}
 		}
@@ -214,14 +207,17 @@ export class Scene extends Entity {
 
 	*render(camera: CameraComponent) {
 		for (const component of this.everyComponentsInTree) {
-			if (
-				component.enabled &&
-				component.render &&
-				component.entity &&
-				component.entity.enabled
-			) {
+			if (component.enabled && component.render && component.entity && component.entity.enabled) {
 				component.render(camera);
 				yield;
+			}
+		}
+	}
+
+	*fixedUpdate() {
+		for (const component of this.everyComponentsInTree) {
+			if (component.enabled && component.fixedUpdate && component.entity && component.entity.enabled) {
+				yield component.fixedUpdate();
 			}
 		}
 	}
