@@ -7,7 +7,7 @@ describe('Scene', () => {
 		const A = new DummyComponent();
 		const scene = new Scene().addChild(new Entity('A').addComponent(A));
 
-		let stepper = scene.update();
+		let stepper = scene.update({});
 
 		// onStart
 		expect(stepper.next().done).to.equal(false);
@@ -28,14 +28,10 @@ describe('Scene', () => {
 		const C = new DummyComponent();
 
 		const scene = new Scene()
-			.addChild(
-				new Entity('A')
-					.addComponent(A)
-					.addChild(new Entity('B').addComponent(B))
-			)
+			.addChild(new Entity('A').addComponent(A).addChild(new Entity('B').addComponent(B)))
 			.addChild(new Entity('C').addComponent(C));
 
-		let stepper = scene.update();
+		let stepper = scene.update({});
 
 		expect(stepper.next().done).to.equal(false);
 		expect(A.mountCount).to.equal(1);
@@ -87,11 +83,9 @@ describe('Scene', () => {
 		const A = new DummyComponent();
 		const B = new PriorityComponent();
 
-		const scene = new Scene()
-			.addChild(new Entity('A').addComponent(A))
-			.addChild(new Entity('B').addComponent(B));
+		const scene = new Scene().addChild(new Entity('A').addComponent(A)).addChild(new Entity('B').addComponent(B));
 
-		let stepper = scene.update();
+		let stepper = scene.update({});
 
 		expect(stepper.next().done).to.equal(false);
 		expect(A.mountCount).to.equal(1);

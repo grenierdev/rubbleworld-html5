@@ -1,9 +1,5 @@
 import { Component, Entity } from '../Scene'; // hack circular dependency
-import {
-	Camera,
-	CameraPerspective,
-	CameraOrthographic,
-} from '../rendering/Camera';
+import { Camera, CameraPerspective, CameraOrthographic } from '../rendering/Camera';
 import { TransformComponent } from './Transform';
 import { Mutable } from '../util/Mutable';
 import { Vector3 } from '../math/Vector3';
@@ -11,6 +7,7 @@ import { Box2 } from '../math/Box2';
 import { Euler } from '../math/Euler';
 import { Vector2 } from '../math/Vector2';
 import { Color } from '../math/Color';
+import { Matrix4 } from '../math/Matrix4';
 
 export enum Clear {
 	Nothing = 0,
@@ -31,9 +28,25 @@ export abstract class CameraComponent extends Component {
 	}
 
 	willMount() {
-		(this as Mutable<CameraComponent>).transform = this.getComponent(
-			TransformComponent
+		(this as Mutable<CameraComponent>).transform = this.getComponent(TransformComponent);
+	}
+
+	update() {
+		// noop;
+	}
+
+	setupViewport(gl: WebGLRenderingContext, width: number, height: number) {
+		gl.viewport(
+			this.viewport.min.x * width,
+			this.viewport.min.y * height,
+			(this.viewport.max.x - this.viewport.min.x) * width,
+			(this.viewport.max.y - this.viewport.min.y) * height
 		);
+		if (this.clear) {
+			gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
+			gl.clear(this.clear);
+		}
+		return [this.transform ? this.transform.worldMatrix : Matrix4.Identity, this.camera.projectionMatrix];
 	}
 }
 
@@ -62,15 +75,7 @@ export interface CameraOrthographicConstructor {
 }
 
 export class CameraOrthographicComponent extends CameraComponent {
-	constructor({
-		bottom,
-		left,
-		far,
-		near,
-		right,
-		top,
-		zoom,
-	}: CameraOrthographicConstructor) {
+	constructor({ bottom, left, far, near, right, top, zoom }: CameraOrthographicConstructor) {
 		super(new CameraOrthographic(left, right, top, bottom, near, far, zoom));
 	}
 }
@@ -89,9 +94,7 @@ export function CameraPerspectivePrefab({
 	camera: CameraPerspectiveConstructor;
 }) {
 	return new Entity(name)
-		.addComponent(
-			new TransformComponent(position.clone(), rotation.clone(), scale.clone())
-		)
+		.addComponent(new TransformComponent(position.clone(), rotation.clone(), scale.clone()))
 		.addComponent(new CameraPerspectiveComponent(camera));
 }
 
@@ -109,8 +112,6 @@ export function CameraOrthographicPrefab({
 	camera: CameraOrthographicConstructor;
 }) {
 	return new Entity(name)
-		.addComponent(
-			new TransformComponent(position.clone(), rotation.clone(), scale.clone())
-		)
+		.addComponent(new TransformComponent(position.clone(), rotation.clone(), scale.clone()))
 		.addComponent(new CameraOrthographicComponent(camera));
 }

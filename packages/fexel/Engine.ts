@@ -1,7 +1,6 @@
 import { IDisposable } from '@konstellio/disposable';
-import { Scene, Component } from './Scene';
+import { Scene, RenderContext } from './Scene';
 import { CameraComponent } from './components/Camera';
-import { MeshRendererComponent } from './components/MeshRenderer';
 import { Stats } from './Stats';
 
 export interface EngineStats {
@@ -72,10 +71,10 @@ export class Engine implements IDisposable {
 			if (HAS_MEMORY) {
 				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: (performance as any).memory.jsHeapSizeLimit / 1048576 });
 			}
-			stats.addGraph({ id: 'update', label: ' updates', min: 0, max: 0 });
-			stats.addGraph({ id: 'render', label: ' renders', min: 0, max: 0 });
-			stats.addGraph({ id: 'fixedupdate', label: ' fupdates', min: 0, max: 0 });
-			stats.addGraph({ id: 'draw', label: ' draws', min: 0, max: 0 });
+			stats.addGraph({ id: 'update', label: ' updates', min: 0, max: 50 });
+			stats.addGraph({ id: 'render', label: ' renders', min: 0, max: 50 });
+			stats.addGraph({ id: 'fixedupdate', label: ' fupdates', min: 0, max: 50 });
+			stats.addGraph({ id: 'draw', label: ' draws', min: 0, max: 20 });
 		}
 	}
 
@@ -105,7 +104,7 @@ export class Engine implements IDisposable {
 		this.statsData.fixedUpdates = 0;
 
 		if (this.mainScene) {
-			const ticker = this.mainScene.fixedUpdate();
+			const ticker = this.mainScene.fixedUpdate({});
 			while (ticker.next().done !== true) {
 				this.statsData.fixedUpdates++;
 				// TODO bail if frame took too long, emit warning ?
@@ -130,53 +129,30 @@ export class Engine implements IDisposable {
 			const width = this.canvas.width;
 			const height = this.canvas.height;
 
-			const ticker = this.mainScene.update();
+			const ticker = this.mainScene.update({});
 			while (ticker.next().done !== true) {
 				this.statsData.updates++;
 				// TODO bail if frame took too long, emit warning ?
 			}
 
 			const cameraComponents: CameraComponent[] = [];
-			const meshRendererComponents: MeshRendererComponent[] = [];
-			for (const component of this.mainScene.everyComponentsInTree) {
+			for (const component of this.mainScene.updatableComponents) {
 				if (component instanceof CameraComponent) {
 					cameraComponents.push(component);
-				} else if (component instanceof MeshRendererComponent) {
-					meshRendererComponents.push(component);
 				}
 			}
 
 			for (const cameraComponent of cameraComponents) {
-				gl.viewport(
-					cameraComponent.viewport.min.x * width,
-					cameraComponent.viewport.min.y * height,
-					(cameraComponent.viewport.max.x - cameraComponent.viewport.min.x) * width,
-					(cameraComponent.viewport.max.y - cameraComponent.viewport.min.y) * height
-				);
-				if (cameraComponent.clear) {
-					gl.clearColor(
-						cameraComponent.backgroundColor.r,
-						cameraComponent.backgroundColor.g,
-						cameraComponent.backgroundColor.b,
-						cameraComponent.backgroundColor.a
-					);
-					gl.clear(cameraComponent.clear);
-				}
-
-				const meshRendererComponents = this.mainScene.everyComponentsInTree.filter(
-					(component): component is MeshRendererComponent => component instanceof MeshRendererComponent
-				);
-				const ticker = this.mainScene.render(cameraComponent);
+				const [viewMatrix, projectionMatrix] = cameraComponent.setupViewport(gl, width, height);
+				const context: RenderContext = {
+					gl,
+					viewMatrix,
+					projectionMatrix,
+				};
+				const ticker = this.mainScene.render(context);
 				while (ticker.next().done !== true) {
 					this.statsData.render++;
 					// TODO bail if frame took too long, emit warning ?
-				}
-
-				meshRendererComponents.sort((a, b) => a.material.queue - b.material.queue);
-
-				for (const meshRendererComponent of meshRendererComponents) {
-					meshRendererComponent.material.bind(gl);
-					meshRendererComponent.mesh.draw(gl);
 				}
 			}
 

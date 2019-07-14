@@ -1,7 +1,16 @@
 import { Mutable } from './util/Mutable';
 
+export interface UpdateContext {}
+
+export interface RenderContext {
+	gl: WebGLRenderingContext;
+	viewMatrix: Matrix4;
+	projectionMatrix: Matrix4;
+}
+
 export abstract class Component {
-	public static readonly executionOrder: number = 0;
+	public executionOrder: number = 0;
+	public renderOrder: number = 0;
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
 
@@ -23,9 +32,9 @@ export abstract class Component {
 
 	willMount?(): void;
 	willUnmount?(): void;
-	update?(): IterableIterator<void> | void;
-	fixedUpdate?(): IterableIterator<void> | void;
-	render?(camera: CameraComponent): void;
+	update?(context: UpdateContext): IterableIterator<void> | void;
+	fixedUpdate?(context: UpdateContext): IterableIterator<void> | void;
+	render?(context: RenderContext): void;
 }
 
 export class Entity {
@@ -126,7 +135,10 @@ export class Entity {
 }
 
 export class Scene extends Entity {
-	public readonly everyComponentsInTree: ReadonlyArray<Component>;
+	/** @internal */
+	public readonly updatableComponents: Component[];
+	/** @internal */
+	public readonly renderableComponents: Component[];
 	/** @internal */
 	public readonly entitiesToAdd: Entity[];
 	/** @internal */
@@ -134,7 +146,8 @@ export class Scene extends Entity {
 
 	constructor() {
 		super('Scene');
-		this.everyComponentsInTree = [];
+		this.updatableComponents = [];
+		this.renderableComponents = [];
 		this.entitiesToAdd = [];
 		this.entitiesToRemove = [];
 	}
@@ -146,7 +159,7 @@ export class Scene extends Entity {
 		return this;
 	}
 
-	*update() {
+	*update(context: UpdateContext) {
 		let changed = false;
 
 		// Remove entities of the scene
@@ -155,11 +168,23 @@ export class Scene extends Entity {
 				const entities = [entityToRemove, ...entityToRemove.getChildren(true)];
 				for (const entity of entities) {
 					for (const component of entity.components) {
-						const i = this.everyComponentsInTree.indexOf(component);
+						let i = this.updatableComponents.indexOf(component);
+						let unmounted = false;
 						if (i > -1) {
 							changed = true;
-							(this.everyComponentsInTree as Component[]).splice(i, 1);
+							this.updatableComponents.splice(i, 1);
 							if (component.willUnmount) {
+								component.willUnmount();
+								unmounted = true;
+								yield;
+							}
+						}
+
+						i = this.renderableComponents.indexOf(component);
+						if (i > -1) {
+							changed = true;
+							this.renderableComponents.splice(i, 1);
+							if (!unmounted && component.willUnmount) {
 								component.willUnmount();
 								yield;
 							}
@@ -178,10 +203,15 @@ export class Scene extends Entity {
 				for (const entity of entities) {
 					for (const component of entity.components) {
 						changed = true;
-						(this.everyComponentsInTree as Component[]).push(component);
 						if (component.willMount) {
 							component.willMount();
 							yield;
+						}
+						if (component.update || component.fixedUpdate) {
+							this.updatableComponents.push(component);
+						}
+						if (component.render) {
+							this.renderableComponents.push(component);
 						}
 					}
 				}
@@ -191,36 +221,35 @@ export class Scene extends Entity {
 
 		// Something changed, reorder components
 		if (changed) {
-			(this.everyComponentsInTree as Component[]).sort(
-				(a, b) =>
-					(a.constructor as typeof Component).executionOrder - (b.constructor as typeof Component).executionOrder
-			);
+			this.updatableComponents.sort((a, b) => a.executionOrder - b.executionOrder);
+			this.renderableComponents.sort((a, b) => a.executionOrder - b.executionOrder);
 		}
 
 		// Update component
-		for (const component of this.everyComponentsInTree) {
+		for (const component of this.updatableComponents) {
 			if (component.enabled && component.entity && component.entity.enabled && component.update) {
-				yield component.update();
+				yield component.update(context);
 			}
 		}
 	}
 
-	*render(camera: CameraComponent) {
-		for (const component of this.everyComponentsInTree) {
+	*render(context: RenderContext) {
+		for (const component of this.renderableComponents) {
 			if (component.enabled && component.render && component.entity && component.entity.enabled) {
-				component.render(camera);
+				component.render(context);
 				yield;
 			}
 		}
 	}
 
-	*fixedUpdate() {
-		for (const component of this.everyComponentsInTree) {
+	*fixedUpdate(context: UpdateContext) {
+		for (const component of this.updatableComponents) {
 			if (component.enabled && component.fixedUpdate && component.entity && component.entity.enabled) {
-				yield component.fixedUpdate();
+				yield component.fixedUpdate(context);
 			}
 		}
 	}
 }
 
-import { CameraComponent } from './components/Camera'; // hack circular dependency
+import { CameraComponent } from './components/Camera'; // hack circular dependencyimport { Matrix4 } from './math/Matrix4';
+import { Matrix4 } from './math/Matrix4';
