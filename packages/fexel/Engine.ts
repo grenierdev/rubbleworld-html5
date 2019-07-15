@@ -16,16 +16,87 @@ const HAS_MEMORY = !!(performance as any).memory;
 
 export class Engine implements IDisposable {
 	protected mainScene?: Scene;
-	protected renderRequestId: number = -1;
+	protected updateRequestId: number = -1;
 	protected fixedUpdateRequestId: number = -1;
+	protected readonly bindedUpdateMethod: () => void;
 	protected readonly bindedFixedUpdateMethod: () => void;
-	protected readonly bindedRenderMethod: () => void;
 
 	public fixedUpdateRate: number = 1000 / 15;
-	public readonly gl: WebGLRenderingContext;
 	public readonly statsData: EngineStats;
 
+	constructor() {
+		this.statsData = {
+			frames: 0,
+			drawCalls: 0,
+			updates: 0,
+			fixedUpdates: 0,
+			render: 0,
+			lastUpdate: 0,
+		};
+		this.bindedUpdateMethod = this.update.bind(this);
+		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
+	}
+
+	dispose(): void {}
+
+	isDisposed(): boolean {
+		return true;
+	}
+
+	loadScene(scene: Scene) {
+		// TODO Unload last scene ?
+		this.mainScene = scene;
+	}
+
+	start() {
+		this.updateRequestId = setInterval(this.bindedUpdateMethod, this.fixedUpdateRate);
+		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate);
+	}
+
+	stop() {
+		if (this.updateRequestId > -1) {
+			clearInterval(this.updateRequestId);
+			this.updateRequestId = -1;
+		}
+		if (this.fixedUpdateRequestId > -1) {
+			clearInterval(this.fixedUpdateRequestId);
+			this.fixedUpdateRequestId = -1;
+		}
+	}
+
+	update() {
+		this.statsData.updates = 0;
+
+		if (this.mainScene) {
+			const ticker = this.mainScene.update({});
+			while (ticker.next().done !== true) {
+				this.statsData.updates++;
+				// TODO bail if frame took too long, emit warning ?
+			}
+		}
+	}
+
+	fixedUpdate() {
+		this.statsData.fixedUpdates = 0;
+
+		if (this.mainScene) {
+			const ticker = this.mainScene.fixedUpdate({});
+			while (ticker.next().done !== true) {
+				this.statsData.fixedUpdates++;
+				// TODO bail if frame took too long, emit warning ?
+			}
+		}
+	}
+}
+
+export class RenderableEngine extends Engine {
+	protected renderRequestId: number = -1;
+
+	public readonly gl: WebGLRenderingContext;
+
 	constructor(protected readonly canvas: HTMLCanvasElement, public readonly stats?: Stats) {
+		super();
+
 		const gl = canvas.getContext('webgl', {
 			alpha: false,
 			antialias: false,
@@ -38,20 +109,11 @@ export class Engine implements IDisposable {
 		}
 
 		this.gl = gl;
-		const statsData = (this.statsData = {
-			frames: 0,
-			drawCalls: 0,
-			updates: 0,
-			fixedUpdates: 0,
-			render: 0,
-			lastUpdate: 0,
-		});
-		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
-		this.bindedRenderMethod = this.render.bind(this);
 
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
 
+		const statsData = this.statsData;
 		gl.drawArrays = (function(fn) {
 			return function(mode: GLenum, first: GLint, count: GLsizei) {
 				statsData.drawCalls++;
@@ -78,21 +140,15 @@ export class Engine implements IDisposable {
 		}
 	}
 
-	dispose(): void {}
-
-	isDisposed(): boolean {
-		return true;
-	}
-
 	start() {
-		this.renderRequestId = requestAnimationFrame(this.bindedRenderMethod);
+		this.updateRequestId = requestAnimationFrame(this.bindedUpdateMethod);
 		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate);
 	}
 
 	stop() {
-		if (this.renderRequestId > -1) {
-			cancelAnimationFrame(this.renderRequestId);
-			this.renderRequestId = -1;
+		if (this.updateRequestId > -1) {
+			cancelAnimationFrame(this.updateRequestId);
+			this.updateRequestId = -1;
 		}
 		if (this.fixedUpdateRequestId > -1) {
 			clearInterval(this.fixedUpdateRequestId);
@@ -100,24 +156,8 @@ export class Engine implements IDisposable {
 		}
 	}
 
-	fixedUpdate() {
-		this.statsData.fixedUpdates = 0;
-
-		if (this.mainScene) {
-			const ticker = this.mainScene.fixedUpdate({});
-			while (ticker.next().done !== true) {
-				this.statsData.fixedUpdates++;
-				// TODO bail if frame took too long, emit warning ?
-			}
-		}
-
-		if (this.stats) {
-			this.stats.updateGraph('fixedupdate', this.statsData.fixedUpdates);
-		}
-	}
-
-	render() {
-		this.renderRequestId = requestAnimationFrame(this.bindedRenderMethod);
+	update() {
+		this.updateRequestId = requestAnimationFrame(this.bindedUpdateMethod);
 
 		this.statsData.frames++;
 		this.statsData.drawCalls = this.statsData.updates = this.statsData.render = 0;
@@ -160,7 +200,7 @@ export class Engine implements IDisposable {
 		}
 		if (this.stats) {
 			const time = (performance || Date).now();
-			if (time >= this.statsData.lastUpdate + 1000) {
+			if (time >= this.statsData.lastUpdate + 300) {
 				this.stats.updateGraph(
 					'fps',
 					+((this.statsData.frames * 1000) / (time - this.statsData.lastUpdate)).toFixed(0)
@@ -178,8 +218,11 @@ export class Engine implements IDisposable {
 		}
 	}
 
-	loadScene(scene: Scene) {
-		// TODO Unload last scene ?
-		this.mainScene = scene;
+	fixedUpdate() {
+		super.fixedUpdate();
+
+		if (this.stats) {
+			this.stats.updateGraph('fixedupdate', this.statsData.fixedUpdates);
+		}
 	}
 }

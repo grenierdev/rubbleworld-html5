@@ -1,4 +1,4 @@
-import { Engine } from '@fexel/core/Engine';
+import { RenderableEngine } from '@fexel/core/Engine';
 import { Stats } from '@fexel/core/Stats';
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
@@ -17,7 +17,7 @@ document.body.appendChild(stats.canvas);
 setInterval(() => stats.update(), 1000 / 30);
 
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
-const engine = ((window as any).engine = new Engine(canvasEl, stats));
+const engine = ((window as any).engine = new RenderableEngine(canvasEl, stats));
 
 const tex = new Texture(
 	document.getElementById('uvdebug')! as HTMLImageElement,
