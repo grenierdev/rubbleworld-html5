@@ -1,11 +1,10 @@
-import { Vector3 } from './math/Vector3';
-import { Color } from './math/Color';
-import { Matrix4 } from './math/Matrix4';
-import { ok as assert } from 'assert';
-import { Shader, ShaderType } from './rendering/Shader';
-import { Material } from './rendering/Material';
-import { Mesh, PointMesh, LineMesh } from './rendering/Mesh';
 import { ArrayVariableManager, ArrayBlock } from './util/ArrayManager';
+import { Color, ReadonlyColor } from './math/Color';
+import { Matrix4, ReadonlyMatrix4 } from './math/Matrix4';
+import { Vector3, ReadonlyVector3 } from './math/Vector3';
+import { Material } from './rendering/Material';
+import { Shader, ShaderType } from './rendering/Shader';
+import { PointMesh, LineMesh } from './rendering/Mesh';
 
 enum DebugType {
 	Points,
@@ -13,10 +12,7 @@ enum DebugType {
 	Triangles,
 }
 
-type DebugPrimitive =
-	| DebugPrimitivePoint
-	| DebugPrimitiveLine
-	| DebugPrimitiveTriangles;
+type DebugPrimitive = DebugPrimitivePoint | DebugPrimitiveLine | DebugPrimitiveTriangles;
 
 interface DebugPrimitiveBase<T> {
 	ttl: number;
@@ -31,15 +27,15 @@ interface DebugPrimitiveLine extends DebugPrimitiveBase<DebugType.Line> {
 	block: ArrayBlock<LineArray, LineItem>;
 }
 
-interface DebugPrimitiveTriangles
-	extends DebugPrimitiveBase<DebugType.Triangles> {
+interface DebugPrimitiveTriangles extends DebugPrimitiveBase<DebugType.Triangles> {
 	block: ArrayBlock<Float32Array>;
 }
 
 export interface DebugDrawOptions {
-	color?: Color | [number, number, number, number];
+	color?: Color | ReadonlyColor | [number, number, number, number];
 	matrix?:
 		| Matrix4
+		| ReadonlyMatrix4
 		| [
 				number,
 				number,
@@ -62,25 +58,20 @@ export interface DebugDrawOptions {
 }
 
 export class Debug {
-	private static stack: DebugPrimitive[] = [];
-	private static lastTime = performance.now() / 1000;
-	private static gl: WebGLRenderingContext | undefined;
-	private static material: Material | undefined;
-	private static pointManager: PointMeshManager | undefined;
-	private static pointMesh: PointMesh | undefined;
-	private static pointNeedsUpdate = false;
-	private static lineManager: LineMeshManager | undefined;
-	private static lineMesh: LineMesh | undefined;
-	private static lineNeedsUpdate = false;
+	protected stack: DebugPrimitive[];
+	protected lastTime: number;
+	protected material: Material;
+	protected pointNeedsUpdate: boolean;
+	protected pointManager: PointMeshManager;
+	protected pointMesh: PointMesh;
+	protected lineNeedsUpdate: boolean;
+	protected lineManager: LineMeshManager;
+	protected lineMesh: LineMesh;
 
-	public static log(...args: any[]) {
-		console.log(...args);
-	}
-
-	public static setRenderingContext(gl: WebGLRenderingContext) {
-		Debug.gl = gl;
-
-		Debug.material = new Material(
+	constructor() {
+		this.stack = [];
+		this.lastTime = 0;
+		this.material = new Material(
 			new Shader(
 				`
 				attribute vec3 vertPosition;
@@ -113,10 +104,11 @@ export class Debug {
 				ShaderType.Fragment
 			)
 		);
-		Debug.material.twoSided = true;
-		Debug.material.transparent = true;
+		this.material.twoSided = true;
+		this.material.transparent = true;
 
-		Debug.pointManager = new PointMeshManager(
+		this.pointNeedsUpdate = false;
+		this.pointManager = new PointMeshManager(
 			{
 				positions: new Float32Array(100000 * 3),
 				sizes: new Float32Array(100000 * 1),
@@ -125,18 +117,18 @@ export class Debug {
 			100000,
 			100
 		);
-
-		Debug.pointMesh = new PointMesh(
+		this.pointMesh = new PointMesh(
 			{
 				count: 0,
-				positions: Debug.pointManager.data.positions,
-				sizes: Debug.pointManager.data.sizes,
-				colors: Debug.pointManager.data.colors,
+				positions: this.pointManager.data.positions,
+				sizes: this.pointManager.data.sizes,
+				colors: this.pointManager.data.colors,
 			},
 			true
 		);
 
-		Debug.lineManager = new LineMeshManager(
+		this.lineNeedsUpdate = false;
+		this.lineManager = new LineMeshManager(
 			{
 				positions: new Float32Array(100000 * 6),
 				colors: new Float32Array(100000 * 8),
@@ -144,24 +136,23 @@ export class Debug {
 			100000,
 			100
 		);
-
-		Debug.lineMesh = new LineMesh(
+		this.lineMesh = new LineMesh(
 			{
 				count: 0,
-				positions: Debug.pointManager.data.positions,
-				colors: Debug.pointManager.data.colors,
+				positions: this.pointManager.data.positions,
+				colors: this.pointManager.data.colors,
 			},
 			true
 		);
 	}
 
-	public static update() {
+	public update() {
 		const now = performance.now() / 1000;
-		const delta = now - Debug.lastTime;
-		Debug.lastTime = now;
+		const delta = now - this.lastTime;
+		this.lastTime = now;
 
 		const oldStack: DebugPrimitive[] = [];
-		Debug.stack = Debug.stack.reduce(
+		this.stack = this.stack.reduce(
 			(stack, prim) => {
 				prim.ttl -= delta;
 				if (prim.ttl < 0) {
@@ -176,162 +167,113 @@ export class Debug {
 
 		for (const prim of oldStack) {
 			if (prim.type === DebugType.Points) {
-				Debug.pointNeedsUpdate = true;
+				this.pointNeedsUpdate = true;
 			}
 			prim.block.free();
 		}
 	}
 
-	public static draw(viewMatrix: Matrix4, projMatrix: Matrix4) {
-		Material.currentMaterial = undefined;
-		Mesh.currentMesh = undefined;
-
-		const gl = Debug.gl!;
-
-		gl.disable(gl.DEPTH_TEST);
-		gl.enable(gl.BLEND);
-
-		if (Debug.pointNeedsUpdate) {
-			Debug.pointNeedsUpdate = false;
-			Debug.pointManager!.defrag();
-			Debug.pointMesh!.data.count = Debug.pointManager!.tail.freed
-				? Debug.pointManager!.tail.offset
-				: Debug.pointManager!.tail.offset + Debug.pointManager!.tail.size;
-			Debug.pointMesh!.data.positions = Debug.pointManager!.data.positions;
-			Debug.pointMesh!.data.sizes = Debug.pointManager!.data.sizes;
-			Debug.pointMesh!.data.colors = Debug.pointManager!.data.colors;
-			Debug.pointMesh!.updateBuffers();
+	public draw(viewMatrix: Matrix4 | ReadonlyMatrix4, projMatrix: Matrix4 | ReadonlyMatrix4, gl: WebGLRenderingContext) {
+		if (this.pointNeedsUpdate) {
+			this.pointNeedsUpdate = false;
+			this.pointManager.defrag();
+			this.pointMesh.data.count = this.pointManager.tail.freed
+				? this.pointManager.tail.offset
+				: this.pointManager.tail.offset + this.pointManager.tail.size;
+			this.pointMesh.data.positions = this.pointManager.data.positions;
+			this.pointMesh.data.sizes = this.pointManager.data.sizes;
+			this.pointMesh.data.colors = this.pointManager.data.colors;
+			this.pointMesh.updateBuffers();
 		}
-		if (Debug.lineNeedsUpdate) {
-			Debug.lineNeedsUpdate = false;
-			Debug.lineManager!.defrag();
-			Debug.lineMesh!.data.count = Debug.lineManager!.tail.freed
-				? Debug.lineManager!.tail.offset
-				: Debug.lineManager!.tail.offset + Debug.lineManager!.tail.size;
-			Debug.lineMesh!.data.positions = Debug.lineManager!.data.positions;
-			Debug.lineMesh!.data.colors = Debug.lineManager!.data.colors;
-			Debug.lineMesh!.updateBuffers();
+		if (this.lineNeedsUpdate) {
+			this.lineNeedsUpdate = false;
+			this.lineManager.defrag();
+			this.lineMesh.data.count = this.lineManager.tail.freed
+				? this.lineManager.tail.offset
+				: this.lineManager.tail.offset + this.lineManager.tail.size;
+			this.lineMesh.data.positions = this.lineManager.data.positions;
+			this.lineMesh.data.colors = this.lineManager.data.colors;
+			this.lineMesh.updateBuffers();
 		}
 
-		Debug.material!.setUniform('viewMatrix', viewMatrix.elements);
-		Debug.material!.setUniform('projectionMatrix', projMatrix.elements);
-		Debug.material!.bind(gl);
+		this.material.setUniform('viewMatrix', viewMatrix.elements);
+		this.material.setUniform('projectionMatrix', projMatrix.elements);
+		this.material.bind(gl);
 
-		if (Debug.pointMesh!.data.count > 0) {
-			Debug.pointMesh!.draw(gl);
+		if (this.pointMesh.data.count > 0) {
+			this.pointMesh.draw(gl);
 		}
-		if (Debug.lineMesh!.data.count > 0) {
-			Debug.lineMesh!.draw(gl);
+		if (this.lineMesh.data.count > 0) {
+			this.lineMesh.draw(gl);
 		}
 	}
 
-	public static drawPrimitivePoints(
-		positions: number[],
-		radius: number,
-		options: DebugDrawOptions = {}
-	) {
-		assert(
-			positions.length % 3 === 0,
-			`Expected positions to contains a multiple of 3 number, one for each axis (x,y,z).`
-		);
-		if (positions.length >= 3) {
-			const color = options.color || Color.White;
-			// const matrix = options.matrix || Matrix4.Identity;
-			const points = [] as PointItem[];
-			for (let i = 0, l = positions.length; i < l; i += 3) {
-				points.push({
-					positions: [
-						positions[i * 3 + 0],
-						positions[i * 3 + 1],
-						positions[i * 3 + 2],
-					],
-					colors:
-						color instanceof Color
-							? [color.r, color.g, color.b, color.a]
-							: color,
-					size: radius,
-				});
-			}
-			const block = Debug.pointManager!.alloc(points);
-			Debug.stack.push({
-				block,
-				ttl: options.ttl || 0,
-				type: DebugType.Points,
-			} as DebugPrimitivePoint);
-			Debug.pointNeedsUpdate = true;
+	public drawPrimitivePoints(positions: number[], radius: number, options: DebugDrawOptions = {}) {
+		if (positions.length % 3 !== 0) {
+			throw RangeError(
+				`Debug.drawPrimitivePoints expected a multiple of 3 number for positions, got ${positions.length}.`
+			);
 		}
-	}
-
-	public static drawPrimitiveLine(
-		positions: number[],
-		options: DebugDrawOptions = {}
-	) {
-		assert(
-			positions.length % 3 === 0,
-			`Expected positions to contains a multiple of 3 number, one for each axis (x,y,z).`
-		);
-		if (positions.length >= 3) {
-			const color = options.color || Color.White;
-			// const matrix = options.matrix || Matrix4.Identity;
-			const lines = [] as LineItem[];
-			for (let i = 0, l = positions.length; i < l; i += 6) {
-				lines.push({
-					positions: [
-						positions[i * 3 + 0],
-						positions[i * 3 + 1],
-						positions[i * 3 + 2],
-						positions[i * 3 + 3],
-						positions[i * 3 + 4],
-						positions[i * 3 + 5],
-					],
-					colors:
-						color instanceof Color
-							? [
-									color.r,
-									color.g,
-									color.b,
-									color.a,
-									color.r,
-									color.g,
-									color.b,
-									color.a,
-							  ]
-							: ([...color, ...color] as any),
-				});
-			}
-			const block = Debug.lineManager!.alloc(lines);
-			Debug.stack.push({
-				block,
-				ttl: options.ttl || 0,
-				type: DebugType.Line,
-			} as DebugPrimitiveLine);
-			Debug.lineNeedsUpdate = true;
+		const color = options.color || Color.White;
+		// const matrix = options.matrix || Matrix4.Identity;
+		const points = [] as PointItem[];
+		for (let i = 0, l = positions.length; i < l; i += 3) {
+			points.push({
+				positions: [positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]],
+				colors: color instanceof Color ? [color.r, color.g, color.b, color.a] : color,
+				size: radius,
+			});
 		}
+		const block = this.pointManager.alloc(points);
+		this.stack.push({
+			block,
+			ttl: options.ttl || 0,
+			type: DebugType.Points,
+		} as DebugPrimitivePoint);
+		this.pointNeedsUpdate = true;
 	}
 
-	public static drawPoint(
-		position: Vector3,
-		radius: number,
-		options: DebugDrawOptions = {}
-	) {
-		return Debug.drawPrimitivePoints(
-			[position.x, position.y, position.z],
-			radius,
-			options
-		);
+	public drawPrimitiveLines(positions: number[], options: DebugDrawOptions = {}) {
+		if (positions.length % 6 !== 0) {
+			throw RangeError(
+				`Debug.drawPrimitiveLines expected a multiple of 6 number for positions, got ${positions.length}.`
+			);
+		}
+		const color = options.color || Color.White;
+		// const matrix = options.matrix || Matrix4.Identity;
+		const lines = [] as LineItem[];
+		for (let i = 0, l = positions.length; i < l; i += 6) {
+			lines.push({
+				positions: [
+					positions[i * 3 + 0],
+					positions[i * 3 + 1],
+					positions[i * 3 + 2],
+					positions[i * 3 + 3],
+					positions[i * 3 + 4],
+					positions[i * 3 + 5],
+				],
+				colors:
+					color instanceof Color
+						? [color.r, color.g, color.b, color.a, color.r, color.g, color.b, color.a]
+						: ([...color, ...color] as any),
+			});
+		}
+		const block = this.lineManager.alloc(lines);
+		this.stack.push({
+			block,
+			ttl: options.ttl || 0,
+			type: DebugType.Line,
+		} as DebugPrimitiveLine);
+		this.lineNeedsUpdate = true;
 	}
 
-	// public static drawBox(min: Vector3, max: Vector3, options: DebugDrawOptions = { }) {
+	public drawPoint(position: Vector3 | ReadonlyVector3, radius: number, options: DebugDrawOptions = {}) {
+		return this.drawPrimitivePoints([position.x, position.y, position.z], radius, options);
+	}
 
-	// }
-
-	// public static drawCube(center: Vector3, size: number, options: DebugDrawOptions = { }) {
-	// 	return Debug.drawBox(
-	// 		v0.copy(center).subScalar(size),
-	// 		v0.copy(center).addScalar(size),
-	// 		options
-	// 	);
-	// }
+	public drawLine(start: Vector3 | ReadonlyVector3, end: Vector3 | ReadonlyVector3, options: DebugDrawOptions = {}) {
+		return this.drawPrimitiveLines([start.x, start.y, start.z, end.x, end.y, end.z], options);
+	}
 }
 
 interface PointArray {
@@ -355,21 +297,9 @@ class PointMeshManager extends ArrayVariableManager<PointArray, PointItem> {
 	}
 
 	move(data: PointArray, block: ArrayBlock, offset: number) {
-		data.sizes.copyWithin(
-			offset * 1,
-			block.offset * 1,
-			block.offset * 1 + block.size * 1
-		);
-		data.positions.copyWithin(
-			offset * 3,
-			block.offset * 3,
-			block.offset * 3 + block.size * 3
-		);
-		data.colors.copyWithin(
-			offset * 4,
-			block.offset * 4,
-			block.offset * 4 + block.size * 4
-		);
+		data.sizes.copyWithin(offset * 1, block.offset * 1, block.offset * 1 + block.size * 1);
+		data.positions.copyWithin(offset * 3, block.offset * 3, block.offset * 3 + block.size * 3);
+		data.colors.copyWithin(offset * 4, block.offset * 4, block.offset * 4 + block.size * 4);
 	}
 
 	set(data: PointArray, index: number, value: PointItem) {
@@ -386,11 +316,7 @@ class PointMeshManager extends ArrayVariableManager<PointArray, PointItem> {
 	get(data: PointArray, index: number): PointItem {
 		return {
 			size: data.sizes[index * 1 + 0],
-			positions: [
-				data.positions[index * 3 + 0],
-				data.positions[index * 3 + 1],
-				data.positions[index * 3 + 2],
-			],
+			positions: [data.positions[index * 3 + 0], data.positions[index * 3 + 1], data.positions[index * 3 + 2]],
 			colors: [
 				data.colors[index * 4 + 0],
 				data.colors[index * 4 + 1],
@@ -419,16 +345,8 @@ class LineMeshManager extends ArrayVariableManager<LineArray, LineItem> {
 	}
 
 	move(data: LineArray, block: ArrayBlock, offset: number) {
-		data.positions.copyWithin(
-			offset * 6,
-			block.offset * 6,
-			block.offset * 6 + block.size * 6
-		);
-		data.colors.copyWithin(
-			offset * 8,
-			block.offset * 8,
-			block.offset * 8 + block.size * 8
-		);
+		data.positions.copyWithin(offset * 6, block.offset * 6, block.offset * 6 + block.size * 6);
+		data.colors.copyWithin(offset * 8, block.offset * 8, block.offset * 8 + block.size * 8);
 	}
 
 	set(data: LineArray, index: number, value: LineItem) {
