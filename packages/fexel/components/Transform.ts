@@ -42,9 +42,7 @@ export class TransformComponent extends Component {
 		if (this.entity && this.lastParent !== this.entity.parent) {
 			this.lastParent = this.entity.parent;
 			(this as Mutable<TransformComponent>).parentTransform =
-				(this.entity.parent &&
-					this.entity.parent.getComponent(TransformComponent)) ||
-				undefined;
+				(this.entity.parent && this.entity.parent.getComponent(TransformComponent)) || undefined;
 		}
 		if (this.parentTransform) {
 			if (
@@ -54,10 +52,7 @@ export class TransformComponent extends Component {
 				!this.lastLocalMatrix.equals(this.localMatrix)
 			) {
 				this.lastLocalMatrix.copy(this.localMatrix);
-				this.worldMatrix.multiplyMatrices(
-					this.parentTransform.worldMatrix,
-					this.localMatrix
-				);
+				this.worldMatrix.multiplyMatrices(this.parentTransform.worldMatrix, this.localMatrix);
 				this.lastParentWorldMatrix = this.lastParentWorldMatrix
 					? this.lastParentWorldMatrix.copy(this.parentTransform.worldMatrix)
 					: this.parentTransform.worldMatrix.clone();
@@ -89,9 +84,9 @@ export class TransformComponent extends Component {
 
 export function EmptyPrefab({
 	name = 'EmptyPrefab',
-	position = Vector3.Zero,
-	rotation = Euler.Zero,
-	scale = Vector3.One,
+	position = Vector3.Zero.clone(),
+	rotation = Euler.Zero.clone(),
+	scale = Vector3.One.clone(),
 	children = [],
 }: {
 	name?: string;
@@ -100,9 +95,5 @@ export function EmptyPrefab({
 	scale?: Vector3;
 	children?: Entity[];
 }) {
-	return new Entity(name)
-		.addComponent(
-			new TransformComponent(position.clone(), rotation.clone(), scale.clone())
-		)
-		.addChild(...children);
+	return new Entity(name).addComponent(new TransformComponent(position, rotation, scale)).addChild(...children);
 }

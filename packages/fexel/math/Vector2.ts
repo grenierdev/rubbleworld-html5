@@ -1,5 +1,5 @@
 import { clamp } from './util';
-import { Matrix3 } from './Matrix3';
+import { Matrix3, ReadonlyMatrix3 } from './Matrix3';
 
 export class Vector2 {
 	constructor(public x = 0, public y = 0) {}
@@ -21,7 +21,7 @@ export class Vector2 {
 		return angle < 0 ? angle + 2 * Math.PI : angle;
 	}
 
-	equals(vector: Vector2) {
+	equals(vector: Vector2 | ReadonlyVector2) {
 		return this.x === vector.x && this.y === vector.y;
 	}
 
@@ -65,19 +65,19 @@ export class Vector2 {
 		return new Vector2(this.x, this.y);
 	}
 
-	copy(vector: Vector2) {
+	copy(vector: Vector2 | ReadonlyVector2) {
 		this.x = vector.x;
 		this.y = vector.y;
 		return this;
 	}
 
-	add(vector: Vector2) {
+	add(vector: Vector2 | ReadonlyVector2) {
 		this.x += vector.x;
 		this.y += vector.y;
 		return this;
 	}
 
-	addVectors(a: Vector2, b: Vector2) {
+	addVectors(a: Vector2 | ReadonlyVector2, b: Vector2 | ReadonlyVector2) {
 		this.x = a.x + b.x;
 		this.y = a.y + b.y;
 		return this;
@@ -89,13 +89,13 @@ export class Vector2 {
 		return this;
 	}
 
-	sub(vector: Vector2) {
+	sub(vector: Vector2 | ReadonlyVector2) {
 		this.x -= vector.x;
 		this.y -= vector.y;
 		return this;
 	}
 
-	subVectors(a: Vector2, b: Vector2) {
+	subVectors(a: Vector2 | ReadonlyVector2, b: Vector2 | ReadonlyVector2) {
 		this.x = a.x - b.x;
 		this.y = a.y - b.y;
 		return this;
@@ -107,13 +107,13 @@ export class Vector2 {
 		return this;
 	}
 
-	multiply(vector: Vector2) {
+	multiply(vector: Vector2 | ReadonlyVector2) {
 		this.x *= vector.x;
 		this.y *= vector.y;
 		return this;
 	}
 
-	multiplyVectors(a: Vector2, b: Vector2) {
+	multiplyVectors(a: Vector2 | ReadonlyVector2, b: Vector2 | ReadonlyVector2) {
 		this.x = a.x * b.x;
 		this.y = a.y * b.y;
 		return this;
@@ -125,13 +125,13 @@ export class Vector2 {
 		return this;
 	}
 
-	divide(vector: Vector2) {
+	divide(vector: Vector2 | ReadonlyVector2) {
 		this.x /= vector.x;
 		this.y /= vector.y;
 		return this;
 	}
 
-	divideVectors(a: Vector2, b: Vector2) {
+	divideVectors(a: Vector2 | ReadonlyVector2, b: Vector2 | ReadonlyVector2) {
 		this.x = a.x / b.x;
 		this.y = a.y / b.y;
 		return this;
@@ -143,19 +143,19 @@ export class Vector2 {
 		return this;
 	}
 
-	min(vector: Vector2) {
+	min(vector: Vector2 | ReadonlyVector2) {
 		this.x = Math.min(this.x, vector.x);
 		this.y = Math.min(this.y, vector.y);
 		return this;
 	}
 
-	max(vector: Vector2) {
+	max(vector: Vector2 | ReadonlyVector2) {
 		this.x = Math.max(this.x, vector.x);
 		this.y = Math.max(this.y, vector.y);
 		return this;
 	}
 
-	clamp(min: Vector2, max: Vector2) {
+	clamp(min: Vector2 | ReadonlyVector2, max: Vector2 | ReadonlyVector2) {
 		this.x = Math.max(min.x, Math.min(max.x, this.x));
 		this.y = Math.max(min.y, Math.min(max.y, this.y));
 		return this;
@@ -163,48 +163,45 @@ export class Vector2 {
 
 	clampLength(min: number, max: number) {
 		const length = this.length;
-		return this.divideScalar(length || 1).multiplyScalar(
-			Math.max(min, Math.min(max, length))
-		);
+		return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
 	}
 
-	project(normal: Vector2) {
+	project(normal: Vector2 | ReadonlyVector2) {
 		return this.multiplyScalar(normal.dot(this) / normal.lengthSquared);
 	}
 
-	reflect(normal: Vector2) {
+	reflect(normal: Vector2 | ReadonlyVector2) {
 		return this.sub(tmp.copy(normal).multiplyScalar(2 * this.dot(normal)));
 	}
 
-	dot(vector: Vector2) {
+	dot(vector: Vector2 | ReadonlyVector2) {
 		return this.x * vector.x + this.y * vector.y;
 	}
 
-	cross(vector: Vector2) {
+	cross(vector: Vector2 | ReadonlyVector2) {
 		return this.x * vector.y - this.y * vector.x;
 	}
 
-	angleTo(vector: Vector2) {
-		const theta =
-			this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
+	angleTo(vector: Vector2 | ReadonlyVector2) {
+		const theta = this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
 		return Math.acos(clamp(theta, -1, 1));
 	}
 
-	distanceTo(vector: Vector2) {
+	distanceTo(vector: Vector2 | ReadonlyVector2) {
 		return Math.sqrt(this.distanceToSquared(vector));
 	}
 
-	distanceToSquared(vector: Vector2) {
+	distanceToSquared(vector: Vector2 | ReadonlyVector2) {
 		const dx = this.x - vector.x;
 		const dy = this.y - vector.y;
 		return dx * dx + dy * dy;
 	}
 
-	manhattanDistanceTo(vector: Vector2) {
+	manhattanDistanceTo(vector: Vector2 | ReadonlyVector2) {
 		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y);
 	}
 
-	applyMatrix3(matrix: Matrix3) {
+	applyMatrix3(matrix: Matrix3 | ReadonlyMatrix3) {
 		const x = this.x;
 		const y = this.y;
 		const me = matrix.elements;
@@ -215,11 +212,27 @@ export class Vector2 {
 		return this;
 	}
 
-	static readonly One = new Vector2(1, 1);
-	static readonly Zero = new Vector2(0, 0);
-	static readonly Right = new Vector2(1, 0);
-	static readonly Up = new Vector2(0, 1);
+	static readonly One: ReadonlyVector2 = new Vector2(1, 1);
+	static readonly Zero: ReadonlyVector2 = new Vector2(0, 0);
+	static readonly Right: ReadonlyVector2 = new Vector2(1, 0);
+	static readonly Up: ReadonlyVector2 = new Vector2(0, 1);
 }
+
+export type ReadonlyVector2 = Pick<
+	Vector2,
+	| 'angle'
+	| 'length'
+	| 'lengthSquared'
+	| 'lengthManhattan'
+	| 'equals'
+	| 'clone'
+	| 'dot'
+	| 'cross'
+	| 'angleTo'
+	| 'distanceTo'
+	| 'distanceToSquared'
+	| 'manhattanDistanceTo'
+> & { readonly x: number; readonly y: number };
 
 Object.freeze(Vector2.One);
 Object.freeze(Vector2.Zero);

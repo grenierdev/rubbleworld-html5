@@ -1,11 +1,12 @@
 import { Mutable } from './util/Mutable';
+import { Matrix4, ReadonlyMatrix4 } from './math/Matrix4';
 
 export interface UpdateContext {}
 
 export interface RenderContext {
 	gl: WebGLRenderingContext;
-	viewMatrix: Matrix4;
-	projectionMatrix: Matrix4;
+	viewMatrix: Matrix4 | ReadonlyMatrix4;
+	projectionMatrix: Matrix4 | ReadonlyMatrix4;
 }
 
 export abstract class Component {
@@ -252,4 +253,3 @@ export class Scene extends Entity {
 }
 
 import { CameraComponent } from './components/Camera'; // hack circular dependencyimport { Matrix4 } from './math/Matrix4';
-import { Matrix4 } from './math/Matrix4';

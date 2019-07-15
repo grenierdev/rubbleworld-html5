@@ -1,21 +1,11 @@
 export class Matrix3 {
 	public elements: number[];
 
-	constructor(
-		n11 = 1,
-		n12 = 0,
-		n13 = 0,
-		n21 = 0,
-		n22 = 1,
-		n23 = 0,
-		n31 = 0,
-		n32 = 0,
-		n33 = 1
-	) {
+	constructor(n11 = 1, n12 = 0, n13 = 0, n21 = 0, n22 = 1, n23 = 0, n31 = 0, n32 = 0, n33 = 1) {
 		this.elements = [n11, n12, n13, n21, n22, n23, n31, n32, n33];
 	}
 
-	equals(matrix: Matrix3) {
+	equals(matrix: Matrix3 | ReadonlyMatrix3) {
 		const te = this.elements;
 		const me = matrix.elements;
 		return (
@@ -55,7 +45,7 @@ export class Matrix3 {
 		return this;
 	}
 
-	setFromArray(elements: number[]) {
+	setFromArray(elements: number[] | readonly number[]) {
 		const te = this.elements;
 		te[0] = elements[0];
 		te[1] = elements[1];
@@ -73,7 +63,7 @@ export class Matrix3 {
 		return new Matrix3().setFromArray(this.elements);
 	}
 
-	copy(matrix: Matrix3) {
+	copy(matrix: Matrix3 | ReadonlyMatrix3) {
 		return this.setFromArray(matrix.elements);
 	}
 
@@ -81,7 +71,7 @@ export class Matrix3 {
 		return this.set(1, 0, 0, 0, 1, 0, 0, 0, 1);
 	}
 
-	multiply(matrix: Matrix3) {
+	multiply(matrix: Matrix3 | ReadonlyMatrix3) {
 		const ae = this.elements;
 		const be = matrix.elements;
 		const te = this.elements;
@@ -118,7 +108,7 @@ export class Matrix3 {
 		return this;
 	}
 
-	premultiply(matrix: Matrix3) {
+	premultiply(matrix: Matrix3 | ReadonlyMatrix3) {
 		const ae = matrix.elements;
 		const be = this.elements;
 		const te = this.elements;
@@ -180,9 +170,7 @@ export class Matrix3 {
 		const g = te[6];
 		const h = te[7];
 		const i = te[8];
-		return (
-			a * e * i - a * f * h - b * d * i + b * f * g + c * d * h - c * e * g
-		);
+		return a * e * i - a * f * h - b * d * i + b * f * g + c * d * h - c * e * g;
 	}
 
 	transpose() {
@@ -244,7 +232,11 @@ export class Matrix3 {
 		return this;
 	}
 
-	static readonly Identity = new Matrix3();
+	static readonly Identity: ReadonlyMatrix3 = new Matrix3();
 }
+
+export type ReadonlyMatrix3 = Pick<Matrix3, 'equals' | 'clone' | 'determinant'> & {
+	readonly elements: number[];
+};
 
 Object.freeze(Matrix3.Identity);

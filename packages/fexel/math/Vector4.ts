@@ -1,34 +1,23 @@
 import { clamp } from './util';
-import { Matrix4 } from './Matrix4';
+import { Matrix4, ReadonlyMatrix4 } from './Matrix4';
 
 export class Vector4 {
 	constructor(public x = 0, public y = 0, public z = 0, public w = 0) {}
 
 	get length() {
-		return Math.sqrt(
-			this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w
-		);
+		return Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w);
 	}
 
 	get lengthSquared() {
-		return (
-			this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w
-		);
+		return this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w;
 	}
 
 	get lengthManhattan() {
-		return (
-			Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z) + Math.abs(this.w)
-		);
+		return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z) + Math.abs(this.w);
 	}
 
-	equals(vector: Vector4) {
-		return (
-			this.x === vector.x &&
-			this.y === vector.y &&
-			this.z === vector.z &&
-			this.w === vector.w
-		);
+	equals(vector: Vector4 | ReadonlyVector4) {
+		return this.x === vector.x && this.y === vector.y && this.z === vector.z && this.w === vector.w;
 	}
 
 	set(x = 0, y = 0, z = 0, w = 0) {
@@ -87,7 +76,7 @@ export class Vector4 {
 		return new Vector4(this.x, this.y, this.z, this.w);
 	}
 
-	copy(vector: Vector4) {
+	copy(vector: Vector4 | ReadonlyVector4) {
 		this.x = vector.x;
 		this.y = vector.y;
 		this.z = vector.z;
@@ -95,7 +84,7 @@ export class Vector4 {
 		return this;
 	}
 
-	add(vector: Vector4) {
+	add(vector: Vector4 | ReadonlyVector4) {
 		this.x += vector.x;
 		this.y += vector.y;
 		this.z += vector.z;
@@ -103,7 +92,7 @@ export class Vector4 {
 		return this;
 	}
 
-	addVectors(a: Vector4, b: Vector4) {
+	addVectors(a: Vector4 | ReadonlyVector4, b: Vector4 | ReadonlyVector4) {
 		this.x = a.x + b.x;
 		this.y = a.y + b.y;
 		this.z = a.z + b.z;
@@ -119,7 +108,7 @@ export class Vector4 {
 		return this;
 	}
 
-	sub(vector: Vector4) {
+	sub(vector: Vector4 | ReadonlyVector4) {
 		this.x -= vector.x;
 		this.y -= vector.y;
 		this.w -= vector.z;
@@ -127,7 +116,7 @@ export class Vector4 {
 		return this;
 	}
 
-	subVectors(a: Vector4, b: Vector4) {
+	subVectors(a: Vector4 | ReadonlyVector4, b: Vector4 | ReadonlyVector4) {
 		this.x = a.x - b.x;
 		this.y = a.y - b.y;
 		this.z = a.z - b.z;
@@ -143,7 +132,7 @@ export class Vector4 {
 		return this;
 	}
 
-	multiply(vector: Vector4) {
+	multiply(vector: Vector4 | ReadonlyVector4) {
 		this.x *= vector.x;
 		this.y *= vector.y;
 		this.z *= vector.z;
@@ -151,7 +140,7 @@ export class Vector4 {
 		return this;
 	}
 
-	multiplyVectors(a: Vector4, b: Vector4) {
+	multiplyVectors(a: Vector4 | ReadonlyVector4, b: Vector4 | ReadonlyVector4) {
 		this.x = a.x * b.x;
 		this.y = a.y * b.y;
 		this.z = a.z * b.z;
@@ -167,7 +156,7 @@ export class Vector4 {
 		return this;
 	}
 
-	divide(vector: Vector4) {
+	divide(vector: Vector4 | ReadonlyVector4) {
 		this.x /= vector.x;
 		this.y /= vector.y;
 		this.z /= vector.z;
@@ -175,7 +164,7 @@ export class Vector4 {
 		return this;
 	}
 
-	divideVectors(a: Vector4, b: Vector4) {
+	divideVectors(a: Vector4 | ReadonlyVector4, b: Vector4 | ReadonlyVector4) {
 		this.x = a.x / b.x;
 		this.y = a.y / b.y;
 		this.z = a.z / b.z;
@@ -191,7 +180,7 @@ export class Vector4 {
 		return this;
 	}
 
-	min(vector: Vector4) {
+	min(vector: Vector4 | ReadonlyVector4) {
 		this.x = Math.min(this.x, vector.x);
 		this.y = Math.min(this.y, vector.y);
 		this.z = Math.min(this.z, vector.z);
@@ -199,7 +188,7 @@ export class Vector4 {
 		return this;
 	}
 
-	max(vector: Vector4) {
+	max(vector: Vector4 | ReadonlyVector4) {
 		this.x = Math.max(this.x, vector.x);
 		this.y = Math.max(this.y, vector.y);
 		this.z = Math.max(this.z, vector.z);
@@ -207,7 +196,7 @@ export class Vector4 {
 		return this;
 	}
 
-	clamp(min: Vector4, max: Vector4) {
+	clamp(min: Vector4 | ReadonlyVector4, max: Vector4 | ReadonlyVector4) {
 		this.x = Math.max(min.x, Math.min(max.x, this.x));
 		this.y = Math.max(min.y, Math.min(max.y, this.y));
 		this.z = Math.max(min.z, Math.min(max.z, this.z));
@@ -217,29 +206,22 @@ export class Vector4 {
 
 	clampLength(min: number, max: number) {
 		const length = this.length;
-		return this.divideScalar(length || 1).multiplyScalar(
-			Math.max(min, Math.min(max, length))
-		);
+		return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
 	}
 
-	project(normal: Vector4) {
+	project(normal: Vector4 | ReadonlyVector4) {
 		return this.multiplyScalar(normal.dot(this) / normal.lengthSquared);
 	}
 
-	reflect(normal: Vector4) {
+	reflect(normal: Vector4 | ReadonlyVector4) {
 		return this.sub(tmp.copy(normal).multiplyScalar(2 * this.dot(normal)));
 	}
 
-	dot(vector: Vector4) {
-		return (
-			this.x * vector.x +
-			this.y * vector.y +
-			this.z * vector.z +
-			this.w * vector.w
-		);
+	dot(vector: Vector4 | ReadonlyVector4) {
+		return this.x * vector.x + this.y * vector.y + this.z * vector.z + this.w * vector.w;
 	}
 
-	// cross(vector: Vector4) {
+	// cross(vector: Vector4 | ReadonlyVector4) {
 	// 	const ax = this.x;
 	// 	const bx = vector.x;
 	// 	const ay = this.y;
@@ -255,17 +237,16 @@ export class Vector4 {
 	// 	return this;
 	// }
 
-	angleTo(vector: Vector4) {
-		const theta =
-			this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
+	angleTo(vector: Vector4 | ReadonlyVector4) {
+		const theta = this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
 		return Math.acos(clamp(theta, -1, 1));
 	}
 
-	distanceTo(vector: Vector4) {
+	distanceTo(vector: Vector4 | ReadonlyVector4) {
 		return Math.sqrt(this.distanceToSquared(vector));
 	}
 
-	distanceToSquared(vector: Vector4) {
+	distanceToSquared(vector: Vector4 | ReadonlyVector4) {
 		const dx = this.x - vector.x;
 		const dy = this.y - vector.y;
 		const dz = this.z - vector.z;
@@ -273,7 +254,7 @@ export class Vector4 {
 		return dx * dx + dy * dy + dz * dz + dw * dw;
 	}
 
-	manhattanDistanceTo(vector: Vector4) {
+	manhattanDistanceTo(vector: Vector4 | ReadonlyVector4) {
 		return (
 			Math.abs(this.x - vector.x) +
 			Math.abs(this.y - vector.y) +
@@ -282,7 +263,7 @@ export class Vector4 {
 		);
 	}
 
-	applyMatrix4(matrix: Matrix4) {
+	applyMatrix4(matrix: Matrix4 | ReadonlyMatrix4) {
 		const x = this.x;
 		const y = this.y;
 		const z = this.z;
@@ -297,5 +278,19 @@ export class Vector4 {
 		return this;
 	}
 }
+
+export type ReadonlyVector4 = Pick<
+	Vector4,
+	| 'length'
+	| 'lengthSquared'
+	| 'lengthManhattan'
+	| 'equals'
+	| 'clone'
+	| 'dot'
+	| 'angleTo'
+	| 'distanceTo'
+	| 'distanceToSquared'
+	| 'manhattanDistanceTo'
+> & { readonly x: number; readonly y: number; readonly z: number; readonly w: number };
 
 const tmp = new Vector4();

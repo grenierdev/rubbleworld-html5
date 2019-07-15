@@ -1,5 +1,5 @@
-import { Vector3 } from './Vector3';
-import { Quaterion } from './Quaterion';
+import { Vector3, ReadonlyVector3 } from './Vector3';
+import { Quaterion, ReadonlyQuaterion } from './Quaterion';
 
 export class Matrix4 {
 	public elements: number[];
@@ -22,27 +22,10 @@ export class Matrix4 {
 		n43 = 0,
 		n44 = 1
 	) {
-		this.elements = [
-			n11,
-			n12,
-			n13,
-			n14,
-			n21,
-			n22,
-			n23,
-			n24,
-			n31,
-			n32,
-			n33,
-			n34,
-			n41,
-			n42,
-			n43,
-			n44,
-		];
+		this.elements = [n11, n12, n13, n14, n21, n22, n23, n24, n31, n32, n33, n34, n41, n42, n43, n44];
 	}
 
-	equals(matrix: Matrix4) {
+	equals(matrix: Matrix4 | ReadonlyMatrix4) {
 		const te = this.elements;
 		const me = matrix.elements;
 		return (
@@ -104,7 +87,7 @@ export class Matrix4 {
 		return this;
 	}
 
-	setFromArray(elements: number[]) {
+	setFromArray(elements: number[] | readonly number[]) {
 		const te = this.elements;
 		te[0] = elements[0];
 		te[1] = elements[1];
@@ -129,7 +112,7 @@ export class Matrix4 {
 		return new Matrix4().setFromArray(this.elements);
 	}
 
-	copy(matrix: Matrix4) {
+	copy(matrix: Matrix4 | ReadonlyMatrix4) {
 		return this.setFromArray(matrix.elements);
 	}
 
@@ -137,15 +120,15 @@ export class Matrix4 {
 		return this.set(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 	}
 
-	multiply(matrix: Matrix4) {
+	multiply(matrix: Matrix4 | ReadonlyMatrix4) {
 		return this.multiplyMatrices(this, matrix);
 	}
 
-	premultiply(matrix: Matrix4) {
+	premultiply(matrix: Matrix4 | ReadonlyMatrix4) {
 		return this.multiplyMatrices(matrix, this);
 	}
 
-	multiplyMatrices(a: Matrix4, b: Matrix4) {
+	multiplyMatrices(a: Matrix4 | ReadonlyMatrix4, b: Matrix4 | ReadonlyMatrix4) {
 		const ae = a.elements;
 		const be = b.elements;
 		const te = this.elements;
@@ -244,33 +227,12 @@ export class Matrix4 {
 		const n44 = te[15];
 		return (
 			n41 *
-				(+n14 * n23 * n32 -
-					n13 * n24 * n32 -
-					n14 * n22 * n33 +
-					n12 * n24 * n33 +
-					n13 * n22 * n34 -
-					n12 * n23 * n34) +
+				(+n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34) +
 			n42 *
-				(+n11 * n23 * n34 -
-					n11 * n24 * n33 +
-					n14 * n21 * n33 -
-					n13 * n21 * n34 +
-					n13 * n24 * n31 -
-					n14 * n23 * n31) +
+				(+n11 * n23 * n34 - n11 * n24 * n33 + n14 * n21 * n33 - n13 * n21 * n34 + n13 * n24 * n31 - n14 * n23 * n31) +
 			n43 *
-				(+n11 * n24 * n32 -
-					n11 * n22 * n34 -
-					n14 * n21 * n32 +
-					n12 * n21 * n34 +
-					n14 * n22 * n31 -
-					n12 * n24 * n31) +
-			n44 *
-				(-n13 * n22 * n31 -
-					n11 * n23 * n32 +
-					n11 * n22 * n33 +
-					n13 * n21 * n32 -
-					n12 * n21 * n33 +
-					n12 * n23 * n31)
+				(+n11 * n24 * n32 - n11 * n22 * n34 - n14 * n21 * n32 + n12 * n21 * n34 + n14 * n22 * n31 - n12 * n24 * n31) +
+			n44 * (-n13 * n22 * n31 - n11 * n23 * n32 + n11 * n22 * n33 + n13 * n21 * n32 - n12 * n21 * n33 + n12 * n23 * n31)
 		);
 	}
 
@@ -315,7 +277,11 @@ export class Matrix4 {
 		return this;
 	}
 
-	compose(position: Vector3, rotation: Quaterion, scale: Vector3) {
+	compose(
+		position: Vector3 | ReadonlyVector3,
+		rotation: Quaterion | ReadonlyQuaterion,
+		scale: Vector3 | ReadonlyVector3
+	) {
 		const te = this.elements;
 
 		const x = rotation.x;
@@ -425,7 +391,7 @@ export class Matrix4 {
 		return this.set(c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 	}
 
-	makeRotationAxis(axis: Vector3, angle: number) {
+	makeRotationAxis(axis: Vector3 | ReadonlyVector3, angle: number) {
 		const c = Math.cos(angle);
 		const s = Math.sin(angle);
 		const t = 1 - c;
@@ -454,7 +420,7 @@ export class Matrix4 {
 		);
 	}
 
-	makeRotationFromQuaternion(quaterion: Quaterion) {
+	makeRotationFromQuaternion(quaterion: Quaterion | ReadonlyQuaterion) {
 		return this.compose(
 			Vector3.Zero,
 			quaterion,
@@ -470,14 +436,7 @@ export class Matrix4 {
 		return this.set(1, y, z, 0, x, 1, z, 0, x, y, 1, 0, 0, 0, 0, 1);
 	}
 
-	makePerspective(
-		left: number,
-		right: number,
-		top: number,
-		bottom: number,
-		near: number,
-		far: number
-	) {
+	makePerspective(left: number, right: number, top: number, bottom: number, near: number, far: number) {
 		const te = this.elements;
 		const x = (2 * near) / (right - left);
 		const y = (2 * near) / (top - bottom);
@@ -504,14 +463,7 @@ export class Matrix4 {
 		return this;
 	}
 
-	makeOrthographic(
-		left: number,
-		right: number,
-		top: number,
-		bottom: number,
-		near: number,
-		far: number
-	) {
+	makeOrthographic(left: number, right: number, top: number, bottom: number, near: number, far: number) {
 		const te = this.elements;
 		const w = 1.0 / (right - left);
 		const h = 1.0 / (top - bottom);
@@ -538,7 +490,7 @@ export class Matrix4 {
 		return this;
 	}
 
-	lookAt(eye: Vector3, target: Vector3, up: Vector3) {
+	lookAt(eye: Vector3 | ReadonlyVector3, target: Vector3 | ReadonlyVector3, up: Vector3 | ReadonlyVector3) {
 		const te = this.elements;
 
 		tv0.subVectors(eye, target);
@@ -574,8 +526,12 @@ export class Matrix4 {
 		return this;
 	}
 
-	static readonly Identity = new Matrix4();
+	static readonly Identity: ReadonlyMatrix4 = new Matrix4();
 }
+
+export type ReadonlyMatrix4 = Pick<Matrix4, 'equals' | 'clone' | 'determinant' | 'decompose'> & {
+	readonly elements: number[];
+};
 
 Object.freeze(Matrix4.Identity);
 

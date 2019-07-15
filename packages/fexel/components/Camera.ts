@@ -82,9 +82,9 @@ export class CameraOrthographicComponent extends CameraComponent {
 
 export function CameraPerspectivePrefab({
 	name = 'CameraPerspectivePrefab',
-	position = Vector3.Zero,
-	rotation = Euler.Zero,
-	scale = Vector3.One,
+	position = Vector3.Zero.clone(),
+	rotation = Euler.Zero.clone(),
+	scale = Vector3.One.clone(),
 	camera,
 }: {
 	name?: string;
@@ -94,15 +94,15 @@ export function CameraPerspectivePrefab({
 	camera: CameraPerspectiveConstructor;
 }) {
 	return new Entity(name)
-		.addComponent(new TransformComponent(position.clone(), rotation.clone(), scale.clone()))
+		.addComponent(new TransformComponent(position, rotation, scale))
 		.addComponent(new CameraPerspectiveComponent(camera));
 }
 
 export function CameraOrthographicPrefab({
 	name = 'CameraOrthographicPrefab',
-	position = Vector3.Zero,
-	rotation = Euler.Zero,
-	scale = Vector3.One,
+	position = Vector3.Zero.clone(),
+	rotation = Euler.Zero.clone(),
+	scale = Vector3.One.clone(),
 	camera,
 }: {
 	name?: string;
@@ -112,6 +112,6 @@ export function CameraOrthographicPrefab({
 	camera: CameraOrthographicConstructor;
 }) {
 	return new Entity(name)
-		.addComponent(new TransformComponent(position.clone(), rotation.clone(), scale.clone()))
+		.addComponent(new TransformComponent(position, rotation, scale))
 		.addComponent(new CameraOrthographicComponent(camera));
 }

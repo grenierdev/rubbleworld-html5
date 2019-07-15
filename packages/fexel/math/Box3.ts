@@ -1,7 +1,7 @@
-import { Vector3 } from './Vector3';
-import { Sphere } from './Sphere';
-import { Plane } from './Plane';
-import { Triangle } from './Triangle';
+import { Vector3, ReadonlyVector3 } from './Vector3';
+import { Sphere, ReadonlySphere } from './Sphere';
+import { Plane, ReadonlyPlane } from './Plane';
+import { Triangle3, ReadonlyTriangle3 } from './Triangle3';
 
 export class Box3 {
 	constructor(
@@ -10,11 +10,7 @@ export class Box3 {
 	) {}
 
 	get isEmpty() {
-		return (
-			this.max.x < this.min.x ||
-			this.max.y < this.min.y ||
-			this.max.z < this.min.z
-		);
+		return this.max.x < this.min.x || this.max.y < this.min.y || this.max.z < this.min.z;
 	}
 
 	getCenter(target: Vector3) {
@@ -27,22 +23,20 @@ export class Box3 {
 	}
 
 	getSize(target: Vector3) {
-		return this.isEmpty
-			? target.set(0, 0, 0)
-			: target.copy(this.min).sub(this.max);
+		return this.isEmpty ? target.set(0, 0, 0) : target.copy(this.min).sub(this.max);
 	}
 
-	equals(box: Box3) {
+	equals(box: Box3 | ReadonlyBox3) {
 		return box.min.equals(this.min) && box.max.equals(this.max);
 	}
 
-	set(min: Vector3, max: Vector3) {
+	set(min: Vector3 | ReadonlyVector3, max: Vector3 | ReadonlyVector3) {
 		this.min.copy(min);
 		this.max.copy(max);
 		return this;
 	}
 
-	setFromPoints(points: Vector3[]) {
+	setFromPoints(points: (Vector3 | ReadonlyVector3)[]) {
 		this.makeEmpty();
 		for (let i = 0, l = points.length; i < l; ++i) {
 			this.expandByPoint(points[i]);
@@ -50,7 +44,7 @@ export class Box3 {
 		return this;
 	}
 
-	setFromCenterAndSize(center: Vector3, size: Vector3) {
+	setFromCenterAndSize(center: Vector3 | ReadonlyVector3, size: Vector3 | ReadonlyVector3) {
 		const halfSize = tv0.copy(size).multiplyScalar(0.5);
 		this.min.copy(center).sub(halfSize);
 		this.max.copy(center).add(halfSize);
@@ -67,13 +61,13 @@ export class Box3 {
 		return this;
 	}
 
-	expandByPoint(point: Vector3) {
+	expandByPoint(point: Vector3 | ReadonlyVector3) {
 		this.min.min(point);
 		this.max.max(point);
 		return this;
 	}
 
-	expandByVector(vector: Vector3) {
+	expandByVector(vector: Vector3 | ReadonlyVector3) {
 		this.min.sub(vector);
 		this.max.add(vector);
 		return this;
@@ -85,7 +79,7 @@ export class Box3 {
 		return this;
 	}
 
-	containsPoint(point: Vector3) {
+	containsPoint(point: Vector3 | ReadonlyVector3) {
 		return point.x < this.min.x ||
 			point.x > this.max.x ||
 			point.y < this.min.y ||
@@ -96,7 +90,7 @@ export class Box3 {
 			: true;
 	}
 
-	containsBox(box: Box3) {
+	containsBox(box: Box3 | ReadonlyBox3) {
 		return (
 			this.min.x <= box.min.x &&
 			box.max.x <= this.max.x &&
@@ -107,7 +101,7 @@ export class Box3 {
 		);
 	}
 
-	intersectsBox(box: Box3) {
+	intersectsBox(box: Box3 | ReadonlyBox3) {
 		return box.max.x < this.min.x ||
 			box.min.x > this.max.x ||
 			box.max.y < this.min.y ||
@@ -118,14 +112,14 @@ export class Box3 {
 			: true;
 	}
 
-	intersectsSphere(sphere: Sphere) {
+	intersectsSphere(sphere: Sphere | ReadonlySphere) {
 		const c = sphere.center;
 		const r = sphere.radius;
 		this.clampPoint(c, tv0);
 		return tv0.distanceToSquared(c) <= r * r;
 	}
 
-	intersectsPlane(plane: Plane) {
+	intersectsPlane(plane: Plane | ReadonlyPlane) {
 		let min: number = 0;
 		let max: number = 0;
 
@@ -167,7 +161,7 @@ export class Box3 {
 		return min <= c && max >= c;
 	}
 
-	intersectsTriangle(triangle: Triangle) {
+	intersectsTriangle(triangle: Triangle3 | ReadonlyTriangle3) {
 		if (this.isEmpty) {
 			return false;
 		}
@@ -184,8 +178,7 @@ export class Box3 {
 		function satForAxes(axes: number[]): boolean {
 			for (let i = 0, j = axes.length - 3; i <= j; i += 3) {
 				a.set(axes[i + 0], axes[i + 1], axes[i + 2]);
-				const r =
-					e.x * Math.abs(a.x) + e.y * Math.abs(a.y) + e.z * Math.abs(a.z);
+				const r = e.x * Math.abs(a.x) + e.y * Math.abs(a.y) + e.z * Math.abs(a.z);
 				const p0 = v0.dot(a);
 				const p1 = v1.dot(a);
 				const p2 = v2.dot(a);
@@ -245,33 +238,52 @@ export class Box3 {
 		return target;
 	}
 
-	clampPoint(point: Vector3, target: Vector3) {
+	clampPoint(point: Vector3 | ReadonlyVector3, target: Vector3) {
 		return target.copy(point).clamp(this.min, this.max);
 	}
 
-	distanceToPoint(point: Vector3) {
+	distanceToPoint(point: Vector3 | ReadonlyVector3) {
 		const clampedPoint = tv0.copy(point).clamp(this.min, this.max);
 		return clampedPoint.sub(point).length;
 	}
 
-	intersection(box: Box3) {
+	intersection(box: Box3 | ReadonlyBox3) {
 		this.min.max(box.min);
 		this.max.min(box.max);
 		return this;
 	}
 
-	union(box: Box3) {
+	union(box: Box3 | ReadonlyBox3) {
 		this.min.min(box.min);
 		this.max.max(box.max);
 		return this;
 	}
 
-	translate(offset: Vector3) {
+	translate(offset: Vector3 | ReadonlyVector3) {
 		this.min.add(offset);
 		this.max.add(offset);
 		return this;
 	}
 }
+
+export type ReadonlyBox3 = Pick<
+	Box3,
+	| 'isEmpty'
+	| 'getCenter'
+	| 'getSize'
+	| 'equals'
+	| 'clone'
+	| 'containsPoint'
+	| 'containsBox'
+	| 'intersectsBox'
+	| 'intersectsSphere'
+	| 'intersectsPlane'
+	| 'intersectsTriangle'
+	| 'intersectsBox'
+	| 'getBoundingSphere'
+	| 'clampPoint'
+	| 'distanceToPoint'
+> & { readonly min: ReadonlyVector3; readonly max: ReadonlyVector3 };
 
 const tv0 = new Vector3();
 const v0 = new Vector3();

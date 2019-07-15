@@ -1,23 +1,15 @@
-import { Vector3 } from './Vector3';
+import { Vector3, ReadonlyVector3 } from './Vector3';
 import { Plane } from './Plane';
-import { Cube } from './Cube';
+import { Box3, ReadonlyBox3 } from './Box3';
 
-export class Triangle {
-	constructor(
-		public a = new Vector3(),
-		public b = new Vector3(),
-		public c = new Vector3()
-	) {}
+export class Triangle3 {
+	constructor(public a = new Vector3(), public b = new Vector3(), public c = new Vector3()) {}
 
-	equals(triangle: Triangle) {
-		return (
-			this.a.equals(triangle.a) &&
-			this.b.equals(triangle.b) &&
-			this.c.equals(triangle.c)
-		);
+	equals(triangle: Triangle3 | ReadonlyTriangle3) {
+		return this.a.equals(triangle.a) && this.b.equals(triangle.b) && this.c.equals(triangle.c);
 	}
 
-	set(a: Vector3, b: Vector3, c: Vector3) {
+	set(a: Vector3 | ReadonlyVector3, b: Vector3 | ReadonlyVector3, c: Vector3 | ReadonlyVector3) {
 		this.a.copy(a);
 		this.b.copy(b);
 		this.c.copy(c);
@@ -25,10 +17,10 @@ export class Triangle {
 	}
 
 	clone() {
-		return new Triangle(this.a.clone(), this.b.clone(), this.c.clone());
+		return new Triangle3(this.a.clone(), this.b.clone(), this.c.clone());
 	}
 
-	copy(triangle: Triangle) {
+	copy(triangle: Triangle3 | ReadonlyTriangle3) {
 		this.a.copy(triangle.a);
 		this.b.copy(triangle.b);
 		this.c.copy(triangle.c);
@@ -49,26 +41,26 @@ export class Triangle {
 	}
 
 	getNormal(target: Vector3) {
-		return Triangle.getNormal(this.a, this.b, this.c, target);
+		return Triangle3.getNormal(this.a, this.b, this.c, target);
 	}
 
 	getPlane(target: Plane) {
 		return target.setFromCoplanarPoints(this.a, this.b, this.c);
 	}
 
-	getBarycoord(point: Vector3, target: Vector3) {
-		return Triangle.getBarycoord(point, this.a, this.b, this.c, target);
+	getBarycoord(point: Vector3 | ReadonlyVector3, target: Vector3) {
+		return Triangle3.getBarycoord(point, this.a, this.b, this.c, target);
 	}
 
-	containsPoint(point: Vector3) {
-		return Triangle.containsPoint(point, this.a, this.b, this.c);
+	containsPoint(point: Vector3 | ReadonlyVector3) {
+		return Triangle3.containsPoint(point, this.a, this.b, this.c);
 	}
 
-	intersectsBox(box: Cube) {
+	intersectsBox(box: Box3 | ReadonlyBox3) {
 		return box.intersectsTriangle(this);
 	}
 
-	closestPointToPoint(point: Vector3, target: Vector3) {
+	closestPointToPoint(point: Vector3 | ReadonlyVector3, target: Vector3) {
 		const a = this.a;
 		const b = this.b;
 		const c = this.c;
@@ -127,7 +119,12 @@ export class Triangle {
 			.add(vac.multiplyScalar(w));
 	}
 
-	static getNormal(a: Vector3, b: Vector3, c: Vector3, target: Vector3) {
+	static getNormal(
+		a: Vector3 | ReadonlyVector3,
+		b: Vector3 | ReadonlyVector3,
+		c: Vector3 | ReadonlyVector3,
+		target: Vector3
+	) {
 		target.subVectors(c, b);
 		v0.subVectors(a, b);
 		target.cross(v0);
@@ -140,10 +137,10 @@ export class Triangle {
 	}
 
 	static getBarycoord(
-		point: Vector3,
-		a: Vector3,
-		b: Vector3,
-		c: Vector3,
+		point: Vector3 | ReadonlyVector3,
+		a: Vector3 | ReadonlyVector3,
+		b: Vector3 | ReadonlyVector3,
+		c: Vector3 | ReadonlyVector3,
 		target: Vector3
 	) {
 		v0.subVectors(c, a);
@@ -169,11 +166,30 @@ export class Triangle {
 		return target.set(1 - u - v, v, u);
 	}
 
-	static containsPoint(point: Vector3, a: Vector3, b: Vector3, c: Vector3) {
-		Triangle.getBarycoord(point, a, b, c, v0);
+	static containsPoint(
+		point: Vector3 | ReadonlyVector3,
+		a: Vector3 | ReadonlyVector3,
+		b: Vector3 | ReadonlyVector3,
+		c: Vector3 | ReadonlyVector3
+	) {
+		Triangle3.getBarycoord(point, a, b, c, v0);
 		return v1.x >= 0 && v1.y >= 0 && v1.x + v1.y <= 1;
 	}
 }
+
+export type ReadonlyTriangle3 = Pick<
+	Triangle3,
+	| 'equals'
+	| 'clone'
+	| 'getArea'
+	| 'getMidpoint'
+	| 'getNormal'
+	| 'getPlane'
+	| 'getBarycoord'
+	| 'containsPoint'
+	| 'intersectsBox'
+	| 'closestPointToPoint'
+> & { readonly a: ReadonlyVector3; readonly b: ReadonlyVector3; readonly c: ReadonlyVector3 };
 
 const v0 = new Vector3();
 const v1 = new Vector3();

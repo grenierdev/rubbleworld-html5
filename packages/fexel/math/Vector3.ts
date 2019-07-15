@@ -1,7 +1,7 @@
 import { clamp } from './util';
-import { Matrix4 } from './Matrix4';
-import { Quaterion } from './Quaterion';
-import { Matrix3 } from './Matrix3';
+import { Matrix4, ReadonlyMatrix4 } from './Matrix4';
+import { Quaterion, ReadonlyQuaterion } from './Quaterion';
+import { Matrix3, ReadonlyMatrix3 } from './Matrix3';
 
 export class Vector3 {
 	constructor(public x = 0, public y = 0, public z = 0) {}
@@ -18,7 +18,7 @@ export class Vector3 {
 		return Math.abs(this.x) + Math.abs(this.y) + Math.abs(this.z);
 	}
 
-	equals(vector: Vector3) {
+	equals(vector: Vector3 | ReadonlyVector3) {
 		return this.x === vector.x && this.y === vector.y && this.z === vector.z;
 	}
 
@@ -70,21 +70,21 @@ export class Vector3 {
 		return new Vector3(this.x, this.y, this.z);
 	}
 
-	copy(vector: Vector3) {
+	copy(vector: Vector3 | ReadonlyVector3) {
 		this.x = vector.x;
 		this.y = vector.y;
 		this.z = vector.z;
 		return this;
 	}
 
-	add(vector: Vector3) {
+	add(vector: Vector3 | ReadonlyVector3) {
 		this.x += vector.x;
 		this.y += vector.y;
 		this.z += vector.z;
 		return this;
 	}
 
-	addVectors(a: Vector3, b: Vector3) {
+	addVectors(a: Vector3 | ReadonlyVector3, b: Vector3 | ReadonlyVector3) {
 		this.x = a.x + b.x;
 		this.y = a.y + b.y;
 		this.z = a.z + b.z;
@@ -98,14 +98,14 @@ export class Vector3 {
 		return this;
 	}
 
-	sub(vector: Vector3) {
+	sub(vector: Vector3 | ReadonlyVector3) {
 		this.x -= vector.x;
 		this.y -= vector.y;
 		this.z -= vector.z;
 		return this;
 	}
 
-	subVectors(a: Vector3, b: Vector3) {
+	subVectors(a: Vector3 | ReadonlyVector3, b: Vector3 | ReadonlyVector3) {
 		this.x = a.x - b.x;
 		this.y = a.y - b.y;
 		this.z = a.z - b.z;
@@ -119,14 +119,14 @@ export class Vector3 {
 		return this;
 	}
 
-	multiply(vector: Vector3) {
+	multiply(vector: Vector3 | ReadonlyVector3) {
 		this.x *= vector.x;
 		this.y *= vector.y;
 		this.z *= vector.z;
 		return this;
 	}
 
-	multiplyVectors(a: Vector3, b: Vector3) {
+	multiplyVectors(a: Vector3 | ReadonlyVector3, b: Vector3 | ReadonlyVector3) {
 		this.x = a.x * b.x;
 		this.y = a.y * b.y;
 		this.z = a.z * b.z;
@@ -140,14 +140,14 @@ export class Vector3 {
 		return this;
 	}
 
-	divide(vector: Vector3) {
+	divide(vector: Vector3 | ReadonlyVector3) {
 		this.x /= vector.x;
 		this.y /= vector.y;
 		this.z /= vector.z;
 		return this;
 	}
 
-	divideVectors(a: Vector3, b: Vector3) {
+	divideVectors(a: Vector3 | ReadonlyVector3, b: Vector3 | ReadonlyVector3) {
 		this.x = a.x / b.x;
 		this.y = a.y / b.y;
 		this.z = a.z / b.z;
@@ -161,21 +161,21 @@ export class Vector3 {
 		return this;
 	}
 
-	min(vector: Vector3) {
+	min(vector: Vector3 | ReadonlyVector3) {
 		this.x = Math.min(this.x, vector.x);
 		this.y = Math.min(this.y, vector.y);
 		this.z = Math.min(this.z, vector.z);
 		return this;
 	}
 
-	max(vector: Vector3) {
+	max(vector: Vector3 | ReadonlyVector3) {
 		this.x = Math.max(this.x, vector.x);
 		this.y = Math.max(this.y, vector.y);
 		this.z = Math.max(this.z, vector.z);
 		return this;
 	}
 
-	clamp(min: Vector3, max: Vector3) {
+	clamp(min: Vector3 | ReadonlyVector3, max: Vector3 | ReadonlyVector3) {
 		this.x = Math.max(min.x, Math.min(max.x, this.x));
 		this.y = Math.max(min.y, Math.min(max.y, this.y));
 		this.z = Math.max(min.z, Math.min(max.z, this.z));
@@ -184,28 +184,26 @@ export class Vector3 {
 
 	clampLength(min: number, max: number) {
 		const length = this.length;
-		return this.divideScalar(length || 1).multiplyScalar(
-			Math.max(min, Math.min(max, length))
-		);
+		return this.divideScalar(length || 1).multiplyScalar(Math.max(min, Math.min(max, length)));
 	}
 
-	project(normal: Vector3) {
+	project(normal: Vector3 | ReadonlyVector3) {
 		return this.multiplyScalar(normal.dot(this) / normal.lengthSquared);
 	}
 
-	reflect(normal: Vector3) {
+	reflect(normal: Vector3 | ReadonlyVector3) {
 		return this.sub(tmp.copy(normal).multiplyScalar(2 * this.dot(normal)));
 	}
 
-	dot(vector: Vector3) {
+	dot(vector: Vector3 | ReadonlyVector3) {
 		return this.x * vector.x + this.y * vector.y + this.z * vector.z;
 	}
 
-	cross(vector: Vector3) {
+	cross(vector: Vector3 | ReadonlyVector3) {
 		return this.crossVectors(this, vector);
 	}
 
-	crossVectors(a: Vector3, b: Vector3) {
+	crossVectors(a: Vector3 | ReadonlyVector3, b: Vector3 | ReadonlyVector3) {
 		const ax = a.x;
 		const bx = b.x;
 		const ay = a.y;
@@ -219,32 +217,27 @@ export class Vector3 {
 		return this;
 	}
 
-	angleTo(vector: Vector3) {
-		const theta =
-			this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
+	angleTo(vector: Vector3 | ReadonlyVector3) {
+		const theta = this.dot(vector) / Math.sqrt(this.lengthSquared * vector.lengthSquared);
 		return Math.acos(clamp(theta, -1, 1));
 	}
 
-	distanceTo(vector: Vector3) {
+	distanceTo(vector: Vector3 | ReadonlyVector3) {
 		return Math.sqrt(this.distanceToSquared(vector));
 	}
 
-	distanceToSquared(vector: Vector3) {
+	distanceToSquared(vector: Vector3 | ReadonlyVector3) {
 		const dx = this.x - vector.x;
 		const dy = this.y - vector.y;
 		const dz = this.z - vector.z;
 		return dx * dx + dy * dy + dz * dz;
 	}
 
-	manhattanDistanceTo(vector: Vector3) {
-		return (
-			Math.abs(this.x - vector.x) +
-			Math.abs(this.y - vector.y) +
-			Math.abs(this.z - vector.z)
-		);
+	manhattanDistanceTo(vector: Vector3 | ReadonlyVector3) {
+		return Math.abs(this.x - vector.x) + Math.abs(this.y - vector.y) + Math.abs(this.z - vector.z);
 	}
 
-	applyMatrix3(matrix: Matrix3) {
+	applyMatrix3(matrix: Matrix3 | ReadonlyMatrix3) {
 		const x = this.x;
 		const y = this.y;
 		const z = this.z;
@@ -257,7 +250,7 @@ export class Vector3 {
 		return this;
 	}
 
-	applyMatrix4(matrix: Matrix4) {
+	applyMatrix4(matrix: Matrix4 | ReadonlyMatrix4) {
 		const x = this.x;
 		const y = this.y;
 		const z = this.z;
@@ -272,7 +265,7 @@ export class Vector3 {
 		return this;
 	}
 
-	applyQuaternion(quaterion: Quaterion) {
+	applyQuaternion(quaterion: Quaterion | ReadonlyQuaterion) {
 		const x = this.x;
 		const y = this.y;
 		const z = this.z;
@@ -293,11 +286,11 @@ export class Vector3 {
 		return this;
 	}
 
-	static readonly One = new Vector3(1, 1, 1);
-	static readonly Zero = new Vector3(0, 0, 0);
-	static readonly Right = new Vector3(1, 0, 0);
-	static readonly Up = new Vector3(0, 1, 0);
-	static readonly Forward = new Vector3(0, 0, 1);
+	static readonly One: ReadonlyVector3 = new Vector3(1, 1, 1);
+	static readonly Zero: ReadonlyVector3 = new Vector3(0, 0, 0);
+	static readonly Right: ReadonlyVector3 = new Vector3(1, 0, 0);
+	static readonly Up: ReadonlyVector3 = new Vector3(0, 1, 0);
+	static readonly Forward: ReadonlyVector3 = new Vector3(0, 0, 1);
 }
 
 Object.freeze(Vector3.One);
@@ -305,5 +298,19 @@ Object.freeze(Vector3.Zero);
 Object.freeze(Vector3.Right);
 Object.freeze(Vector3.Up);
 Object.freeze(Vector3.Forward);
+
+export type ReadonlyVector3 = Pick<
+	Vector3,
+	| 'length'
+	| 'lengthSquared'
+	| 'lengthManhattan'
+	| 'equals'
+	| 'clone'
+	| 'dot'
+	| 'angleTo'
+	| 'distanceTo'
+	| 'distanceToSquared'
+	| 'manhattanDistanceTo'
+> & { readonly x: number; readonly y: number; readonly z: number };
 
 const tmp = new Vector3();

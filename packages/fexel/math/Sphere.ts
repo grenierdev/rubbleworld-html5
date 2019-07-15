@@ -1,6 +1,6 @@
-import { Vector3 } from './Vector3';
-import { Cube } from './Cube';
-import { Plane } from './Plane';
+import { Vector3, ReadonlyVector3 } from './Vector3';
+import { Plane, ReadonlyPlane } from './Plane';
+import { Box3, ReadonlyBox3 } from './Box3';
 
 export class Sphere {
 	constructor(public center = new Vector3(), public radius = 0) {}
@@ -9,17 +9,17 @@ export class Sphere {
 		return this.radius < 0;
 	}
 
-	equals(sphere: Sphere) {
+	equals(sphere: Sphere | ReadonlySphere) {
 		return this.center.equals(sphere.center) && this.radius === sphere.radius;
 	}
 
-	set(center: Vector3, radius: number) {
+	set(center: Vector3 | ReadonlyVector3, radius: number) {
 		this.center.copy(center);
 		this.radius = radius;
 		return this;
 	}
 
-	setFromPoints(points: Vector3[]) {
+	setFromPoints(points: (Vector3 | ReadonlyVector3)[]) {
 		const center = tb0.setFromPoints(points).getCenter(this.center);
 
 		let maxRadius = 0;
@@ -35,31 +35,31 @@ export class Sphere {
 		return new Sphere(this.center.clone(), this.radius);
 	}
 
-	copy(sphere: Sphere) {
+	copy(sphere: Sphere | ReadonlySphere) {
 		this.center.copy(sphere.center);
 		this.radius = sphere.radius;
 		return this;
 	}
 
-	containsPoint(point: Vector3) {
+	containsPoint(point: Vector3 | ReadonlyVector3) {
 		const r = this.radius;
 		return point.distanceToSquared(this.center) <= r * r;
 	}
 
-	distanceToPoint(point: Vector3) {
+	distanceToPoint(point: Vector3 | ReadonlyVector3) {
 		return point.distanceTo(this.center) - this.radius;
 	}
 
-	intersectsSphere(sphere: Sphere) {
+	intersectsSphere(sphere: Sphere | ReadonlySphere) {
 		const s = this.radius + sphere.radius;
 		return sphere.center.distanceToSquared(this.center) <= s * s;
 	}
 
-	intersectsBox(box: Cube) {
+	intersectsBox(box: Box3 | ReadonlyBox3) {
 		return box.intersectsSphere(this);
 	}
 
-	intersectsPlane(plane: Plane) {
+	intersectsPlane(plane: Plane | ReadonlyPlane) {
 		return Math.abs(plane.distanceToPoint(this.center)) <= this.radius;
 	}
 
@@ -78,13 +78,13 @@ export class Sphere {
 		return target;
 	}
 
-	getBoundingBox(target: Cube) {
+	getBoundingBox(target: Box3) {
 		target.set(this.center, this.center);
 		target.expandByScalar(this.radius);
 		return target;
 	}
 
-	translate(offset: Vector3) {
+	translate(offset: Vector3 | ReadonlyVector3) {
 		this.center.add(offset);
 		return this;
 	}
@@ -95,4 +95,17 @@ export class Sphere {
 	}
 }
 
-const tb0 = new Cube();
+export type ReadonlySphere = Pick<
+	Sphere,
+	| 'isEmpty'
+	| 'equals'
+	| 'clone'
+	| 'containsPoint'
+	| 'distanceToPoint'
+	| 'intersectsSphere'
+	| 'intersectsBox'
+	| 'intersectsPlane'
+	| 'getBoundingBox'
+> & { readonly center: ReadonlyVector3; readonly radius: number };
+
+const tb0 = new Box3();
