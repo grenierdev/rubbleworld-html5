@@ -8,7 +8,7 @@ import { PointMesh, LineMesh } from './rendering/Mesh';
 
 enum DebugType {
 	Points,
-	Line,
+	Lines,
 	Triangles,
 }
 
@@ -23,7 +23,7 @@ interface DebugPrimitivePoint extends DebugPrimitiveBase<DebugType.Points> {
 	block: ArrayBlock<PointArray, PointItem>;
 }
 
-interface DebugPrimitiveLine extends DebugPrimitiveBase<DebugType.Line> {
+interface DebugPrimitiveLine extends DebugPrimitiveBase<DebugType.Lines> {
 	block: ArrayBlock<LineArray, LineItem>;
 }
 
@@ -168,6 +168,8 @@ export class Debug {
 		for (const prim of oldStack) {
 			if (prim.type === DebugType.Points) {
 				this.pointNeedsUpdate = true;
+			} else if (prim.type === DebugType.Lines) {
+				this.lineNeedsUpdate = true;
 			}
 			prim.block.free();
 		}
@@ -262,7 +264,7 @@ export class Debug {
 		this.stack.push({
 			block,
 			ttl: options.ttl || 0,
-			type: DebugType.Line,
+			type: DebugType.Lines,
 		} as DebugPrimitiveLine);
 		this.lineNeedsUpdate = true;
 	}

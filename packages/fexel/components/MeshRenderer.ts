@@ -12,7 +12,7 @@ export class MeshRendererComponent extends Component {
 		super();
 	}
 
-	willMount() {
+	didMount() {
 		(this as Mutable<MeshRendererComponent>).transform = this.getComponent(TransformComponent);
 	}
 

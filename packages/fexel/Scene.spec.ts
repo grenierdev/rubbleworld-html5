@@ -5,9 +5,14 @@ import { Scene, Entity, Component } from './Scene';
 describe('Scene', () => {
 	it('update iterator', async () => {
 		const A = new DummyComponent();
-		const scene = new Scene().addChild(new Entity('A').addComponent(A));
+		const scene = new Scene().addChild(new Entity('A', A));
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 
 		// onStart
 		expect(stepper.next().done).to.equal(false);
@@ -27,11 +32,14 @@ describe('Scene', () => {
 		const B = new DummyComponent();
 		const C = new DummyComponent();
 
-		const scene = new Scene()
-			.addChild(new Entity('A').addComponent(A).addChild(new Entity('B').addComponent(B)))
-			.addChild(new Entity('C').addComponent(C));
+		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B', B))).addChild(new Entity('C', C));
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 
 		expect(stepper.next().done).to.equal(false);
 		expect(A.mountCount).to.equal(1);
@@ -83,9 +91,14 @@ describe('Scene', () => {
 		const A = new DummyComponent();
 		const B = new PriorityComponent();
 
-		const scene = new Scene().addChild(new Entity('A').addComponent(A)).addChild(new Entity('B').addComponent(B));
+		const scene = new Scene().addChild(new Entity('A', A)).addChild(new Entity('B', B));
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 
 		expect(stepper.next().done).to.equal(false);
 		expect(A.mountCount).to.equal(1);
@@ -115,7 +128,7 @@ class DummyComponent extends Component {
 	mountCount = 0;
 	updateCount = 0;
 
-	willMount() {
+	didMount() {
 		this.mountCount += 1;
 	}
 

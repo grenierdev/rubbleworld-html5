@@ -1,4 +1,4 @@
-import { Component, Entity } from '../Scene'; // hack circular dependency
+import { Component, Entity, RenderContext } from '../Scene'; // hack circular dependency
 import { Camera, CameraPerspective, CameraOrthographic } from '../rendering/Camera';
 import { TransformComponent } from './Transform';
 import { Mutable } from '../util/Mutable';
@@ -22,12 +22,13 @@ export abstract class CameraComponent extends Component {
 	public order: number = 0;
 	public backgroundColor: Color = Color.Black.clone();
 	public clear: Clear = Clear.Background | Clear.Depth;
+	public showDebug: boolean = false;
 
 	constructor(public readonly camera: Camera) {
 		super();
 	}
 
-	willMount() {
+	didMount() {
 		(this as Mutable<CameraComponent>).transform = this.getComponent(TransformComponent);
 	}
 
@@ -35,8 +36,26 @@ export abstract class CameraComponent extends Component {
 		// noop;
 	}
 
-	setupViewport(gl: WebGLRenderingContext, width: number, height: number) {
+	draw({
+		width,
+		height,
+		renderScene,
+		context,
+	}: {
+		width: number;
+		height: number;
+		renderScene: (context: RenderContext) => void;
+		context: Pick<RenderContext, 'time' | 'deltaTime' | 'timeScale' | 'debug' | 'frameCount' | 'gl'>;
+	}) {
+		const gl = context.gl;
+		gl.enable(gl.SCISSOR_TEST);
 		gl.viewport(
+			this.viewport.min.x * width,
+			this.viewport.min.y * height,
+			(this.viewport.max.x - this.viewport.min.x) * width,
+			(this.viewport.max.y - this.viewport.min.y) * height
+		);
+		gl.scissor(
 			this.viewport.min.x * width,
 			this.viewport.min.y * height,
 			(this.viewport.max.x - this.viewport.min.x) * width,
@@ -46,7 +65,16 @@ export abstract class CameraComponent extends Component {
 			gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
 			gl.clear(this.clear);
 		}
-		return [this.transform ? this.transform.worldMatrix : Matrix4.Identity, this.camera.projectionMatrix];
+
+		const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
+		renderScene({
+			...context,
+			viewMatrix,
+			projectionMatrix: this.camera.projectionMatrix,
+		});
+		if (this.showDebug && context.debug) {
+			context.debug.draw(viewMatrix, this.camera.projectionMatrix, gl);
+		}
 	}
 }
 
@@ -93,9 +121,7 @@ export function CameraPerspectivePrefab({
 	scale?: Vector3;
 	camera: CameraPerspectiveConstructor;
 }) {
-	return new Entity(name)
-		.addComponent(new TransformComponent(position, rotation, scale))
-		.addComponent(new CameraPerspectiveComponent(camera));
+	return new Entity(name, new TransformComponent(position, rotation, scale), new CameraPerspectiveComponent(camera));
 }
 
 export function CameraOrthographicPrefab({
@@ -111,7 +137,5 @@ export function CameraOrthographicPrefab({
 	scale?: Vector3;
 	camera: CameraOrthographicConstructor;
 }) {
-	return new Entity(name)
-		.addComponent(new TransformComponent(position, rotation, scale))
-		.addComponent(new CameraOrthographicComponent(camera));
+	return new Entity(name, new TransformComponent(position, rotation, scale), new CameraOrthographicComponent(camera));
 }

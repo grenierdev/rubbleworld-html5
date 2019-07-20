@@ -26,7 +26,7 @@ describe('TransformComponent', () => {
 	});
 	it('local matrix changes on update', async () => {
 		const A = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A').addComponent(A));
+		const scene = new Scene().addChild(new Entity('A', A));
 
 		const pos = new Vector3();
 		const rot = new Quaterion();
@@ -37,7 +37,12 @@ describe('TransformComponent', () => {
 
 		A.localPosition.x = 10;
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 
 		expect(stepper.next().done).to.equal(false); // onStart
 		expect(stepper.next().done).to.equal(false); // onUpdate
@@ -47,7 +52,7 @@ describe('TransformComponent', () => {
 	it('world matrix changes on update', async () => {
 		const A = new TransformComponent();
 		const B = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A').addComponent(A).addChild(new Entity('B').addComponent(B)));
+		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B', B)));
 
 		const pos = new Vector3();
 		const rot = new Quaterion();
@@ -56,7 +61,12 @@ describe('TransformComponent', () => {
 		A.localPosition.x = 10;
 		B.localPosition.x = 10;
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 
 		expect(stepper.next().done).to.equal(false); // A#onStart
 		expect(stepper.next().done).to.equal(false); // A#onUpdate
@@ -70,9 +80,7 @@ describe('TransformComponent', () => {
 	it('empty entity reset matrices chain', async () => {
 		const A = new TransformComponent();
 		const C = new TransformComponent();
-		const scene = new Scene().addChild(
-			new Entity('A').addComponent(A).addChild(new Entity('B').addChild(new Entity('C').addComponent(C)))
-		);
+		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B').addChild(new Entity('C', C))));
 
 		const pos = new Vector3();
 		const rot = new Quaterion();
@@ -81,7 +89,12 @@ describe('TransformComponent', () => {
 		A.localPosition.x = 10;
 		C.localPosition.x = 10;
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 
 		expect(stepper.next().done).to.equal(false); // A#onStart
 		expect(stepper.next().done).to.equal(false); // A#onUpdate
@@ -97,7 +110,7 @@ describe('TransformComponent', () => {
 
 		const A = new TransformComponent();
 		const B = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A').addComponent(A).addChild(new Entity('B').addComponent(B)));
+		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B', B)));
 
 		A.localRotation.x = 180 * DEG2RAD;
 		B.localPosition.x = 10;
@@ -115,7 +128,12 @@ describe('TransformComponent', () => {
 		expect(v.y).to.approximately(1, Number.EPSILON);
 		expect(v.z).to.approximately(0, Number.EPSILON);
 
-		let stepper = scene.update({});
+		let stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
 		expect(stepper.next().done).to.equal(false); // A#willMount
 		expect(stepper.next().done).to.equal(false); // B#willMount
 		expect(stepper.next().done).to.equal(false); // A#update

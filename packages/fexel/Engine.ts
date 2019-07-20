@@ -2,14 +2,18 @@ import { IDisposable } from '@konstellio/disposable';
 import { Scene, RenderContext } from './Scene';
 import { CameraComponent } from './components/Camera';
 import { Stats } from './Stats';
+import { Debug } from './Debug';
 
 export interface EngineStats {
+	frameCount: number;
 	frames: number;
 	drawCalls: number;
 	updates: number;
 	fixedUpdates: number;
 	render: number;
-	lastUpdate: number;
+	lastFPSUpdate: number;
+	lastUpdateTime: number;
+	lastFixedUpdateTime: number;
 }
 
 const HAS_MEMORY = !!(performance as any).memory;
@@ -26,12 +30,15 @@ export class Engine implements IDisposable {
 
 	constructor() {
 		this.statsData = {
+			frameCount: 0,
 			frames: 0,
 			drawCalls: 0,
 			updates: 0,
 			fixedUpdates: 0,
 			render: 0,
-			lastUpdate: 0,
+			lastFPSUpdate: 0,
+			lastUpdateTime: 0,
+			lastFixedUpdateTime: 0,
 		};
 		this.bindedUpdateMethod = this.update.bind(this);
 		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
@@ -68,7 +75,16 @@ export class Engine implements IDisposable {
 		this.statsData.updates = 0;
 
 		if (this.mainScene) {
-			const ticker = this.mainScene.update({});
+			const time = (performance || Date).now();
+			const deltaTime = time - this.statsData.lastUpdateTime;
+			this.statsData.lastUpdateTime = time;
+
+			const ticker = this.mainScene.update({
+				time,
+				deltaTime,
+				timeScale: 1,
+				frameCount: 0,
+			});
 			while (ticker.next().done !== true) {
 				this.statsData.updates++;
 				// TODO bail if frame took too long, emit warning ?
@@ -80,7 +96,15 @@ export class Engine implements IDisposable {
 		this.statsData.fixedUpdates = 0;
 
 		if (this.mainScene) {
-			const ticker = this.mainScene.fixedUpdate({});
+			const time = (performance || Date).now();
+			const deltaTime = time - this.statsData.lastFixedUpdateTime;
+			this.statsData.lastFixedUpdateTime = time;
+
+			const ticker = this.mainScene.fixedUpdate({
+				time,
+				deltaTime,
+				timeScale: 1,
+			});
 			while (ticker.next().done !== true) {
 				this.statsData.fixedUpdates++;
 				// TODO bail if frame took too long, emit warning ?
@@ -93,6 +117,7 @@ export class RenderableEngine extends Engine {
 	protected renderRequestId: number = -1;
 
 	public readonly gl: WebGLRenderingContext;
+	public readonly debug: Debug;
 
 	constructor(protected readonly canvas: HTMLCanvasElement, public readonly stats?: Stats) {
 		super();
@@ -109,9 +134,7 @@ export class RenderableEngine extends Engine {
 		}
 
 		this.gl = gl;
-
-		gl.enable(gl.DEPTH_TEST);
-		gl.enable(gl.CULL_FACE);
+		this.debug = new Debug();
 
 		const statsData = this.statsData;
 		gl.drawArrays = (function(fn) {
@@ -159,6 +182,7 @@ export class RenderableEngine extends Engine {
 	update() {
 		this.updateRequestId = requestAnimationFrame(this.bindedUpdateMethod);
 
+		this.statsData.frameCount++;
 		this.statsData.frames++;
 		this.statsData.drawCalls = this.statsData.updates = this.statsData.render = 0;
 
@@ -168,8 +192,17 @@ export class RenderableEngine extends Engine {
 			const gl = this.gl;
 			const width = this.canvas.width;
 			const height = this.canvas.height;
+			const time = startTime;
+			const deltaTime = time - this.statsData.lastUpdateTime;
+			this.statsData.lastUpdateTime = time;
 
-			const ticker = this.mainScene.update({});
+			const ticker = this.mainScene.update({
+				time,
+				deltaTime,
+				timeScale: 1,
+				frameCount: this.statsData.frameCount,
+				debug: this.debug,
+			});
 			while (ticker.next().done !== true) {
 				this.statsData.updates++;
 				// TODO bail if frame took too long, emit warning ?
@@ -183,29 +216,42 @@ export class RenderableEngine extends Engine {
 			}
 
 			for (const cameraComponent of cameraComponents) {
-				const [viewMatrix, projectionMatrix] = cameraComponent.setupViewport(gl, width, height);
-				const context: RenderContext = {
-					gl,
-					viewMatrix,
-					projectionMatrix,
-				};
-				const ticker = this.mainScene.render(context);
-				while (ticker.next().done !== true) {
-					this.statsData.render++;
-					// TODO bail if frame took too long, emit warning ?
-				}
+				cameraComponent.draw({
+					width,
+					height,
+					context: {
+						gl,
+						time,
+						deltaTime,
+						timeScale: 1,
+						frameCount: this.statsData.frameCount,
+						debug: this.debug,
+					},
+					renderScene: context => {
+						const ticker = this.mainScene!.render(context);
+						while (ticker.next().done !== true) {
+							this.statsData.render++;
+							// TODO bail if frame took too long, emit warning ?
+						}
+					},
+				});
 			}
 
 			gl.flush();
 		}
+
+		if (this.debug) {
+			this.debug.update();
+		}
+
 		if (this.stats) {
 			const time = (performance || Date).now();
-			if (time >= this.statsData.lastUpdate + 300) {
+			if (time >= this.statsData.lastFPSUpdate + 300) {
 				this.stats.updateGraph(
 					'fps',
-					+((this.statsData.frames * 1000) / (time - this.statsData.lastUpdate)).toFixed(0)
+					+((this.statsData.frames * 1000) / (time - this.statsData.lastFPSUpdate)).toFixed(0)
 				);
-				this.statsData.lastUpdate = time;
+				this.statsData.lastFPSUpdate = time;
 				this.statsData.frames = 0;
 			}
 			this.stats.updateGraph('ms', +(time - startTime).toFixed(1));

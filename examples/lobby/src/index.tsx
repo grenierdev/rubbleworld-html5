@@ -4,12 +4,15 @@ import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
 import { Texture, TextureWrap, TextureFilter } from '@fexel/core/rendering/Texture';
-import { Debug } from '@fexel/core/Debug';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
-import { CameraPerspectivePrefab, CameraPerspectiveComponent } from '@fexel/core/components/Camera';
+import { CameraPerspectivePrefab, CameraPerspectiveComponent, Clear } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
+import { Vector2 } from '@fexel/core/math/Vector2';
+import { Color } from '@fexel/core/math/Color';
+import { Euler } from '@fexel/core/math/Euler';
+import { DEG2RAD } from '@fexel/core/math/util';
 
 const stats = new Stats(340);
 stats.canvas.style.opacity = '0.9';
@@ -71,68 +74,59 @@ const mesh = new Mesh({
 
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;
-	willMount() {
+	didMount() {
 		this.transform = this.getComponent(TransformComponent);
 	}
-	update() {
+	update({ time }) {
 		if (this.transform) {
 			this.transform.localPosition.set(
-				Math.sin(Math.max(0, performance.now()) / 500),
-				Math.cos(Math.max(0, performance.now()) / 500),
-				Math.cos(Math.max(0, performance.now()) / 100)
+				Math.sin(Math.max(0, time) / 500),
+				Math.cos(Math.max(0, time) / 500),
+				Math.cos(Math.max(0, time) / 100)
 			);
 		}
 	}
 }
 
-const cam = CameraPerspectivePrefab({
+const cam1 = CameraPerspectivePrefab({
 	position: new Vector3(0, 0, -10),
 	camera: {
 		fov: 40,
-		aspect: canvasEl.width / canvasEl.height,
+		aspect: canvasEl.width / (canvasEl.height / 2),
 		near: 0.1,
 		far: 100.0,
 		zoom: 2,
 	},
 });
-// cam.getComponent(CameraPerspectiveComponent)!.viewport.max.set(0.5, 0.5);
+const cam1Comp = cam1.getComponent(CameraPerspectiveComponent)!;
+cam1Comp.backgroundColor = new Color(0.1, 0.1, 0.1);
+cam1Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.75), new Vector2(1, 0.5));
+cam1Comp.showDebug = true;
 
-const obj = new Entity('UV')
-	.addComponent(new TransformComponent())
-	.addComponent(new MoverComponent())
-	.addComponent(new MeshRendererComponent(mesh, material));
+const cam2 = CameraPerspectivePrefab({
+	position: new Vector3(0, 0, -10),
+	rotation: new Euler(0, 0, 180 * DEG2RAD),
+	camera: {
+		fov: 40,
+		aspect: canvasEl.width / (canvasEl.height / 2),
+		near: 0.1,
+		far: 100.0,
+		zoom: 2,
+	},
+});
 
-const scene = new Scene().addChild(cam).addChild(obj);
+const cam2Comp = cam2.getComponent(CameraPerspectiveComponent)!;
+cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
+cam2Comp.showDebug = true;
+
+const obj = new Entity('UV', new TransformComponent(), new MoverComponent(), new MeshRendererComponent(mesh, material));
+
+const scene = new Scene()
+	.addChild(cam1)
+	.addChild(cam2)
+	.addChild(obj);
 
 engine.loadScene(scene);
 engine.start();
 
-// setInterval(() => console.log(engine.stats.drawCalls), 1000);
-
-// Debug.setRenderingContext(engine.gl);
-// Debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 0.0, color: [1, 1, 1, 1] });
-
-// 	// Debug.drawPrimitivePoints([0 + Math.random(), -1 + Math.random() * 2, 0], 2, {
-// 	// 	ttl: 1.0,
-// 	// 	color: [Math.random(), Math.random(), Math.random(), 1],
-// 	// });
-// 	// Debug.drawPrimitiveLine(
-// 	// 	[
-// 	// 		-1 + Math.random() * 1,
-// 	// 		-1 + Math.random() * 2,
-// 	// 		0,
-// 	// 		-1 + Math.random() * 1,
-// 	// 		-1 + Math.random() * 2,
-// 	// 		0,
-// 	// 	],
-// 	// 	{
-// 	// 		ttl: 1.0,
-// 	// 		color: [Math.random(), Math.random(), Math.random(), 1],
-// 	// 	}
-// 	// );
-
-// 	Debug.draw(
-// 		camCamera.transform!.worldMatrix,
-// 		camCamera.camera.projectionMatrix
-// 	);
-// 	Debug.update();
+engine.debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 10.0, color: [1, 1, 1, 1] });

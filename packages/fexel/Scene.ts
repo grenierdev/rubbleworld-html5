@@ -1,9 +1,28 @@
 import { Mutable } from './util/Mutable';
 import { Matrix4, ReadonlyMatrix4 } from './math/Matrix4';
+import { Debug } from './Debug';
 
-export interface UpdateContext {}
+export interface UpdateContext {
+	time: number;
+	deltaTime: number;
+	frameCount: number;
+	timeScale: number;
+	debug?: Debug;
+}
+
+export interface FixedUpdateContext {
+	time: number;
+	deltaTime: number;
+	timeScale: number;
+	debug?: Debug;
+}
 
 export interface RenderContext {
+	time: number;
+	deltaTime: number;
+	timeScale: number;
+	frameCount: number;
+	debug?: Debug;
 	gl: WebGLRenderingContext;
 	viewMatrix: Matrix4 | ReadonlyMatrix4;
 	projectionMatrix: Matrix4 | ReadonlyMatrix4;
@@ -26,15 +45,22 @@ export abstract class Component {
 
 	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
 		if (this.entity) {
-			return this.entity.getComponent(type) as any;
+			return this.entity.getComponent(type);
 		}
 		return undefined;
 	}
 
-	willMount?(): void;
+	getComponents<T>(type: new (...args: any[]) => T): T[] {
+		if (this.entity) {
+			return this.entity.getComponents(type);
+		}
+		return [];
+	}
+
+	didMount?(): void;
 	willUnmount?(): void;
 	update?(context: UpdateContext): IterableIterator<void> | void;
-	fixedUpdate?(context: UpdateContext): IterableIterator<void> | void;
+	fixedUpdate?(context: FixedUpdateContext): IterableIterator<void> | void;
 	render?(context: RenderContext): void;
 }
 
@@ -44,27 +70,13 @@ export class Entity {
 	public readonly children: Entity[];
 	public readonly components: Component[];
 
-	public static build({
-		name,
-		enabled,
-		children,
-		components,
-	}: {
-		name: string;
-		enabled?: boolean;
-		children?: Entity[];
-		components?: Component[];
-	}) {
-		return new Entity(name)
-			.setEnable(enabled === undefined ? true : enabled)
-			.addChild(...(children || []))
-			.addComponent(...(components || []));
-	}
-
-	constructor(public name: string) {
+	constructor(public name: string, ...components: Component[]) {
 		this.enabled = true;
 		this.children = [];
 		this.components = [];
+		for (const component of components) {
+			this.addComponent(component);
+		}
 	}
 
 	get scene(): Scene | undefined {
@@ -126,7 +138,11 @@ export class Entity {
 		}
 	}
 
-	addComponent(...components: Component[]) {
+	getComponents<T>(type: new (...args: any[]) => T): T[] {
+		return this.components.filter(component => component.constructor === type) as any;
+	}
+
+	private addComponent(...components: Component[]) {
 		for (const component of components) {
 			this.components.push(component);
 			(component as Mutable<Component>).entity = this;
@@ -204,8 +220,8 @@ export class Scene extends Entity {
 				for (const entity of entities) {
 					for (const component of entity.components) {
 						changed = true;
-						if (component.willMount) {
-							component.willMount();
+						if (component.didMount) {
+							component.didMount();
 							yield;
 						}
 						if (component.update || component.fixedUpdate) {
@@ -243,7 +259,7 @@ export class Scene extends Entity {
 		}
 	}
 
-	*fixedUpdate(context: UpdateContext) {
+	*fixedUpdate(context: FixedUpdateContext) {
 		for (const component of this.updatableComponents) {
 			if (component.enabled && component.fixedUpdate && component.entity && component.entity.enabled) {
 				yield component.fixedUpdate(context);
@@ -251,5 +267,3 @@ export class Scene extends Entity {
 		}
 	}
 }
-
-import { CameraComponent } from './components/Camera'; // hack circular dependencyimport { Matrix4 } from './math/Matrix4';
