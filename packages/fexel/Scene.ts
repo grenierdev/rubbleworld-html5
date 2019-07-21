@@ -26,6 +26,7 @@ export interface RenderContext {
 	gl: WebGLRenderingContext;
 	viewMatrix: Matrix4 | ReadonlyMatrix4;
 	projectionMatrix: Matrix4 | ReadonlyMatrix4;
+	visibilityFlag: number;
 }
 
 export abstract class Component {

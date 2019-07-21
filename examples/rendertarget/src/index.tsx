@@ -13,6 +13,7 @@ import { Vector2 } from '@fexel/core/math/Vector2';
 import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
 import { DEG2RAD } from '@fexel/core/math/util';
+import { RenderTarget } from '@fexel/core/rendering/RenderTarget';
 
 const stats = new Stats(340);
 stats.canvas.style.opacity = '0.9';
@@ -22,13 +23,17 @@ setInterval(() => stats.update(), 1000 / 30);
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
 const engine = ((window as any).engine = new RenderableEngine(canvasEl, stats));
 
-const tex = new Texture({
+const tex1 = new Texture({
 	data: document.getElementById('uvdebug')! as HTMLImageElement,
 });
 
-const material = new Material(
-	new Shader(
-		`
+const tex2 = new Texture({
+	width: 512,
+	height: 512,
+});
+
+const vertShader = new Shader(
+	`
 		attribute vec3 vertPosition;
 		attribute vec2 vertUV1;
 
@@ -43,10 +48,10 @@ const material = new Material(
 			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1.0);
 		}
 	`,
-		ShaderType.Vertex
-	),
-	new Shader(
-		`
+	ShaderType.Vertex
+);
+const fragShader = new Shader(
+	`
 		precision mediump float;
 
 		varying vec2 fragUV;
@@ -56,12 +61,18 @@ const material = new Material(
 			gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);
 		}
 	`,
-		ShaderType.Fragment
-	)
+	ShaderType.Fragment
 );
-material.twoSided = true;
-material.transparent = false;
-material.setUniform('sampler', tex);
+
+const uvMaterial = new Material(vertShader, fragShader);
+uvMaterial.twoSided = true;
+uvMaterial.transparent = false;
+uvMaterial.setUniform('sampler', tex1);
+
+const rtMaterial = new Material(vertShader, fragShader);
+rtMaterial.twoSided = true;
+rtMaterial.transparent = false;
+rtMaterial.setUniform('sampler', tex2);
 
 const mesh = new Mesh({
 	vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
@@ -86,27 +97,39 @@ class MoverComponent extends Component {
 	}
 }
 
+const rt = new RenderTarget(tex2.width!, tex2.height!, tex2);
+
 const cam1 = CameraPerspectivePrefab({
 	position: new Vector3(0, 0, -10),
 	camera: {
 		fov: 40,
-		aspect: canvasEl.width / (canvasEl.height / 2),
+		aspect: canvasEl.width / canvasEl.height,
 		near: 0.1,
 		far: 100.0,
 		zoom: 2,
 	},
 });
 const cam1Comp = cam1.getComponent(CameraPerspectiveComponent)!;
-cam1Comp.backgroundColor = new Color(0.1, 0.1, 0.1);
-cam1Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.75), new Vector2(1, 0.5));
+cam1Comp.backgroundColor = Color.White;
 cam1Comp.showDebug = true;
+cam1Comp.renderTarget = rt;
+cam1Comp.visibilityFlag = 2;
+
+const obj1 = new Entity(
+	'UV',
+	new TransformComponent(),
+	new MoverComponent(),
+	new MeshRendererComponent(mesh, uvMaterial)
+);
+const obj1Comp = obj1.getComponent(MeshRendererComponent)!;
+obj1Comp.visibilityFlag = 2;
 
 const cam2 = CameraPerspectivePrefab({
 	position: new Vector3(0, 0, -10),
-	rotation: new Euler(0, 0, 180 * DEG2RAD),
+	rotation: new Euler(0, 0, 45 * DEG2RAD),
 	camera: {
 		fov: 40,
-		aspect: canvasEl.width / (canvasEl.height / 2),
+		aspect: canvasEl.width / canvasEl.height,
 		near: 0.1,
 		far: 100.0,
 		zoom: 2,
@@ -114,16 +137,24 @@ const cam2 = CameraPerspectivePrefab({
 });
 
 const cam2Comp = cam2.getComponent(CameraPerspectiveComponent)!;
-cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
+// cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
 cam2Comp.showDebug = true;
-// cam2Comp.visibilityFlag = 0;
+cam2Comp.visibilityFlag = 1;
 
-const obj = new Entity('UV', new TransformComponent(), new MoverComponent(), new MeshRendererComponent(mesh, material));
+const obj2 = new Entity(
+	'RT',
+	new TransformComponent(),
+	// new MoverComponent(),
+	new MeshRendererComponent(mesh, rtMaterial)
+);
+const obj2Comp = obj2.getComponent(MeshRendererComponent)!;
+obj2Comp.visibilityFlag = 1;
 
 const scene = new Scene()
 	.addChild(cam1)
 	.addChild(cam2)
-	.addChild(obj);
+	.addChild(obj1)
+	.addChild(obj2);
 
 engine.loadScene(scene);
 engine.start();

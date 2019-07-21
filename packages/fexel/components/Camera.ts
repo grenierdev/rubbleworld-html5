@@ -8,6 +8,7 @@ import { Euler } from '../math/Euler';
 import { Vector2 } from '../math/Vector2';
 import { Color } from '../math/Color';
 import { Matrix4 } from '../math/Matrix4';
+import { RenderTarget } from '../rendering/RenderTarget';
 
 export enum Clear {
 	Nothing = 0,
@@ -23,8 +24,9 @@ export abstract class CameraComponent extends Component {
 	public backgroundColor: Color = Color.Black.clone();
 	public clear: Clear = Clear.Background | Clear.Depth;
 	public showDebug: boolean = false;
+	public renderTarget?: RenderTarget;
 
-	constructor(public readonly camera: Camera) {
+	constructor(public readonly camera: Camera, public visibilityFlag: number = 0xff) {
 		super();
 	}
 
@@ -48,29 +50,42 @@ export abstract class CameraComponent extends Component {
 		context: Pick<RenderContext, 'time' | 'deltaTime' | 'timeScale' | 'debug' | 'frameCount' | 'gl'>;
 	}) {
 		const gl = context.gl;
+
 		gl.enable(gl.SCISSOR_TEST);
-		gl.viewport(
-			this.viewport.min.x * width,
-			this.viewport.min.y * height,
-			(this.viewport.max.x - this.viewport.min.x) * width,
-			(this.viewport.max.y - this.viewport.min.y) * height
-		);
-		gl.scissor(
-			this.viewport.min.x * width,
-			this.viewport.min.y * height,
-			(this.viewport.max.x - this.viewport.min.x) * width,
-			(this.viewport.max.y - this.viewport.min.y) * height
-		);
+		if (this.renderTarget) {
+			this.renderTarget.bind(gl);
+			gl.viewport(0, 0, this.renderTarget.width, this.renderTarget.height);
+			gl.scissor(0, 0, this.renderTarget.width, this.renderTarget.height);
+		} else {
+			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+			gl.viewport(
+				this.viewport.min.x * width,
+				this.viewport.min.y * height,
+				(this.viewport.max.x - this.viewport.min.x) * width,
+				(this.viewport.max.y - this.viewport.min.y) * height
+			);
+			gl.scissor(
+				this.viewport.min.x * width,
+				this.viewport.min.y * height,
+				(this.viewport.max.x - this.viewport.min.x) * width,
+				(this.viewport.max.y - this.viewport.min.y) * height
+			);
+		}
+
 		if (this.clear) {
 			gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
 			gl.clear(this.clear);
 		}
+
+		gl.enable(gl.CULL_FACE);
+		gl.enable(gl.DEPTH_TEST);
 
 		const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
 		renderScene({
 			...context,
 			viewMatrix,
 			projectionMatrix: this.camera.projectionMatrix,
+			visibilityFlag: this.visibilityFlag,
 		});
 		if (this.showDebug && context.debug) {
 			context.debug.draw(viewMatrix, this.camera.projectionMatrix, gl);

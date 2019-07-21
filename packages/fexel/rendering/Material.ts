@@ -115,10 +115,7 @@ export class Material implements IDisposable {
 	public twoSided: boolean = false;
 	public readonly uniforms: Map<string, Uniform>;
 
-	constructor(
-		public readonly vertexShader: Shader,
-		public readonly fragmentShader: Shader
-	) {
+	constructor(public readonly vertexShader: Shader, public readonly fragmentShader: Shader) {
 		this.attributes = new Map();
 		this.uniforms = new Map();
 	}
@@ -162,9 +159,7 @@ export class Material implements IDisposable {
 
 	protected createProgram(gl: WebGLRenderingContext) {
 		if (this.gl && this.gl !== gl) {
-			throw new ReferenceError(
-				`Material already compiled with an other WebGLRenderingContext.`
-			);
+			throw new ReferenceError(`Material already compiled with an other WebGLRenderingContext.`);
 		}
 
 		if (this.program) {
@@ -183,9 +178,7 @@ export class Material implements IDisposable {
 
 		const status = gl.getProgramParameter(this.program!, gl.LINK_STATUS);
 		if (!status) {
-			throw new SyntaxError(
-				`Could not load program : ${gl.getProgramInfoLog(this.program!)}.`
-			);
+			throw new SyntaxError(`Could not load program : ${gl.getProgramInfoLog(this.program!)}.`);
 		}
 
 		gl.detachShader(this.program!, this.vertexShader.shader!);
@@ -193,11 +186,7 @@ export class Material implements IDisposable {
 
 		let textureUnits = 0;
 		let matches: RegExpExecArray | null;
-		while (
-			(matches = attrRegex.exec(
-				this.vertexShader.source + this.fragmentShader.source
-			))
-		) {
+		while ((matches = attrRegex.exec(this.vertexShader.source + this.fragmentShader.source))) {
 			const [, type, name] = matches;
 			this.attributes.set(name, {
 				location: gl.getAttribLocation(this.program!, name),
@@ -205,11 +194,7 @@ export class Material implements IDisposable {
 			});
 		}
 		const structMap = new Map<string, Map<string, string>>();
-		while (
-			(matches = structRegex.exec(
-				this.vertexShader.source + this.fragmentShader.source
-			))
-		) {
+		while ((matches = structRegex.exec(this.vertexShader.source + this.fragmentShader.source))) {
 			const [, nameStruct, def] = matches;
 			const vars = new Map<string, string>();
 			while ((matches = varRegex.exec(def))) {
@@ -220,28 +205,19 @@ export class Material implements IDisposable {
 		}
 
 		// TODO: getUniformLocation for arrays
-		while (
-			(matches = uniformRegex.exec(
-				this.vertexShader.source + this.fragmentShader.source
-			))
-		) {
+		while ((matches = uniformRegex.exec(this.vertexShader.source + this.fragmentShader.source))) {
 			const [, type, name] = matches;
 			if (structMap.has(type)) {
 				const vars = structMap.get(type)!;
 				for (const [varName, varType] of vars) {
-					const loc = gl.getUniformLocation(
-						this.program!,
-						name + '.' + varName
-					);
+					const loc = gl.getUniformLocation(this.program!, name + '.' + varName);
 					if (loc) {
 						const existingUniform = this.uniforms.get(name + '.' + varName);
 						this.uniforms.set(name + '.' + varName, {
 							location: loc,
 							type: varType.toLocaleLowerCase() as Type,
 							value: existingUniform ? existingUniform.value : undefined,
-							...(isSampler(type.toLocaleLowerCase())
-								? { slot: textureUnits++ }
-								: {}),
+							...(isSampler(type.toLocaleLowerCase()) ? { slot: textureUnits++ } : {}),
 						} as Uniform);
 					}
 				}
@@ -253,9 +229,7 @@ export class Material implements IDisposable {
 						location: loc,
 						type: type.toLocaleLowerCase() as Type,
 						value: existingUniform ? existingUniform.value : undefined,
-						...(isSampler(type.toLocaleLowerCase())
-							? { slot: textureUnits++ }
-							: {}),
+						...(isSampler(type.toLocaleLowerCase()) ? { slot: textureUnits++ } : {}),
 					} as Uniform);
 				}
 			}
@@ -295,10 +269,7 @@ export class Material implements IDisposable {
 				case Type.Sampler:
 				case Type.Sampler2D:
 				case Type.SamplerCube:
-					if (
-						uniform.value instanceof Texture &&
-						typeof uniform.slot === 'number'
-					) {
+					if (uniform.value instanceof Texture && typeof uniform.slot === 'number') {
 						gl.uniform1i(uniform.location, uniform.slot!);
 						uniform.value.bind(gl, uniform.slot!);
 					} else {
@@ -323,93 +294,63 @@ export class Material implements IDisposable {
 					if (isArray(uniform.value)) {
 						gl.uniform2iv(uniform.location, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.IVec3:
 					if (isArray(uniform.value)) {
 						gl.uniform3iv(uniform.location, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.IVec4:
 					if (isArray(uniform.value)) {
 						gl.uniform4iv(uniform.location, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Vec2:
 					if (isArray(uniform.value)) {
 						gl.uniform2fv(uniform.location, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Vec3:
 					if (isArray(uniform.value)) {
 						gl.uniform3fv(uniform.location, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Vec4:
 					if (isArray(uniform.value)) {
 						gl.uniform4fv(uniform.location, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Mat2:
 					if (isArray(uniform.value)) {
-						gl.uniformMatrix2fv(
-							uniform.location,
-							uniform.transpose === true,
-							uniform.value
-						);
+						gl.uniformMatrix2fv(uniform.location, uniform.transpose === true, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Mat3:
 					if (isArray(uniform.value)) {
-						gl.uniformMatrix3fv(
-							uniform.location,
-							uniform.transpose === true,
-							uniform.value
-						);
+						gl.uniformMatrix3fv(uniform.location, uniform.transpose === true, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Mat4:
 					if (isArray(uniform.value)) {
-						gl.uniformMatrix4fv(
-							uniform.location,
-							uniform.transpose === true,
-							uniform.value
-						);
+						gl.uniformMatrix4fv(uniform.location, uniform.transpose === true, uniform.value);
 					} else {
-						throw new SyntaxError(
-							`Expected uniform ${name} to be an array of number.`
-						);
+						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 			}

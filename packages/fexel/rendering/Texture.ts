@@ -1,11 +1,7 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Mutable } from '../util/Mutable';
 
-const LoadingImage = new ImageData(
-	new Uint8ClampedArray([255, 0, 255, 255]),
-	1,
-	1
-);
+const LoadingImage = new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1);
 
 export enum TextureWrap {
 	REPEAT = WebGLRenderingContext.REPEAT,
@@ -56,20 +52,71 @@ export class Texture implements IDisposable {
 	protected gl?: WebGLRenderingContext;
 
 	public readonly texture?: WebGLTexture;
+	public readonly data?: HTMLImageElement | ImageData | ImageBitmap;
+	public readonly width?: number;
+	public readonly height?: number;
+	public readonly wrap = TextureWrap.CLAMP_TO_EDGE;
+	public readonly filter = TextureFilter.NEAREST_MIPMAP_LINEAR;
+	public readonly format = TextureFormat.RGBA;
+	public readonly type = WebGLRenderingContext.UNSIGNED_BYTE;
 
-	constructor(
-		public readonly data: HTMLImageElement | ImageData | ImageBitmap,
-		public readonly wrap = TextureWrap.MIRRORED_REPEAT,
-		public readonly filter = TextureFilter.NEAREST_MIPMAP_LINEAR,
-		public readonly format = TextureFormat.RGBA,
-		public readonly type = WebGLRenderingContext.UNSIGNED_BYTE
-	) {}
+	constructor({
+		width,
+		height,
+		wrap,
+		filter,
+		format,
+		type,
+	}: {
+		width: number;
+		height: number;
+		wrap?: TextureWrap;
+		filter?: TextureFilter;
+		format?: TextureFormat;
+		type?: TextureType;
+	});
+	constructor({
+		data,
+		wrap,
+		filter,
+		format,
+		type,
+	}: {
+		data: HTMLImageElement | ImageData | ImageBitmap;
+		wrap?: TextureWrap;
+		filter?: TextureFilter;
+		format?: TextureFormat;
+		type?: TextureType;
+	});
+	constructor({
+		data,
+		width,
+		height,
+		wrap,
+		filter,
+		format,
+		type,
+	}: {
+		data?: HTMLImageElement | ImageData | ImageBitmap;
+		width?: number;
+		height?: number;
+		wrap?: TextureWrap;
+		filter?: TextureFilter;
+		format?: TextureFormat;
+		type?: TextureType;
+	}) {
+		this.data = data;
+		this.width = width;
+		this.height = height;
+		this.wrap = wrap || TextureWrap.CLAMP_TO_EDGE;
+		this.filter = filter || TextureFilter.LINEAR;
+		this.format = format || TextureFormat.RGBA;
+		this.type = type || TextureType.UNSIGNED_BYTE;
+	}
 
-	protected createTexture(gl: WebGLRenderingContext) {
+	public createTexture(gl: WebGLRenderingContext) {
 		if (this.gl && this.gl !== gl) {
-			throw new ReferenceError(
-				`Texture already compiled with an other WebGLRenderingContext.`
-			);
+			throw new ReferenceError(`Texture already compiled with an other WebGLRenderingContext.`);
 		}
 
 		if (this.texture) {
@@ -84,34 +131,15 @@ export class Texture implements IDisposable {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.filter);
 
 		if (this.data instanceof HTMLImageElement && this.data.complete === false) {
-			gl.texImage2D(
-				gl.TEXTURE_2D,
-				0,
-				this.format,
-				this.format,
-				this.type,
-				LoadingImage
-			);
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, LoadingImage);
 			this.data.onload = () => {
 				gl.bindTexture(gl.TEXTURE_2D, this.texture!);
-				gl.texImage2D(
-					gl.TEXTURE_2D,
-					0,
-					this.format,
-					this.format,
-					this.type,
-					this.data
-				);
+				gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, this.data!);
 			};
-		} else {
-			gl.texImage2D(
-				gl.TEXTURE_2D,
-				0,
-				this.format,
-				this.format,
-				this.type,
-				this.data
-			);
+		} else if (this.data) {
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, this.data);
+		} else if (this.width && this.height) {
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, null);
 		}
 
 		gl.bindTexture(gl.TEXTURE_2D, null);
@@ -119,8 +147,8 @@ export class Texture implements IDisposable {
 
 	dispose(): void {
 		if (this.disposed === false) {
-			if (this.gl) {
-				this.gl.deleteTexture(this.texture!);
+			if (this.gl && this.texture) {
+				this.gl.deleteTexture(this.texture);
 			}
 			this.disposed = true;
 		}
