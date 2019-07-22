@@ -1,5 +1,5 @@
 {
-	"name": "rendertarget",
+	"name": "net-lobby",
 	"private": true,
 	"version": "0.0.1",
 	"dependencies": {
