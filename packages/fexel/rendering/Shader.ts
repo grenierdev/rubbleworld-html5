@@ -6,7 +6,7 @@ export enum ShaderType {
 	Fragment = WebGLRenderingContext.FRAGMENT_SHADER,
 }
 
-export class Shader implements IDisposable {
+export abstract class Shader implements IDisposable {
 	private disposed: boolean = false;
 	protected gl?: WebGLRenderingContext;
 
@@ -14,8 +14,7 @@ export class Shader implements IDisposable {
 
 	constructor(
 		public readonly source: string,
-		public readonly type = WebGLRenderingContext.VERTEX_SHADER |
-			WebGLRenderingContext.FRAGMENT_SHADER
+		public readonly type = WebGLRenderingContext.VERTEX_SHADER | WebGLRenderingContext.FRAGMENT_SHADER
 	) {}
 
 	dispose(): void {
@@ -33,9 +32,7 @@ export class Shader implements IDisposable {
 
 	compile(gl: WebGLRenderingContext) {
 		if (this.gl && this.gl !== gl) {
-			throw new ReferenceError(
-				`Shader already compiled with an other WebGLRenderingContext.`
-			);
+			throw new ReferenceError(`Shader already compiled with an other WebGLRenderingContext.`);
 		}
 
 		if (this.shader) {
@@ -49,9 +46,19 @@ export class Shader implements IDisposable {
 		gl.compileShader(this.shader!);
 
 		if (!gl.getShaderParameter(this.shader!, gl.COMPILE_STATUS)) {
-			throw new SyntaxError(
-				`Could not compile shader : ${gl.getShaderInfoLog(this.shader!)}.`
-			);
+			throw new SyntaxError(`Could not compile shader : ${gl.getShaderInfoLog(this.shader!)}.`);
 		}
+	}
+}
+
+export class VertexShader extends Shader {
+	constructor(source: string) {
+		super(source, WebGLRenderingContext.VERTEX_SHADER);
+	}
+}
+
+export class FragmentShader extends Shader {
+	constructor(source: string) {
+		super(source, WebGLRenderingContext.FRAGMENT_SHADER);
 	}
 }

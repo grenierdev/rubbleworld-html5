@@ -3,12 +3,12 @@ import { Stats } from '@fexel/core/Stats';
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
-import { Texture, TextureWrap, TextureFilter } from '@fexel/core/rendering/Texture';
+import { Texture } from '@fexel/core/rendering/Texture';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
 import { CameraPerspectivePrefab, CameraPerspectiveComponent, Clear } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
-import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
+import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
 import { Vector2 } from '@fexel/core/math/Vector2';
 import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
@@ -27,7 +27,7 @@ const tex = new Texture({
 });
 
 const material = new Material(
-	new Shader(
+	new VertexShader(
 		`
 		attribute vec3 vertPosition;
 		attribute vec2 vertUV1;
@@ -42,10 +42,9 @@ const material = new Material(
 			fragUV = vertUV1;
 			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1.0);
 		}
-	`,
-		ShaderType.Vertex
+	`
 	),
-	new Shader(
+	new FragmentShader(
 		`
 		precision mediump float;
 
@@ -55,8 +54,7 @@ const material = new Material(
 		void main(void) {
 			gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);
 		}
-	`,
-		ShaderType.Fragment
+	`
 	)
 );
 material.twoSided = true;

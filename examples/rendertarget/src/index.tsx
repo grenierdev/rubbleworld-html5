@@ -8,7 +8,7 @@ import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
 import { CameraPerspectivePrefab, CameraPerspectiveComponent, Clear } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
-import { Shader, ShaderType } from '@fexel/core/rendering/Shader';
+import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
 import { Vector2 } from '@fexel/core/math/Vector2';
 import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
@@ -32,7 +32,7 @@ const tex2 = new Texture({
 	height: 512,
 });
 
-const vertShader = new Shader(
+const vertShader = new VertexShader(
 	`
 		attribute vec3 vertPosition;
 		attribute vec2 vertUV1;
@@ -47,10 +47,9 @@ const vertShader = new Shader(
 			fragUV = vertUV1;
 			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1.0);
 		}
-	`,
-	ShaderType.Vertex
+	`
 );
-const fragShader = new Shader(
+const fragShader = new FragmentShader(
 	`
 		precision mediump float;
 
@@ -60,8 +59,7 @@ const fragShader = new Shader(
 		void main(void) {
 			gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);
 		}
-	`,
-	ShaderType.Fragment
+	`
 );
 
 const uvMaterial = new Material(vertShader, fragShader);
@@ -97,7 +95,7 @@ class MoverComponent extends Component {
 	}
 }
 
-const rt = new RenderTarget(tex2.width!, tex2.height!, tex2);
+const rt = new RenderTarget(tex2.width!, tex2.height!, tex2, true);
 
 const cam1 = CameraPerspectivePrefab({
 	position: new Vector3(0, 0, -10),

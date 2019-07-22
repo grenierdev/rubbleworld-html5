@@ -1,5 +1,5 @@
 import { IDisposable } from '@konstellio/disposable';
-import { Shader } from './Shader';
+import { VertexShader, FragmentShader } from './Shader';
 import { isArray as isarray } from 'util';
 import { Mesh } from './Mesh';
 import { Texture } from './Texture';
@@ -115,7 +115,7 @@ export class Material implements IDisposable {
 	public twoSided: boolean = false;
 	public readonly uniforms: Map<string, Uniform>;
 
-	constructor(public readonly vertexShader: Shader, public readonly fragmentShader: Shader) {
+	constructor(public readonly vertexShader: VertexShader, public readonly fragmentShader: FragmentShader) {
 		this.attributes = new Map();
 		this.uniforms = new Map();
 	}

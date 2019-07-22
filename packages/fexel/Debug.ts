@@ -3,7 +3,7 @@ import { Color, ReadonlyColor } from './math/Color';
 import { Matrix4, ReadonlyMatrix4 } from './math/Matrix4';
 import { Vector3, ReadonlyVector3 } from './math/Vector3';
 import { Material } from './rendering/Material';
-import { Shader, ShaderType } from './rendering/Shader';
+import { VertexShader, FragmentShader } from './rendering/Shader';
 import { PointMesh, LineMesh } from './rendering/Mesh';
 
 enum DebugType {
@@ -72,7 +72,7 @@ export class Debug {
 		this.stack = [];
 		this.lastTime = 0;
 		this.material = new Material(
-			new Shader(
+			new VertexShader(
 				`
 				attribute vec3 vertPosition;
 				attribute float vertSize;
@@ -88,10 +88,9 @@ export class Debug {
 					gl_Position = projectionMatrix * viewMatrix * vec4(vertPosition, 1.0);
 					gl_PointSize = vertSize;
 				}
-			`,
-				ShaderType.Vertex
+			`
 			),
-			new Shader(
+			new FragmentShader(
 				`
 				precision mediump float;
 
@@ -100,8 +99,7 @@ export class Debug {
 				void main(void) {
 					gl_FragColor = fragColor;
 				}
-			`,
-				ShaderType.Fragment
+			`
 			)
 		);
 		this.material.twoSided = true;
