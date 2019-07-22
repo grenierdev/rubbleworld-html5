@@ -7,33 +7,55 @@ import { ClientTransport } from './Client';
 
 export interface WebRTCServerTransportConstructor {
 	label: string;
-	maxConnections: number;
 	servers?: RTCIceServer[];
 	channel?: RTCDataChannelInit;
 }
+
+const defaultIceServers = [
+	{ urls: 'stun:stun.1.google.com:19302' },
+	// { urls: 'stun:stun1.l.google.com:19302' },
+	// { urls: 'stun:stun2.l.google.com:19302' },
+	// { urls: 'stun:stun3.l.google.com:19302' },
+	// { urls: 'stun:stun4.l.google.com:19302' },
+];
 
 export class WebRTCServerTransport extends ServerTransport {
 	constructor(public readonly params: WebRTCServerTransportConstructor) {
 		super();
 	}
+
+	async createInvite() {
+		const peerConnection = new RTCPeerConnection({
+			iceServers: this.params.servers ? this.params.servers : defaultIceServers,
+		});
+
+		const description = await peerConnection
+			.createOffer()
+			.then(desc => peerConnection.setLocalDescription(desc).then(() => peerConnection.localDescription!));
+
+		const invite = new WebRTCServerInvite(
+			peerConnection,
+			description,
+			() => {
+				const client = new WebRTCServerClient(peerConnection, this.params.label, this.params.channel);
+				this.emit('onConnect', client);
+			},
+			() => {}
+		);
+
+		return invite;
+	}
 }
 
-export class WebRTCServerClient extends ServerClient {
-	constructor(public readonly connection: RTCPeerConnection, public readonly channel: RTCDataChannel) {
-		super();
-
-		connection.createOffer().then(desc => {
-			connection.setLocalDescription(desc).then(
-				() => {
-					this.emit('onOffer', connection.localDescription);
-				},
-				err => {}
-			);
-		});
-		connection.onicecandidate = candidate => {
-			if (candidate === null) {
-				console.trace('onReady', connection);
-			}
+export class WebRTCServerInvite {
+	constructor(
+		protected readonly connection: RTCPeerConnection,
+		public readonly description: RTCSessionDescription,
+		protected readonly onAccept: () => void,
+		protected readonly onError: () => void
+	) {
+		connection.onicecandidate = e => {
+			console.trace('onicecandidate', e);
 		};
 		connection.onicecandidateerror = e => {
 			console.trace('onicecandidateerror', e);
@@ -41,24 +63,101 @@ export class WebRTCServerClient extends ServerClient {
 		connection.onsignalingstatechange = e => {
 			console.trace('onsignalingstatechange', e);
 		};
-		connection.oniceconnectionstatechange = e => {
-			console.trace('oniceconnectionstatechange', e, connection.iceConnectionState);
-			switch (connection.iceConnectionState) {
-				case 'completed':
-					this.emit('onConnect');
-					break;
-				case 'disconnected':
-					this.emit('onDisconnect');
-					break;
-				case 'closed':
-				case 'failed':
-					this.emit('onClose');
-					break;
-			}
-		};
 		connection.onicegatheringstatechange = e => {
 			console.trace('onicegatheringstatechange', e);
 		};
+		connection.oniceconnectionstatechange = e => {
+			console.trace('oniceconnectionstatechange', e);
+			debugger;
+			switch (connection.iceConnectionState) {
+				case 'completed':
+					this.onAccept();
+					break;
+				case 'disconnected':
+				case 'closed':
+				case 'failed':
+					this.onError();
+					break;
+			}
+		};
+	}
+
+	async accept(answer: RTCSessionDescription) {
+		await this.connection.setRemoteDescription(
+			answer,
+			() => console.log('Invite.accept RemoteDescription', this.connection.remoteDescription),
+			err => console.trace('Invite.accept Error', err)
+		);
+	}
+}
+
+export class WebRTCServerClient extends ServerClient {
+	protected readonly channel: RTCDataChannel;
+	constructor(
+		protected readonly connection: RTCPeerConnection,
+		protected readonly label: string,
+		protected readonly channelInit?: RTCDataChannelInit
+	) {
+		super();
+
+		this.channel = connection.createDataChannel(label, channelInit);
+
+		this.channel.onerror = err => {
+			this.emit('onDisconnect');
+		};
+		this.channel.onmessage = event => {
+			const data = JSON.parse(event.data);
+			this.emit('onReceive', { ...data });
+		};
+	}
+
+	send(payload: Payload) {
+		this.channel.send(JSON.stringify(payload));
+	}
+}
+
+export interface WebRTCClientTransportConstructor {
+	description: RTCSessionDescriptionInit;
+	onAnswer: (description: RTCSessionDescription) => void;
+	servers?: RTCIceServer[];
+}
+
+export class WebRTCClientTransport extends ClientTransport {
+	static createTransport({ description, onAnswer, servers }: WebRTCClientTransportConstructor) {
+		return new Promise<WebRTCClientTransport>(async (resolve, reject) => {
+			const peerConnection = new RTCPeerConnection({
+				iceServers: servers ? servers : defaultIceServers,
+			});
+
+			peerConnection.oniceconnectionstatechange = e => {
+				switch (peerConnection.iceConnectionState) {
+					case 'connected':
+						// this.emit('onConnect');
+						break;
+					case 'disconnected':
+					case 'closed':
+					case 'failed':
+						reject();
+						break;
+				}
+			};
+
+			peerConnection.ondatachannel = ({ channel }) => {
+				resolve(new WebRTCClientTransport(peerConnection, channel));
+			};
+
+			await peerConnection.setRemoteDescription(description);
+			const answer = await peerConnection.createAnswer().then(async description => {
+				await peerConnection.setLocalDescription(description);
+				return peerConnection.localDescription!;
+			});
+
+			onAnswer(answer);
+		});
+	}
+
+	constructor(protected readonly connection: RTCPeerConnection, protected readonly channel: RTCDataChannel) {
+		super();
 
 		// channel.onopen = () => {
 		// 	this.emit('onConnect');
@@ -75,34 +174,4 @@ export class WebRTCServerClient extends ServerClient {
 	send(payload: Payload) {
 		this.channel.send(JSON.stringify(payload));
 	}
-
-	setAnswer(answer: RTCSessionDescriptionInit) {
-		this.connection
-			.setRemoteDescription(answer)
-			.then(() => this.emit('onAnswer', this.connection.remoteDescription))
-			.catch(err => this.emit('onClose', err));
-	}
-
-	onOffer(listener: (description: RTCSessionDescription) => void) {
-		return this.on('onOffer ', listener);
-	}
-
-	onAnswer(listener: (description: RTCSessionDescription) => void) {
-		return this.on('onAnswer ', listener);
-	}
-}
-
-export interface WebRTCClientTransportConstructor {
-	label: string;
-	remoteDescription: RTCSessionDescriptionInit;
-	iceServers?: RTCIceServer[];
-	channel?: RTCDataChannelInit;
-}
-
-export class WebRTCClientTransport extends ClientTransport {
-	constructor(public readonly params: WebRTCClientTransportConstructor) {
-		super();
-	}
-
-	send(payload: Payload) {}
 }

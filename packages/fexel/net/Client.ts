@@ -10,7 +10,7 @@ export class Client extends EventEmitter {
 
 		this.janitor.add(transport.onConnect(() => this.emit('onConnect')));
 		this.janitor.add(transport.onDisconnect(() => this.emit('onDisconnect')));
-		this.janitor.add(transport.onReceive(() => this.emit('onReceive')));
+		this.janitor.add(transport.onReceive(payload => this.emit('onReceive', payload)));
 	}
 
 	dispose() {

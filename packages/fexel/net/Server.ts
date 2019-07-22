@@ -42,18 +42,9 @@ export class Server extends EventEmitter {
 		}
 	}
 
-	broadcastTo(payload: Payload, client: ServerClient) {
+	broadcastExcept(payload: Payload, ...exceptions: ServerClient[]) {
 		for (const client of this.clients) {
-			if (client === client) {
-				client.send(payload);
-				return;
-			}
-		}
-	}
-
-	broadcastExcept(payload: Payload, client: ServerClient) {
-		for (const client of this.clients) {
-			if (client !== client) {
+			if (exceptions.indexOf(client) === -1) {
 				client.send(payload);
 			}
 		}
