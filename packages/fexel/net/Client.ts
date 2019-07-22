@@ -1,41 +1,50 @@
 import { EventEmitter } from '@konstellio/eventemitter';
-import { Disposable } from '@konstellio/disposable';
+import { Disposable, CompositeDisposable } from '@konstellio/disposable';
+import { Payload } from './Payload';
 
-import { Message, Payload } from './Message';
+export class Client extends EventEmitter {
+	private readonly janitor: CompositeDisposable = new CompositeDisposable();
 
-export type CloseEventListener = (error: Error) => void;
-export type ConnectEventListener = () => void;
-export type DisconnectEventListener = () => void;
-export type MessageEventListener = (message: Message) => void;
-
-let nextClientId = 0;
-
-export abstract class Client extends EventEmitter {
-
-	readonly id: string;
-
-	constructor() {
+	constructor(public readonly transport: ClientTransport) {
 		super();
 
-		this.id = (++nextClientId).toString();
+		this.janitor.add(transport.onConnect(() => this.emit('onConnect')));
+		this.janitor.add(transport.onDisconnect(() => this.emit('onDisconnect')));
+		this.janitor.add(transport.onReceive(() => this.emit('onReceive')));
 	}
 
-	abstract sendPayload(payload: Payload): void;
-
-	onClose(listener: CloseEventListener): Disposable {
-		return this.on('onClose', listener);
+	dispose() {
+		super.dispose();
+		this.janitor.dispose();
 	}
 
-	onConnect(listener: ConnectEventListener): Disposable {
+	send(payload: Payload) {
+		return this.transport.send(payload);
+	}
+
+	onConnect(listener: () => void): Disposable {
 		return this.on('onConnect', listener);
 	}
 
-	onDisconnect(listener: DisconnectEventListener): Disposable {
+	onDisconnect(listener: () => void): Disposable {
 		return this.on('onDisconnect', listener);
 	}
 
-	onMessage(listener: MessageEventListener): Disposable {
-		return this.on('onMessage', listener);
+	onReceive(listener: (payload: Payload) => void): Disposable {
+		return this.on('onReceive', listener);
 	}
+}
 
+export abstract class ClientTransport extends EventEmitter {
+	abstract send(payload: Payload): void;
+
+	onConnect(listener: () => void): Disposable {
+		return this.on('onConnect', listener);
+	}
+	onDisconnect(listener: () => void): Disposable {
+		return this.on('onDisconnect', listener);
+	}
+	onReceive(listener: (payload: Payload) => void): Disposable {
+		return this.on('onReceive', listener);
+	}
 }
