@@ -21,7 +21,7 @@ const defaultIceServers = [
 
 export class WebRTCServerTransport extends ServerTransport {
 	constructor(
-		public readonly defaultConstructor: WebRTCServerTransportConstructor = {
+		public readonly params: WebRTCServerTransportConstructor = {
 			label: 'data',
 			iceServers: defaultIceServers,
 			dataChannelInit: {
@@ -30,121 +30,68 @@ export class WebRTCServerTransport extends ServerTransport {
 		}
 	) {
 		super();
+		this.emit('onReady');
 	}
-	async createInvite(
-		onOffer: (description: RTCSessionDescription) => void,
-		onCandidate: (candidate: RTCIceCandidate) => void
-	) {
-		const peerConnection = new RTCPeerConnection({
-			iceServers: (this.defaultConstructor && this.defaultConstructor.iceServers) || defaultIceServers,
+
+	async createOffer(gatherCandidatesTimeout: number = 2000) {
+		return new Promise<
+			[
+				RTCSessionDescriptionInit,
+				RTCIceCandidateInit[],
+				(answer: RTCSessionDescriptionInit, remoteCandidates: RTCIceCandidateInit[]) => void
+			]
+		>(async (resolve, reject) => {
+			const peerConnection = new RTCPeerConnection({
+				iceServers: this.params.iceServers,
+			});
+			const channel = peerConnection.createDataChannel(this.params.label, this.params.dataChannelInit);
+
+			let offer: RTCSessionDescriptionInit;
+			const localCandidates: RTCIceCandidateInit[] = [];
+			const answer = async (answer, remoteCandidates) => {
+				// console.log('WebRTCServerTransport.answer', answer);
+				await peerConnection.setRemoteDescription(answer);
+				await Promise.all(remoteCandidates.map(candidate => peerConnection.addIceCandidate(candidate)));
+			};
+
+			// peerConnection.onconnectionstatechange = e => console.log('WebRTCServerTransport.onconnectionstatechange', e);
+			// peerConnection.onicecandidate = e => console.log('WebRTCServerTransport.onicecandidate', e);
+			// peerConnection.onicecandidateerror = e => console.log('WebRTCServerTransport.onicecandidateerror', e);
+			// peerConnection.oniceconnectionstatechange = e =>
+			// 	console.log('WebRTCServerTransport.oniceconnectionstatechange', e);
+			// peerConnection.onnegotiationneeded = e => console.log('WebRTCServerTransport.onnegotiationneeded', e);
+			// peerConnection.onsignalingstatechange = e => console.log('WebRTCServerTransport.onsignalingstatechange', e);
+			// peerConnection.onstatsended = e => console.log('WebRTCServerTransport.onstatsended', e);
+			// peerConnection.ontrack = e => console.log('WebRTCServerTransport.ontrack', e);
+			// channel.onopen = e => console.log('WebRTCServerTransport.onopen', e);
+			// channel.onclose = e => console.log('WebRTCServerTransport.onclose', e);
+			// channel.onerror = e => console.log('WebRTCServerTransport.onerror', e);
+			// channel.onmessage = e => console.log('WebRTCServerTransport.onmessage', e);
+
+			peerConnection.addEventListener('icecandidate', ({ candidate }) => {
+				if (candidate) {
+					localCandidates.push(candidate.toJSON());
+				}
+			});
+
+			channel.addEventListener('open', _ => {
+				const client = new WebRTCServerClient(peerConnection, channel);
+				this.emit('onConnect', client);
+			});
+
+			const offerInit = await peerConnection.createOffer();
+			await peerConnection.setLocalDescription(offerInit);
+			// console.log('WebRTCServerTransport.offer', peerConnection.localDescription!);
+			offer = peerConnection.localDescription!.toJSON();
+
+			setTimeout(() => {
+				resolve([offer, localCandidates, answer]);
+			}, gatherCandidatesTimeout);
 		});
-
-		const channel = peerConnection.createDataChannel(
-			(this.defaultConstructor && this.defaultConstructor.label) || 'data',
-			this.defaultConstructor && this.defaultConstructor.dataChannelInit
-		);
-		channel.onopen = e => console.log('WebRTCServerTransport.onopen', e);
-		channel.onclose = e => console.log('WebRTCServerTransport.onclose', e);
-		channel.onerror = e => console.log('WebRTCServerTransport.onerror', e);
-		channel.onmessage = e => console.log('WebRTCServerTransport.onmessage', e);
-		console.log('WebRTCServerTransport.channel', channel);
-
-		peerConnection.onconnectionstatechange = e => console.log('WebRTCServerTransport.onconnectionstatechange', e);
-		peerConnection.onicecandidate = e => console.log('WebRTCServerTransport.onicecandidate', e);
-		peerConnection.onicecandidateerror = e => console.log('WebRTCServerTransport.onicecandidateerror', e);
-		peerConnection.oniceconnectionstatechange = e => console.log('WebRTCServerTransport.oniceconnectionstatechange', e);
-		peerConnection.onnegotiationneeded = e => console.log('WebRTCServerTransport.onnegotiationneeded', e);
-		peerConnection.onsignalingstatechange = e => console.log('WebRTCServerTransport.onsignalingstatechange', e);
-		peerConnection.onstatsended = e => console.log('WebRTCServerTransport.onstatsended', e);
-		peerConnection.ontrack = e => console.log('WebRTCServerTransport.ontrack', e);
-
-		peerConnection.addEventListener('icecandidate', ({ candidate }) => {
-			if (candidate) {
-				onCandidate(candidate);
-			}
-		});
-
-		await peerConnection.createOffer().then(offerInit =>
-			peerConnection.setLocalDescription(offerInit).then(() => {
-				console.log('WebRTCServerTransport.offer', peerConnection.localDescription!);
-				onOffer(peerConnection.localDescription!);
-			})
-		);
-
-		return async (answer: RTCSessionDescriptionInit, candidates: RTCIceCandidate[]) => {
-			console.log('WebRTCServerTransport.answer', answer);
-			await peerConnection.setRemoteDescription(answer);
-			await Promise.all(candidates.map(candidate => peerConnection.addIceCandidate(candidate)));
-			// await peerConnection.addIceCandidate(candidate);
-		};
 	}
 }
 
 export class WebRTCServerClient extends ServerClient {
-	protected readonly channel: RTCDataChannel;
-	constructor(
-		protected readonly connection: RTCPeerConnection,
-		protected readonly label: string,
-		protected readonly channelInit?: RTCDataChannelInit
-	) {
-		super();
-
-		this.channel = connection.createDataChannel(label, channelInit);
-
-		this.channel.onerror = err => {
-			this.emit('onDisconnect');
-		};
-		this.channel.onmessage = event => {
-			const data = JSON.parse(event.data);
-			this.emit('onReceive', { ...data });
-		};
-	}
-
-	send(payload: Payload) {
-		this.channel.send(JSON.stringify(payload));
-	}
-}
-
-export class WebRTCClientTransport extends ClientTransport {
-	static async createTransport(
-		offer: RTCSessionDescriptionInit,
-		candidates: RTCIceCandidateInit[],
-		onAnswer: (answer: RTCSessionDescription) => void,
-		onCandidate: (candidate: RTCIceCandidate) => void,
-		iceServers: RTCIceServer[] = defaultIceServers
-	) {
-		const peerConnection = new RTCPeerConnection({
-			iceServers,
-		});
-
-		peerConnection.ondatachannel = e => console.log('WebRTCClientTransport.ondatachannel', e);
-		peerConnection.onconnectionstatechange = e => console.log('WebRTCClientTransport.onconnectionstatechange', e);
-		peerConnection.onicecandidate = e => console.log('WebRTCClientTransport.onicecandidate', e);
-		peerConnection.onicecandidateerror = e => console.log('WebRTCClientTransport.onicecandidateerror', e);
-		peerConnection.oniceconnectionstatechange = e => console.log('WebRTCClientTransport.oniceconnectionstatechange', e);
-		peerConnection.onnegotiationneeded = e => console.log('WebRTCClientTransport.onnegotiationneeded', e);
-		peerConnection.onsignalingstatechange = e => console.log('WebRTCClientTransport.onsignalingstatechange', e);
-		peerConnection.onstatsended = e => console.log('WebRTCClientTransport.onstatsended', e);
-		peerConnection.ontrack = e => console.log('WebRTCClientTransport.ontrack', e);
-
-		peerConnection.addEventListener('icecandidate', ({ candidate }) => {
-			if (candidate) {
-				onCandidate(candidate);
-			}
-		});
-
-		await peerConnection.setRemoteDescription(offer);
-		await Promise.all(candidates.map(candidate => peerConnection.addIceCandidate(candidate)));
-		// await peerConnection.addIceCandidate(candidate);
-
-		if (offer.type === 'offer') {
-			const answerInit = await peerConnection.createAnswer();
-			await peerConnection.setLocalDescription(answerInit);
-			console.log('WebRTCClientTransport.answer', peerConnection.localDescription!);
-			onAnswer(peerConnection.localDescription!);
-		}
-	}
-
 	constructor(protected readonly connection: RTCPeerConnection, protected readonly channel: RTCDataChannel) {
 		super();
 
@@ -164,56 +111,84 @@ export class WebRTCClientTransport extends ClientTransport {
 	}
 }
 
-// export class WebRTCClientTransport extends ClientTransport {
-// 	static createTransport({ description, onAnswer, servers }: WebRTCClientTransportConstructor) {
-// 		return new Promise<WebRTCClientTransport>(async (resolve, reject) => {
-// 			const peerConnection = new RTCPeerConnection({
-// 				iceServers: servers ? servers : defaultIceServers,
-// 			});
+export class WebRTCClientTransport extends ClientTransport {
+	static async createConnection(
+		offer: RTCSessionDescriptionInit,
+		remoteCandidates: RTCIceCandidateInit[],
+		params: {
+			iceServers: RTCIceServer[];
+			gatherCandidatesTimeout: number;
+		} = {
+			iceServers: defaultIceServers,
+			gatherCandidatesTimeout: 2000,
+		}
+	) {
+		return new Promise<[RTCSessionDescriptionInit, RTCIceCandidateInit[], WebRTCClientTransport]>(
+			async (resolve, reject) => {
+				const peerConnection = new RTCPeerConnection({
+					iceServers: params.iceServers,
+				});
 
-// 			peerConnection.oniceconnectionstatechange = e => {
-// 				switch (peerConnection.iceConnectionState) {
-// 					case 'connected':
-// 						// this.emit('onConnect');
-// 						break;
-// 					case 'disconnected':
-// 					case 'closed':
-// 					case 'failed':
-// 						reject();
-// 						break;
-// 				}
-// 			};
+				let answer: RTCSessionDescriptionInit;
+				const localCandidates: RTCIceCandidateInit[] = [];
 
-// 			peerConnection.ondatachannel = ({ channel }) => {
-// 				resolve(new WebRTCClientTransport(peerConnection, channel));
-// 			};
+				// peerConnection.ondatachannel = e => console.log('WebRTCClientTransport.ondatachannel', e);
+				// peerConnection.onconnectionstatechange = e => console.log('WebRTCClientTransport.onconnectionstatechange', e);
+				// peerConnection.onicecandidate = e => console.log('WebRTCClientTransport.onicecandidate', e);
+				// peerConnection.onicecandidateerror = e => console.log('WebRTCClientTransport.onicecandidateerror', e);
+				// peerConnection.oniceconnectionstatechange = e =>
+				// 	console.log('WebRTCClientTransport.oniceconnectionstatechange', e);
+				// peerConnection.onnegotiationneeded = e => console.log('WebRTCClientTransport.onnegotiationneeded', e);
+				// peerConnection.onsignalingstatechange = e => console.log('WebRTCClientTransport.onsignalingstatechange', e);
+				// peerConnection.onstatsended = e => console.log('WebRTCClientTransport.onstatsended', e);
+				// peerConnection.ontrack = e => console.log('WebRTCClientTransport.ontrack', e);
 
-// 			await peerConnection.setRemoteDescription(description);
-// 			const answer = await peerConnection.createAnswer().then(async description => {
-// 				await peerConnection.setLocalDescription(description);
-// 				return peerConnection.localDescription!;
-// 			});
+				peerConnection.addEventListener('icecandidate', ({ candidate }) => {
+					if (candidate) {
+						localCandidates.push(candidate.toJSON());
+					}
+				});
 
-// 			onAnswer(answer);
-// 		});
-// 	}
+				await peerConnection.setRemoteDescription(offer);
+				await Promise.all(remoteCandidates.map(candidate => peerConnection.addIceCandidate(candidate)));
 
-// 	constructor(protected readonly connection: RTCPeerConnection, protected readonly channel: RTCDataChannel) {
-// 		super();
+				if (offer.type === 'offer') {
+					const answerInit = await peerConnection.createAnswer();
+					await peerConnection.setLocalDescription(answerInit);
+					// console.log('WebRTCClientTransport.answer', peerConnection.localDescription!);
+					answer = peerConnection.localDescription!.toJSON();
+				}
 
-// 		// channel.onopen = () => {
-// 		// 	this.emit('onConnect');
-// 		// }
-// 		// channel.onerror = (err) => {
-// 		// 	this.emit('onClose', err);
-// 		// }
-// 		channel.onmessage = e => {
-// 			const data = JSON.parse(e.data);
-// 			this.emit('onReceive', { ...data });
-// 		};
-// 	}
+				setTimeout(() => {
+					resolve([answer, localCandidates, new WebRTCClientTransport(peerConnection)]);
+				}, params.gatherCandidatesTimeout);
+			}
+		);
+	}
 
-// 	send(payload: Payload) {
-// 		this.channel.send(JSON.stringify(payload));
-// 	}
-// }
+	protected channel?: RTCDataChannel;
+
+	constructor(protected readonly connection: RTCPeerConnection) {
+		super();
+
+		connection.addEventListener('datachannel', ({ channel }) => {
+			this.channel = channel;
+			this.channel.addEventListener('message', ({ data }) => {
+				this.emit('onReceive', JSON.parse(data));
+			});
+			this.emit('onConnect');
+		});
+
+		connection.addEventListener('connectionstatechange', _ => {
+			if (connection.connectionState !== 'connected') {
+				this.emit('onDisconnect');
+			}
+		});
+	}
+
+	send(payload: Payload) {
+		if (this.channel) {
+			this.channel.send(JSON.stringify(payload));
+		}
+	}
+}

@@ -19,11 +19,13 @@ import { SharedWorkerClientTransport } from '@fexel/core/net/TransportSharedWork
  * server = createWebRTCServer()
  *
  * 2. Create offer for other player to join
- * accept = await server.transports[0].createInvite(offer => console.log(JSON.stringify(offer.toJSON())), candidate => console.log(JSON.stringify(candidate.toJSON())));
+ * [offer, candidates, accept] = await server.transports[0].createOffer();
+ * console.log(JSON.stringify(offer));
+ * console.log(JSON.stringify(candidates));
  *
- * 3. Send off _offer_ & _candidate_ to joinning player by any means
+ * 3. Send off _offer_ & _candidates_ to joinning player by any means
  *
- * 4. Accept _answer_ & _candidate_ of joinning player
+ * 4. Accept _answer_ & _candidates_ of joinning player
  * accept(answer, candidate);
  *
  * 5. Enjoy !
@@ -42,27 +44,27 @@ import { SharedWorkerClientTransport } from '@fexel/core/net/TransportSharedWork
 };
 
 /**
- * 1. Receive _offer_ & _candidate_ from hosting player
+ * 1. Receive _offer_ & _candidates_ from hosting player
  *
  * 2. Create transport from _offer_ & _candidate_
- * client = await createWebRTCClient(offer, candidate, answer => console.log(JSON.stringify(answer.toJSON())), candidate => console.log(JSON.stringify(candidate.toJSON())))
+ * client = await createWebRTCClient(offer, candidates, (answer, candidates) => { console.log(JSON.stringify(answer)); console.log(JSON.stringify(candidates)); })
  *
- * 3. Send back _answer_ & _candidate_ to hosting player
+ * 3. Send back _answer_ & _candidates_ to hosting player
  *
  * 4. Wait for hosting player to accept connection
  */
 (window as any).createWebRTCClient = async (
 	offer: RTCSessionDescriptionInit,
-	candidates: RTCIceCandidateInit[],
-	onAnswer: (answer: RTCSessionDescription) => void,
-	onCandidate: (candidate: RTCIceCandidate) => void
+	remoteCandidates: RTCIceCandidateInit[],
+	onAnswer: (answer: RTCSessionDescriptionInit, candidates: RTCIceCandidateInit[]) => void
 ) => {
-	const transport = await WebRTCClientTransport.createTransport(offer, candidates, onAnswer, onCandidate);
+	const [answer, localCandidates, transport] = await WebRTCClientTransport.createConnection(offer, remoteCandidates);
+	onAnswer(answer, localCandidates);
 
-	// const client = new Client(transport);
-	// client.onConnect(() => console.log('[CLI] Connect'));
-	// client.onDisconnect(() => console.log('[CLI] Disconnect'));
-	// client.onReceive(payload => console.log('[CLI] Receive', payload));
+	const client = new Client(transport);
+	client.onConnect(() => console.log('[CLI] Connect'));
+	client.onDisconnect(() => console.log('[CLI] Disconnect'));
+	client.onReceive(payload => console.log('[CLI] Receive', payload));
 
-	// return client;
+	return client;
 };
