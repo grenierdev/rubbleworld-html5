@@ -1,7 +1,7 @@
 import { Server } from '@fexel/core/net/Server';
 import { SharedWorkerServerTransport } from '@fexel/core/net/TransportSharedWorker';
 
-const server = ((self as any).echoServer = new Server([new SharedWorkerServerTransport()]));
+const server = new Server([new SharedWorkerServerTransport()]);
 
 server.onClientJoin(client => console.log('[SRV] Join', client));
 server.onClientLeave(client => console.log('[SRV] Leave', client));
