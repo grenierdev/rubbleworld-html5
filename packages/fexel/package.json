@@ -12,6 +12,7 @@
 		"@types/sharedworker": "^0.0.28",
 		"@types/webrtc": "^0.0.25",
 		"chai": "^4.2.0",
+		"firebase": "^6.3.1",
 		"mocha": "^6.1.4",
 		"rimraf": "^2.6.3",
 		"ts-node": "8.3.0",
@@ -19,6 +20,9 @@
 		"tslint-config-airbnb": "^5.11.1",
 		"tslint-config-prettier": "^1.18.0",
 		"typescript": "^3.5.2"
+	},
+	"optionalDependencies": {
+		"firebase": "^6.3.1"
 	},
 	"scripts": {
 		"build": "npm run clean && npm run compile",

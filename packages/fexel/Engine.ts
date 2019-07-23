@@ -56,8 +56,8 @@ export class Engine implements IDisposable {
 	}
 
 	start() {
-		this.updateRequestId = setInterval(this.bindedUpdateMethod, this.fixedUpdateRate);
-		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate);
+		this.updateRequestId = setInterval(this.bindedUpdateMethod, this.fixedUpdateRate) as any;
+		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate) as any;
 	}
 
 	stop() {
@@ -165,7 +165,7 @@ export class RenderableEngine extends Engine {
 
 	start() {
 		this.updateRequestId = requestAnimationFrame(this.bindedUpdateMethod);
-		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate);
+		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate) as any;
 	}
 
 	stop() {
