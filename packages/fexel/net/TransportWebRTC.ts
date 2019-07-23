@@ -33,7 +33,7 @@ export class WebRTCServerTransport extends ServerTransport {
 		this.emit('onReady');
 	}
 
-	async createOffer(gatherCandidatesTimeout: number = 2000) {
+	async createOffer(gatherCandidatesTimeout: number = 3000) {
 		return new Promise<
 			[
 				RTCSessionDescriptionInit,
@@ -49,7 +49,6 @@ export class WebRTCServerTransport extends ServerTransport {
 			let offer: RTCSessionDescriptionInit;
 			const localCandidates: RTCIceCandidateInit[] = [];
 			const answer = async (answer, remoteCandidates) => {
-				// console.log('WebRTCServerTransport.answer', answer);
 				await peerConnection.setRemoteDescription(answer);
 				await Promise.all(remoteCandidates.map(candidate => peerConnection.addIceCandidate(candidate)));
 			};
@@ -81,7 +80,6 @@ export class WebRTCServerTransport extends ServerTransport {
 
 			const offerInit = await peerConnection.createOffer();
 			await peerConnection.setLocalDescription(offerInit);
-			// console.log('WebRTCServerTransport.offer', peerConnection.localDescription!);
 			offer = peerConnection.localDescription!.toJSON();
 
 			setTimeout(() => {
@@ -112,7 +110,7 @@ export class WebRTCServerClient extends ServerClient {
 }
 
 export class WebRTCClientTransport extends ClientTransport {
-	static async createConnection(
+	static async createTransport(
 		offer: RTCSessionDescriptionInit,
 		remoteCandidates: RTCIceCandidateInit[],
 		params: {
@@ -120,7 +118,7 @@ export class WebRTCClientTransport extends ClientTransport {
 			gatherCandidatesTimeout: number;
 		} = {
 			iceServers: defaultIceServers,
-			gatherCandidatesTimeout: 2000,
+			gatherCandidatesTimeout: 3000,
 		}
 	) {
 		return new Promise<[RTCSessionDescriptionInit, RTCIceCandidateInit[], WebRTCClientTransport]>(
@@ -155,7 +153,6 @@ export class WebRTCClientTransport extends ClientTransport {
 				if (offer.type === 'offer') {
 					const answerInit = await peerConnection.createAnswer();
 					await peerConnection.setLocalDescription(answerInit);
-					// console.log('WebRTCClientTransport.answer', peerConnection.localDescription!);
 					answer = peerConnection.localDescription!.toJSON();
 				}
 

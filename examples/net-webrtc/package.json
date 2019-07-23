@@ -1,5 +1,5 @@
 {
-	"name": "net-lobby",
+	"name": "net-webrtc",
 	"private": true,
 	"version": "0.0.1",
 	"dependencies": {

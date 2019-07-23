@@ -1,0 +1,24 @@
+{
+	"name": "net-sharedworker",
+	"private": true,
+	"version": "0.0.1",
+	"dependencies": {
+		"@fexel/core": "*"
+	},
+	"devDependencies": {
+		"@babel/core": "^7.5.0",
+		"parcel-bundler": "^1.12.3",
+		"rimraf": "^2.6.3",
+		"tslint": "^5.18.0",
+		"tslint-config-airbnb": "^5.11.1",
+		"tslint-config-prettier": "^1.18.0",
+		"typescript": "^3.5.2"
+	},
+	"scripts": {
+		"start": "parcel ./src/index.html --port 8080 --log-level 4",
+		"build": "parcel build ./src/index.html --log-level 4 --public-url '/' --no-cache"
+	},
+	"browserslist": [
+		"last 1 chrome versions"
+	]
+}
