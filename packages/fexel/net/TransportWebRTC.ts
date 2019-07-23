@@ -2,9 +2,6 @@ import { ServerTransport, ServerClient } from './Server';
 import { Payload } from './Payload';
 import { ClientTransport } from './Client';
 
-// https://github.com/grenierdev/rubbleworld-html5/blob/proto2/packages/fexel/net/ServerWebRTC.ts
-// https://github.com/grenierdev/rubbleworld-html5/blob/proto2/packages/fexel/net/ClientWebRTC.ts
-
 export interface WebRTCServerTransportConstructor {
 	label: string;
 	iceServers?: RTCIceServer[];
