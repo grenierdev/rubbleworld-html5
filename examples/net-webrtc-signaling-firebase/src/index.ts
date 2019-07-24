@@ -16,14 +16,22 @@ if (firebase.apps.length === 0) {
 }
 
 const auth = ((window as any).auth = firebase.auth());
-const firestore = firebase.firestore();
-
-const signaler = new WebRTCSignalingFirestore(auth, firestore, 'p2p_rooms');
+const firestore = ((window as any).firestore = firebase.firestore());
+const signaler = new WebRTCSignalingFirestore(auth, firestore);
 
 /**
+ * 1. Sign in to Firebase
+ * auth.signInAnonymously()
  *
+ * 2. Create server
+ * server = await createServer();
+ *
+ * 3. Exchange your userId
+ * console.log(auth.currentUser.uid)
+ *
+ * 3. Enjoy !
  */
-(window as any).createServer = async (uid: string) => {
+(window as any).createServer = async () => {
 	const transport = await signaler.host();
 	const server = new Server([transport]);
 
@@ -38,7 +46,13 @@ const signaler = new WebRTCSignalingFirestore(auth, firestore, 'p2p_rooms');
 };
 
 /**
+ * 1. Sign in to Firebase
+ * auth.signInAnonymously()
  *
+ * 2. Create client using the host userId
+ * client = await createClient(hostId);
+ *
+ * 3. Enjoy !
  */
 (window as any).createClient = async (uid: string) => {
 	const transport = await signaler.join(uid);
