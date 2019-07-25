@@ -108,19 +108,16 @@ export class Material implements IDisposable {
 	private disposed: boolean = false;
 	protected gl?: WebGLRenderingContext;
 
-	public readonly attributes: Map<string, Attribute>;
+	public readonly attributes: Map<string, Attribute> = new Map();
 	public readonly program?: WebGLProgram;
 	public queue: MaterialQueue | number = 0;
 	public transparent: boolean = false;
 	public twoSided: boolean = false;
-	public readonly uniforms: Map<string, Uniform>;
+	public readonly uniforms: Map<string, Uniform> = new Map();
 
-	constructor(public readonly vertexShader: VertexShader, public readonly fragmentShader: FragmentShader) {
-		this.attributes = new Map();
-		this.uniforms = new Map();
-	}
+	constructor(public readonly vertexShader: VertexShader, public readonly fragmentShader: FragmentShader) {}
 
-	dispose(): void {
+	async dispose() {
 		if (this.disposed === false) {
 			if (this.gl && this.program) {
 				this.gl.deleteProgram(this.program);
@@ -129,7 +126,7 @@ export class Material implements IDisposable {
 		}
 	}
 
-	isDisposed(): boolean {
+	isDisposed() {
 		return this.disposed;
 	}
 
@@ -241,7 +238,7 @@ export class Material implements IDisposable {
 		Mesh.currentMesh = undefined;
 	}
 
-	setUniform(name: string, value: number | number[] | Texture): void {
+	setUniform(name: string, value: number | number[] | Texture) {
 		if (!this.uniforms.has(name)) {
 			this.uniforms.set(name, {
 				location: -1,
@@ -254,7 +251,7 @@ export class Material implements IDisposable {
 		uniform.value = value;
 	}
 
-	updateUniforms(): void {
+	updateUniforms() {
 		if (this.gl) {
 			for (const [name, uniform] of this.uniforms) {
 				this.updateUniform(uniform);

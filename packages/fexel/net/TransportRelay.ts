@@ -19,9 +19,9 @@ export class RelayServerTransport extends ServerTransport {
 		);
 	}
 
-	dispose() {
-		super.dispose();
-		this.janitor.dispose();
+	async dispose() {
+		await super.dispose();
+		await this.janitor.dispose();
 	}
 }
 
@@ -54,9 +54,9 @@ export class RelayServerClient extends ServerClient {
 		);
 	}
 
-	dispose() {
-		super.dispose();
-		this.janitor.dispose();
+	async dispose() {
+		await super.dispose();
+		await this.janitor.dispose();
 	}
 
 	send(payload: Payload) {
@@ -112,7 +112,11 @@ export class RelayClientTransport extends ClientTransport {
 				const janitor = new CompositeDisposable([]);
 				this.relayClients.set(id, client);
 
-				janitor.add(new Disposable(() => this.relayClients.delete(id)));
+				janitor.add(
+					new Disposable(() => {
+						this.relayClients.delete(id);
+					})
+				);
 				janitor.add(
 					client.onDisconnect(() => {
 						this.client.send({ type: 'relay', client: id, event: 'onDisconnect' });
@@ -129,9 +133,9 @@ export class RelayClientTransport extends ClientTransport {
 		);
 	}
 
-	dispose() {
-		super.dispose();
-		this.janitor.dispose();
+	async dispose() {
+		await super.dispose();
+		await this.janitor.dispose();
 	}
 
 	send(payload: Payload) {

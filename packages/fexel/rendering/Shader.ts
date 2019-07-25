@@ -17,7 +17,7 @@ export abstract class Shader implements IDisposable {
 		public readonly type = WebGLRenderingContext.VERTEX_SHADER | WebGLRenderingContext.FRAGMENT_SHADER
 	) {}
 
-	dispose(): void {
+	async dispose() {
 		if (this.disposed === false) {
 			if (this.gl && this.shader) {
 				this.gl.deleteShader(this.shader);
@@ -26,7 +26,7 @@ export abstract class Shader implements IDisposable {
 		}
 	}
 
-	isDisposed(): boolean {
+	isDisposed() {
 		return this.disposed;
 	}
 

@@ -5,7 +5,7 @@ import { Payload } from './Payload';
 export class Server extends EventEmitter {
 	public readonly clients: ReadonlySet<ServerClient> = new Set();
 
-	private readonly janitor: CompositeDisposable = new CompositeDisposable();
+	private readonly janitor: CompositeDisposable = new CompositeDisposable([]);
 
 	constructor(public readonly transports: ReadonlyArray<ServerTransport>) {
 		super();
@@ -31,9 +31,9 @@ export class Server extends EventEmitter {
 		}
 	}
 
-	dispose() {
-		super.dispose();
-		this.janitor.dispose();
+	async dispose() {
+		await super.dispose();
+		await this.janitor.dispose();
 	}
 
 	broadcast(payload: Payload) {

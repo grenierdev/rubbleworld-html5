@@ -33,11 +33,7 @@ export class Grid {
 	/**
 	 * Lights up cells visible from the source. Clear all lighting before calling.
 	 */
-	static castPointShadow(
-		grid: GridData,
-		source: GridPosition,
-		radius: number
-	): Float32Array {
+	static castPointShadow(grid: GridData, source: GridPosition, radius: number) {
 		const shadowMap = new Float32Array(grid.width * grid.height);
 
 		// Viewer's cell is always visible.
@@ -167,15 +163,7 @@ export class Grid {
 							// corner will be greater than the initial view slope (1.0).  Handle
 							// that here.
 							if (leftBlockSlope <= leftViewSlope) {
-								castShadow(
-									grid,
-									source,
-									radius,
-									currentCol + 1,
-									leftViewSlope,
-									leftBlockSlope,
-									octant
-								);
+								castShadow(grid, source, radius, currentCol + 1, leftViewSlope, leftBlockSlope, octant);
 							}
 
 							// Once that's done, we keep searching to the right (down the column),

@@ -44,10 +44,10 @@ export class Engine implements IDisposable {
 		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
 	}
 
-	dispose(): void {}
+	async dispose() {}
 
-	isDisposed(): boolean {
-		return true;
+	isDisposed() {
+		return false;
 	}
 
 	loadScene(scene: Scene) {

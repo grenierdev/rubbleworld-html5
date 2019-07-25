@@ -7,9 +7,7 @@ export abstract class ArrayManager<T = any, I = any> {
 
 	constructor(public readonly data: T, public readonly size: number) {
 		if (size < 0) {
-			throw new SyntaxError(
-				`ArrayVariableManager can not have a size less than 0.`
-			);
+			throw new SyntaxError(`ArrayVariableManager can not have a size less than 0.`);
 		}
 
 		this.head = new ArrayBlock<T, I>(this, true, 0, size, undefined, undefined);
@@ -24,25 +22,14 @@ export abstract class ArrayManager<T = any, I = any> {
 
 		let allocBlock: ArrayBlock<T, I> | undefined;
 
-		for (
-			let block: ArrayBlock<T, I> | undefined = this.head;
-			block !== undefined;
-			block = block.right
-		) {
+		for (let block: ArrayBlock<T, I> | undefined = this.head; block !== undefined; block = block.right) {
 			if (block.freed) {
 				if (block.size === size) {
 					allocBlock = block;
 					(allocBlock as Mutable<ArrayBlock<T, I>>).freed = false;
 					break;
 				} else if (block.size > size) {
-					allocBlock = new ArrayBlock<T, I>(
-						this,
-						false,
-						block.offset,
-						size,
-						block.left,
-						block
-					);
+					allocBlock = new ArrayBlock<T, I>(this, false, block.offset, size, block.left, block);
 					if (block.left) {
 						swapBlock(block.left, block.left.left, allocBlock);
 					}
@@ -76,8 +63,7 @@ export abstract class ArrayManager<T = any, I = any> {
 
 			if (block.left && block.left.freed) {
 				if (block.right && block.right.freed) {
-					(block.left as Mutable<ArrayBlock>).size +=
-						block.size + block.right.size;
+					(block.left as Mutable<ArrayBlock>).size += block.size + block.right.size;
 					swapBlock(block.left, block.left.left, block.right.right);
 					if (block.right.right) {
 						swapBlock(block.right.right, block.left, block.right.right.right);
@@ -199,23 +185,14 @@ export class ArrayBlock<T = any, I = any> {
 }
 
 export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
-	constructor(
-		data: T,
-		public readonly initialSize: number,
-		public readonly growSize: number
-	) {
+	constructor(data: T, public readonly initialSize: number, public readonly growSize: number) {
 		super(data, initialSize);
 
 		if (growSize <= 0) {
-			throw new SyntaxError(
-				`ArrayVariableManager can not have a grow size of 0.`
-			);
+			throw new SyntaxError(`ArrayVariableManager can not have a grow size of 0.`);
 		}
 
-		(this as Mutable<ArrayManager<T, I>>).data = this.resize(
-			this.data,
-			Math.ceil(initialSize / growSize) * growSize
-		);
+		(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, Math.ceil(initialSize / growSize) * growSize);
 	}
 
 	alloc(size: number): ArrayBlock<T, I>;
@@ -233,26 +210,14 @@ export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
 			this.defrag();
 
 			const currentSize = this.tail.offset + this.tail.size;
-			const newSize =
-				currentSize + Math.ceil(size / this.growSize) * this.growSize;
+			const newSize = currentSize + Math.ceil(size / this.growSize) * this.growSize;
 
-			(this as Mutable<ArrayManager<T, I>>).data = this.resize(
-				this.data,
-				newSize
-			);
+			(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, newSize);
 
 			if (this.tail.freed) {
-				(this.tail as Mutable<ArrayBlock>).size =
-					this.tail.size + (newSize - currentSize);
+				(this.tail as Mutable<ArrayBlock>).size = this.tail.size + (newSize - currentSize);
 			} else {
-				const tail = new ArrayBlock<T, I>(
-					this,
-					true,
-					currentSize,
-					newSize - currentSize,
-					this.tail,
-					undefined
-				);
+				const tail = new ArrayBlock<T, I>(this, true, currentSize, newSize - currentSize, this.tail, undefined);
 				swapBlock(this.tail, this.tail.left, tail);
 				(this as Mutable<ArrayManager<T, I>>).tail = tail;
 			}
@@ -267,12 +232,8 @@ export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
 	shrink() {
 		if (this.tail.freed) {
 			if (this.tail.left) {
-				const newSize =
-					Math.ceil(this.tail.offset / this.growSize) * this.growSize;
-				(this as Mutable<ArrayManager<T, I>>).data = this.resize(
-					this.data,
-					newSize
-				);
+				const newSize = Math.ceil(this.tail.offset / this.growSize) * this.growSize;
+				(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, newSize);
 			} else {
 				(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, 0);
 			}
@@ -283,11 +244,7 @@ export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
 	abstract resize(data: T, size: number): T;
 }
 
-function swapBlock(
-	block: ArrayBlock,
-	newLeft: ArrayBlock | undefined,
-	newRight: ArrayBlock | undefined
-) {
+function swapBlock(block: ArrayBlock, newLeft: ArrayBlock | undefined, newRight: ArrayBlock | undefined) {
 	(block as Mutable<ArrayBlock>).left = newLeft;
 	(block as Mutable<ArrayBlock>).right = newRight;
 }
@@ -310,10 +267,7 @@ export type TypedArray =
 	| Int8Array
 	| Uint8ClampedArray;
 
-export class TypedArrayManager<T extends TypedArray> extends ArrayManager<
-	T,
-	number
-> {
+export class TypedArrayManager<T extends TypedArray> extends ArrayManager<T, number> {
 	constructor(data: T) {
 		super(data, data.length);
 	}
@@ -331,9 +285,7 @@ export class TypedArrayManager<T extends TypedArray> extends ArrayManager<
 	}
 }
 
-export class TypedArrayVariableManager<
-	T extends TypedArray
-> extends ArrayVariableManager<T, number> {
+export class TypedArrayVariableManager<T extends TypedArray> extends ArrayVariableManager<T, number> {
 	constructor(data: T, growSize: number) {
 		super(data, data.length, growSize);
 	}

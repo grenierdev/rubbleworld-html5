@@ -55,7 +55,7 @@ export class RenderTarget implements IDisposable {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	}
 
-	dispose(): void {
+	async dispose() {
 		if (this.disposed === false) {
 			if (this.gl && this.frameBuffer) {
 				this.gl.deleteFramebuffer(this.frameBuffer);
@@ -67,11 +67,11 @@ export class RenderTarget implements IDisposable {
 		}
 	}
 
-	isDisposed(): boolean {
+	isDisposed() {
 		return this.disposed;
 	}
 
-	bind(gl: WebGLRenderingContext): void {
+	bind(gl: WebGLRenderingContext) {
 		this.createRenderTarget(gl);
 
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this.frameBuffer!);

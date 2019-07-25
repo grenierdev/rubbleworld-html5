@@ -145,7 +145,7 @@ export class Texture implements IDisposable {
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
-	dispose(): void {
+	async dispose() {
 		if (this.disposed === false) {
 			if (this.gl && this.texture) {
 				this.gl.deleteTexture(this.texture);
@@ -154,11 +154,11 @@ export class Texture implements IDisposable {
 		}
 	}
 
-	isDisposed(): boolean {
+	isDisposed() {
 		return this.disposed;
 	}
 
-	bind(gl: WebGLRenderingContext, slot = 0): void {
+	bind(gl: WebGLRenderingContext, slot = 0) {
 		this.createTexture(gl);
 
 		gl.bindTexture(gl.TEXTURE_2D, this.texture!);

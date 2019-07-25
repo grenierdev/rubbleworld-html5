@@ -16,7 +16,7 @@ import { IDisposable, CompositeDisposable, Disposable } from '@konstellio/dispos
  *  }
  */
 export class WebRTCSignalingFirestore implements IDisposable {
-	protected readonly janitor = new CompositeDisposable();
+	protected readonly janitor = new CompositeDisposable([]);
 	protected timeToLive = 5 * 60;
 
 	constructor(
@@ -29,10 +29,10 @@ export class WebRTCSignalingFirestore implements IDisposable {
 		return this.janitor.isDisposed();
 	}
 
-	dispose() {
-		this.janitor.dispose();
+	async dispose() {
+		await this.janitor.dispose();
 		if (this.auth.currentUser) {
-			this.database
+			await this.database
 				.collection(this.collection)
 				.doc(this.auth.currentUser.uid)
 				.delete();

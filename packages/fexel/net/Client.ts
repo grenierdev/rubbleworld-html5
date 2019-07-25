@@ -3,7 +3,7 @@ import { Disposable, CompositeDisposable } from '@konstellio/disposable';
 import { Payload } from './Payload';
 
 export class Client extends EventEmitter {
-	private readonly janitor: CompositeDisposable = new CompositeDisposable();
+	private readonly janitor: CompositeDisposable = new CompositeDisposable([]);
 
 	constructor(public readonly transport: ClientTransport) {
 		super();
@@ -13,9 +13,9 @@ export class Client extends EventEmitter {
 		this.janitor.add(transport.onReceive(payload => this.emit('onReceive', payload)));
 	}
 
-	dispose() {
-		super.dispose();
-		this.janitor.dispose();
+	async dispose() {
+		await super.dispose();
+		await this.janitor.dispose();
 	}
 
 	send(payload: Payload) {
