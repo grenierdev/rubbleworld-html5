@@ -3,7 +3,8 @@
 	"private": true,
 	"version": "0.0.1",
 	"dependencies": {
-		"@fexel/core": "*"
+		"@fexel/core": "*",
+		"firebase": "^6.3.1"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.5.0",
