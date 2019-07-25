@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"strictNullChecks": true,
+		"noImplicitAny": false,
+		"allowSyntheticDefaultImports": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"target": "es6",
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"strict": true,
+		"jsx": "react"
+	}
+}
