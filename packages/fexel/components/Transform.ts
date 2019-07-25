@@ -6,7 +6,7 @@ import { Mutable } from '../util/Mutable';
 import { Euler } from '../math/Euler';
 
 export class TransformComponent extends Component {
-	public static executionOrder = -1000;
+	public executionOrder = 1000;
 
 	public readonly localQuaterion: ReadonlyQuaterion = new Quaterion();
 	public readonly localMatrix: ReadonlyMatrix4 = new Matrix4();
