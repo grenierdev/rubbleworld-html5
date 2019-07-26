@@ -109,7 +109,6 @@ export class RenderableEngine extends Engine {
 		lastFixedUpdateTime: 0,
 		frames: 0,
 		frameCount: 0,
-		render: 0,
 		drawCalls: 0,
 		lastFPSUpdate: 0,
 	};
@@ -152,7 +151,6 @@ export class RenderableEngine extends Engine {
 				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: (performance as any).memory.jsHeapSizeLimit / 1048576 });
 			}
 			stats.addGraph({ id: 'update', label: ' updates', min: 0, max: 50 });
-			stats.addGraph({ id: 'render', label: ' renders', min: 0, max: 50 });
 			stats.addGraph({ id: 'fixedupdate', label: ' fupdates', min: 0, max: 50 });
 			stats.addGraph({ id: 'draw', label: ' draws', min: 0, max: 20 });
 		}
@@ -186,7 +184,7 @@ export class RenderableEngine extends Engine {
 
 		this.statsData.frameCount++;
 		this.statsData.frames++;
-		this.statsData.drawCalls = this.statsData.updates = this.statsData.render = 0;
+		this.statsData.drawCalls = this.statsData.updates = 0;
 
 		const startTime = (performance || Date).now();
 
@@ -215,7 +213,6 @@ export class RenderableEngine extends Engine {
 				this.stats.updateGraph('mem', +((performance as any).memory.usedJSHeapSize / 1048576).toFixed(1));
 			}
 			this.stats.updateGraph('update', this.statsData.updates);
-			this.stats.updateGraph('render', this.statsData.render);
 			this.stats.updateGraph('draw', this.statsData.drawCalls);
 		}
 	}

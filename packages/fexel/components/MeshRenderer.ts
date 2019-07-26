@@ -4,9 +4,9 @@ import { Material } from '../rendering/Material';
 import { TransformComponent } from './Transform';
 import { Mutable } from '../util/Mutable';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
-import { RendererComponent } from './Renderer';
+import { RendererComponent, IDrawable } from './Renderer';
 
-export class MeshRendererComponent extends Component {
+export class MeshRendererComponent extends Component implements IDrawable {
 	public readonly transform: TransformComponent | undefined;
 	protected renderer: RendererComponent | undefined;
 
@@ -20,23 +20,23 @@ export class MeshRendererComponent extends Component {
 		const scene = this.entity!.scene;
 		this.renderer = scene ? scene.getComponent(RendererComponent) : undefined;
 		if (this.renderer) {
-			this.renderer.meshes.add(this, this.material.queue);
+			this.renderer.drawables.add(this, this.material.queue);
 		}
 	}
 
 	willUnmount() {
 		if (this.renderer) {
-			this.renderer.meshes.remove(this);
+			this.renderer.drawables.remove(this);
 		}
 	}
 
-	render(
+	draw(
 		gl: WebGLRenderingContext,
 		viewMatrix: Matrix4 | ReadonlyMatrix4,
 		projectionMatrix: Matrix4 | ReadonlyMatrix4,
 		visibilityFlag: number
 	) {
-		if (visibilityFlag & this.visibilityFlag) {
+		if (this.enabled && this.entity && this.entity.enabled && visibilityFlag & this.visibilityFlag) {
 			this.material.setUniform(
 				'worldMatrix',
 				this.transform ? this.transform.worldMatrix.elements : Matrix4.Identity.elements

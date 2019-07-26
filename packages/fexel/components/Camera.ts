@@ -9,7 +9,7 @@ import { Vector2 } from '../math/Vector2';
 import { Color } from '../math/Color';
 import { Matrix4 } from '../math/Matrix4';
 import { RenderTarget } from '../rendering/RenderTarget';
-import { RendererComponent } from './Renderer';
+import { RendererComponent, IRenderable, IDrawable } from './Renderer';
 import { MeshRendererComponent } from './MeshRenderer';
 import { PriorityList } from '../util/PriorityList';
 
@@ -19,7 +19,7 @@ export enum Clear {
 	Depth = WebGLRenderingContext.DEPTH_BUFFER_BIT,
 }
 
-export abstract class CameraComponent extends Component {
+export abstract class CameraComponent extends Component implements IRenderable {
 	public readonly transform: TransformComponent | undefined;
 	protected renderer: RendererComponent | undefined;
 
@@ -40,56 +40,58 @@ export abstract class CameraComponent extends Component {
 		const scene = this.entity!.scene;
 		this.renderer = scene ? scene.getComponent(RendererComponent) : undefined;
 		if (this.renderer) {
-			this.renderer.cameras.add(this, this.order);
+			this.renderer.renderable.add(this, this.order);
 		}
 	}
 
 	willUnmount() {
 		if (this.renderer) {
-			this.renderer.cameras.remove(this);
+			this.renderer.renderable.remove(this);
 		}
 	}
 
-	draw(width: number, height: number, meshes: PriorityList<MeshRendererComponent>, context: UpdateContext) {
-		const gl = context.gl!;
+	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
+		if (this.enabled && this.entity && this.entity.enabled) {
+			const gl = context.gl!;
 
-		gl.enable(gl.SCISSOR_TEST);
-		if (this.renderTarget) {
-			this.renderTarget.bind(gl);
-			gl.viewport(0, 0, this.renderTarget.width, this.renderTarget.height);
-			gl.scissor(0, 0, this.renderTarget.width, this.renderTarget.height);
-		} else {
-			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-			gl.viewport(
-				this.viewport.min.x * width,
-				this.viewport.min.y * height,
-				(this.viewport.max.x - this.viewport.min.x) * width,
-				(this.viewport.max.y - this.viewport.min.y) * height
-			);
-			gl.scissor(
-				this.viewport.min.x * width,
-				this.viewport.min.y * height,
-				(this.viewport.max.x - this.viewport.min.x) * width,
-				(this.viewport.max.y - this.viewport.min.y) * height
-			);
-		}
+			gl.enable(gl.SCISSOR_TEST);
+			if (this.renderTarget) {
+				this.renderTarget.bind(gl);
+				gl.viewport(0, 0, this.renderTarget.width, this.renderTarget.height);
+				gl.scissor(0, 0, this.renderTarget.width, this.renderTarget.height);
+			} else {
+				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+				gl.viewport(
+					this.viewport.min.x * width,
+					this.viewport.min.y * height,
+					(this.viewport.max.x - this.viewport.min.x) * width,
+					(this.viewport.max.y - this.viewport.min.y) * height
+				);
+				gl.scissor(
+					this.viewport.min.x * width,
+					this.viewport.min.y * height,
+					(this.viewport.max.x - this.viewport.min.x) * width,
+					(this.viewport.max.y - this.viewport.min.y) * height
+				);
+			}
 
-		if (this.clear) {
-			gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
-			gl.clear(this.clear);
-		}
+			if (this.clear) {
+				gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
+				gl.clear(this.clear);
+			}
 
-		gl.enable(gl.CULL_FACE);
-		gl.enable(gl.DEPTH_TEST);
+			gl.enable(gl.CULL_FACE);
+			gl.enable(gl.DEPTH_TEST);
 
-		const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
-		const projectionMatrix = this.camera.projectionMatrix;
-		const visibilityFlag = this.visibilityFlag;
-		for (const [mesh] of meshes) {
-			mesh.render(gl, viewMatrix, projectionMatrix, visibilityFlag);
-		}
-		if (this.showDebug && context.debug) {
-			context.debug.draw(viewMatrix, projectionMatrix, gl);
+			const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
+			const projectionMatrix = this.camera.projectionMatrix;
+			const visibilityFlag = this.visibilityFlag;
+			for (const [drawer] of drawables) {
+				drawer.draw(gl, viewMatrix, projectionMatrix, visibilityFlag);
+			}
+			if (this.showDebug && context.debug) {
+				context.debug.draw(viewMatrix, projectionMatrix, gl);
+			}
 		}
 	}
 }
