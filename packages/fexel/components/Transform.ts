@@ -88,5 +88,5 @@ export function EmptyPrefab({
 	scale?: Vector3;
 	children?: Entity[];
 }) {
-	return new Entity(name, new TransformComponent(position, rotation, scale)).addChild(...children);
+	return new Entity(name, [new TransformComponent(position, rotation, scale)], children);
 }

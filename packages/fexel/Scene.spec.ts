@@ -5,7 +5,7 @@ import { Scene, Entity, Component } from './Scene';
 describe('Scene', () => {
 	it('update iterator', async () => {
 		const A = new DummyComponent();
-		const scene = new Scene().addChild(new Entity('A', A));
+		const scene = new Scene([], [new Entity('A', [A])]);
 
 		let stepper = scene.update({
 			time: 0,
@@ -14,16 +14,14 @@ describe('Scene', () => {
 			timeScale: 1,
 		});
 
-		// onStart
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
+		function data() {
+			return [A.mountCount, A.updateCount];
+		}
 
-		// onUpdate
 		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(1);
-
+		expect(data()).to.eql([1, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1]);
 		expect(stepper.next().done).to.equal(true);
 	});
 
@@ -32,7 +30,7 @@ describe('Scene', () => {
 		const B = new DummyComponent();
 		const C = new DummyComponent();
 
-		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B', B))).addChild(new Entity('C', C));
+		const scene = new Scene([], [new Entity('A', [A], [new Entity('B', [B])]), new Entity('C', [C])]);
 
 		let stepper = scene.update({
 			time: 0,
@@ -41,57 +39,33 @@ describe('Scene', () => {
 			timeScale: 1,
 		});
 
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
-		expect(B.mountCount).to.equal(0);
-		expect(B.updateCount).to.equal(0);
-		expect(C.mountCount).to.equal(0);
-		expect(C.updateCount).to.equal(0);
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(0);
-		expect(C.mountCount).to.equal(0);
-		expect(C.updateCount).to.equal(0);
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(0);
-		expect(C.mountCount).to.equal(1);
-		expect(C.updateCount).to.equal(0);
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(1);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(0);
-		expect(C.mountCount).to.equal(1);
-		expect(C.updateCount).to.equal(0);
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(1);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(1);
-		expect(C.mountCount).to.equal(1);
-		expect(C.updateCount).to.equal(0);
-		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(1);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(1);
-		expect(C.mountCount).to.equal(1);
-		expect(C.updateCount).to.equal(1);
+		function data() {
+			return [A.mountCount, A.updateCount, B.mountCount, B.updateCount, C.mountCount, C.updateCount];
+		}
 
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 0, 0, 0, 0, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 0, 1, 0, 0, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 0, 1, 0, 1, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1, 1, 0, 1, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1, 1, 1, 1, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1, 1, 1, 1, 1]);
 		expect(stepper.next().done).to.equal(true);
 	});
 
 	it('component execution order', async () => {
 		const A = new DummyComponent();
 		const B = new PriorityComponent();
+		const C = new PriorityComponent();
 
-		const scene = new Scene().addChild(new Entity('A', A)).addChild(new Entity('B', B));
+		const EA = new Entity('A', [A]);
+
+		const scene = new Scene([], [EA, new Entity('B', [B])]);
 
 		let stepper = scene.update({
 			time: 0,
@@ -100,26 +74,37 @@ describe('Scene', () => {
 			timeScale: 1,
 		});
 
+		function data() {
+			return [A.mountCount, A.updateCount, B.mountCount, B.updateCount, C.mountCount, C.updateCount];
+		}
+
 		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
-		expect(B.mountCount).to.equal(0);
-		expect(B.updateCount).to.equal(0);
+		expect(data()).to.eql([1, 0, 0, 0, 0, 0]);
 		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(0);
+		expect(data()).to.eql([1, 0, 1, 0, 0, 0]);
 		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(0);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(1);
+		expect(data()).to.eql([1, 0, 1, 1, 0, 0]);
 		expect(stepper.next().done).to.equal(false);
-		expect(A.mountCount).to.equal(1);
-		expect(A.updateCount).to.equal(1);
-		expect(B.mountCount).to.equal(1);
-		expect(B.updateCount).to.equal(1);
+		expect(data()).to.eql([1, 1, 1, 1, 0, 0]);
+		expect(stepper.next().done).to.equal(true);
+
+		EA.addComponent(C);
+
+		stepper = scene.update({
+			time: 0,
+			deltaTime: 0,
+			frameCount: 0,
+			timeScale: 1,
+		});
+
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1, 1, 1, 1, 0]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1, 1, 1, 1, 1]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 1, 1, 2, 1, 1]);
+		expect(stepper.next().done).to.equal(false);
+		expect(data()).to.eql([1, 2, 1, 2, 1, 1]);
 		expect(stepper.next().done).to.equal(true);
 	});
 });
@@ -138,5 +123,5 @@ class DummyComponent extends Component {
 }
 
 class PriorityComponent extends DummyComponent {
-	public static executionOrder = -10;
+	public readonly executionOrder = -10;
 }

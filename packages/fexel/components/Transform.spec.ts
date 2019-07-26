@@ -26,7 +26,7 @@ describe('TransformComponent', () => {
 	});
 	it('local matrix changes on update', async () => {
 		const A = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A', A));
+		const scene = new Scene([], [new Entity('A', [A])]);
 
 		const pos = new Vector3();
 		const rot = new Quaterion();
@@ -44,15 +44,14 @@ describe('TransformComponent', () => {
 			timeScale: 1,
 		});
 
-		expect(stepper.next().done).to.equal(false); // onStart
-		expect(stepper.next().done).to.equal(false); // onUpdate
+		expect(stepper.next().done).to.equal(false);
 		A.localMatrix.decompose(pos, rot, sca);
 		expect(pos.equals(A.localPosition)).to.equal(true);
 	});
 	it('world matrix changes on update', async () => {
 		const A = new TransformComponent();
 		const B = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B', B)));
+		const scene = new Scene([], [new Entity('A', [A], [new Entity('B', [B])])]);
 
 		const pos = new Vector3();
 		const rot = new Quaterion();
@@ -68,10 +67,8 @@ describe('TransformComponent', () => {
 			timeScale: 1,
 		});
 
-		expect(stepper.next().done).to.equal(false); // A#onStart
-		expect(stepper.next().done).to.equal(false); // A#onUpdate
-		expect(stepper.next().done).to.equal(false); // B#onStart
-		expect(stepper.next().done).to.equal(false); // B#onUpdate
+		expect(stepper.next().done).to.equal(false);
+		expect(stepper.next().done).to.equal(false);
 		A.worldMatrix.decompose(pos, rot, sca);
 		expect(pos.equals(new Vector3(10, 0, 0))).to.equal(true);
 		B.worldMatrix.decompose(pos, rot, sca);
@@ -80,7 +77,7 @@ describe('TransformComponent', () => {
 	it('empty entity reset matrices chain', async () => {
 		const A = new TransformComponent();
 		const C = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B').addChild(new Entity('C', C))));
+		const scene = new Scene([], [new Entity('A', [A], [new Entity('B', [], [new Entity('C', [C])])])]);
 
 		const pos = new Vector3();
 		const rot = new Quaterion();
@@ -96,10 +93,8 @@ describe('TransformComponent', () => {
 			timeScale: 1,
 		});
 
-		expect(stepper.next().done).to.equal(false); // A#onStart
-		expect(stepper.next().done).to.equal(false); // A#onUpdate
-		expect(stepper.next().done).to.equal(false); // B#onStart
-		expect(stepper.next().done).to.equal(false); // B#onUpdate
+		expect(stepper.next().done).to.equal(false);
+		expect(stepper.next().done).to.equal(false);
 		A.worldMatrix.decompose(pos, rot, sca);
 		expect(pos.equals(new Vector3(10, 0, 0))).to.equal(true);
 		C.worldMatrix.decompose(pos, rot, sca);
@@ -110,7 +105,7 @@ describe('TransformComponent', () => {
 
 		const A = new TransformComponent();
 		const B = new TransformComponent();
-		const scene = new Scene().addChild(new Entity('A', A).addChild(new Entity('B', B)));
+		const scene = new Scene([], [new Entity('A', [A], [new Entity('B', [B])])]);
 
 		A.localRotation.x = 180 * DEG2RAD;
 		B.localPosition.x = 10;
@@ -134,10 +129,8 @@ describe('TransformComponent', () => {
 			frameCount: 0,
 			timeScale: 1,
 		});
-		expect(stepper.next().done).to.equal(false); // A#willMount
-		expect(stepper.next().done).to.equal(false); // B#willMount
-		expect(stepper.next().done).to.equal(false); // A#update
-		expect(stepper.next().done).to.equal(false); // B#update
+		expect(stepper.next().done).to.equal(false);
+		expect(stepper.next().done).to.equal(false);
 
 		B.getForwardVector(v);
 		expect(v.x).to.approximately(0, Number.EPSILON);

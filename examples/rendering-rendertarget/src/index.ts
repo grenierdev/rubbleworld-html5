@@ -113,12 +113,11 @@ cam1Comp.showDebug = true;
 cam1Comp.renderTarget = rt;
 cam1Comp.visibilityFlag = 2;
 
-const obj1 = new Entity(
-	'UV',
+const obj1 = new Entity('UV', [
 	new TransformComponent(),
 	new MoverComponent(),
-	new MeshRendererComponent(mesh, uvMaterial)
-);
+	new MeshRendererComponent(mesh, uvMaterial),
+]);
 const obj1Comp = obj1.getComponent(MeshRendererComponent)!;
 obj1Comp.visibilityFlag = 2;
 
@@ -139,12 +138,11 @@ const cam2Comp = cam2.getComponent(CameraPerspectiveComponent)!;
 cam2Comp.showDebug = true;
 cam2Comp.visibilityFlag = 1;
 
-const obj2 = new Entity(
-	'RT',
+const obj2 = new Entity('RT', [
 	new TransformComponent(),
 	// new MoverComponent(),
-	new MeshRendererComponent(mesh, rtMaterial)
-);
+	new MeshRendererComponent(mesh, rtMaterial),
+]);
 const obj2Comp = obj2.getComponent(MeshRendererComponent)!;
 obj2Comp.visibilityFlag = 1;
 

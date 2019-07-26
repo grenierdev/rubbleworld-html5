@@ -1,5 +1,4 @@
 import { Mutable } from './util/Mutable';
-import { Matrix4, ReadonlyMatrix4 } from './math/Matrix4';
 import { Debug } from './Debug';
 
 export interface UpdateContext {
@@ -8,6 +7,8 @@ export interface UpdateContext {
 	frameCount: number;
 	timeScale: number;
 	debug?: Debug;
+	canvas?: HTMLCanvasElement;
+	gl?: WebGLRenderingContext;
 }
 
 export interface FixedUpdateContext {
@@ -17,21 +18,18 @@ export interface FixedUpdateContext {
 	debug?: Debug;
 }
 
-export interface RenderContext {
-	time: number;
-	deltaTime: number;
-	timeScale: number;
-	frameCount: number;
-	debug?: Debug;
-	gl: WebGLRenderingContext;
-	viewMatrix: Matrix4 | ReadonlyMatrix4;
-	projectionMatrix: Matrix4 | ReadonlyMatrix4;
-	visibilityFlag: number;
+function updateEntityScenePosition(scene: Scene) {
+	const queue: Entity[] = [scene];
+	let i = 0;
+	let node: Entity | undefined;
+	while ((node = queue.shift())) {
+		node.scenePosition = ++i;
+		queue.unshift(...node.children);
+	}
 }
 
 export abstract class Component {
 	public executionOrder: number = 0;
-	public renderOrder: number = 0;
 	public readonly entity: undefined | Entity;
 	public readonly enabled: boolean;
 
@@ -62,24 +60,22 @@ export abstract class Component {
 	willUnmount?(): void;
 	update?(context: UpdateContext): IterableIterator<void> | void;
 	fixedUpdate?(context: FixedUpdateContext): IterableIterator<void> | void;
-	render?(context: RenderContext): void;
 }
 
 export class Entity {
 	public readonly parent: undefined | Entity;
-	public readonly enabled: boolean;
-	public readonly children: Entity[];
-	public readonly components: Component[];
+	public readonly enabled: boolean = true;
+	public readonly children: Entity[] = [];
+	public readonly components: Component[] = [];
+	/** @internal */
+	scenePosition: number = 0;
 
-	constructor(public name: string, ...components: Component[]) {
-		this.enabled = true;
-		this.children = [];
-		this.components = [];
-		for (const component of components) {
-			this.addComponent(component);
-		}
+	constructor(public name: string, components: Component[] = [], children: Entity[] = []) {
+		this.addComponent(...components);
+		this.addChild(...children);
 	}
 
+	/** @internal */
 	get scene(): Scene | undefined {
 		if (this.parent) {
 			return this.parent instanceof Scene ? this.parent : this.parent.scene;
@@ -93,7 +89,7 @@ export class Entity {
 
 	addChild(...entities: Entity[]) {
 		for (const entity of entities) {
-			if (this.children.indexOf(entity) === -1) {
+			if (!this.children.includes(entity)) {
 				this.children.push(entity);
 				(entity as Mutable<Entity>).parent = this;
 				const scene = this.scene;
@@ -132,6 +128,35 @@ export class Entity {
 		);
 	}
 
+	addComponent(...components: Component[]) {
+		for (const component of components) {
+			if (!this.components.includes(component)) {
+				this.components.push(component);
+				this.components.sort((a, b) => a.executionOrder - b.executionOrder);
+				(component as Mutable<Component>).entity = this;
+				const scene = this.scene;
+				if (scene) {
+					scene.componentsToAdd.push(component);
+				}
+			}
+		}
+		return this;
+	}
+
+	removeComponent(...components: Component[]) {
+		for (const component of components) {
+			const idx = this.components.indexOf(component);
+			if (idx > -1) {
+				this.components.splice(idx, 1);
+				const scene = this.scene;
+				if (scene) {
+					scene.componentsToRemove.push(component);
+				}
+			}
+		}
+		return this;
+	}
+
 	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
 		const component = this.components.find(component => component.constructor === type);
 		if (component) {
@@ -142,32 +167,24 @@ export class Entity {
 	getComponents<T>(type: new (...args: any[]) => T): T[] {
 		return this.components.filter(component => component.constructor === type) as any;
 	}
-
-	private addComponent(...components: Component[]) {
-		for (const component of components) {
-			this.components.push(component);
-			(component as Mutable<Component>).entity = this;
-		}
-		return this;
-	}
 }
 
 export class Scene extends Entity {
 	/** @internal */
-	public readonly updatableComponents: Component[];
+	public readonly updatableComponents: Component[] = [];
 	/** @internal */
-	public readonly renderableComponents: Component[];
+	public readonly entitiesToAdd: Entity[] = [];
 	/** @internal */
-	public readonly entitiesToAdd: Entity[];
+	public readonly entitiesToRemove: Entity[] = [];
 	/** @internal */
-	public readonly entitiesToRemove: Entity[];
+	public readonly componentsToAdd: Component[] = [];
+	/** @internal */
+	public readonly componentsToRemove: Component[] = [];
 
-	constructor() {
+	constructor(components: Component[] = [], children: Entity[] = []) {
 		super('Scene');
-		this.updatableComponents = [];
-		this.renderableComponents = [];
-		this.entitiesToAdd = [];
-		this.entitiesToRemove = [];
+		this.addComponent(...components);
+		this.addChild(...children);
 	}
 
 	get scene(): Scene | undefined {
@@ -187,22 +204,10 @@ export class Scene extends Entity {
 				for (const entity of entities) {
 					for (const component of entity.components) {
 						let i = this.updatableComponents.indexOf(component);
-						let unmounted = false;
 						if (i > -1) {
 							changed = true;
 							this.updatableComponents.splice(i, 1);
 							if (component.willUnmount) {
-								component.willUnmount();
-								unmounted = true;
-								yield;
-							}
-						}
-
-						i = this.renderableComponents.indexOf(component);
-						if (i > -1) {
-							changed = true;
-							this.renderableComponents.splice(i, 1);
-							if (!unmounted && component.willUnmount) {
 								component.willUnmount();
 								yield;
 							}
@@ -228,34 +233,59 @@ export class Scene extends Entity {
 						if (component.update || component.fixedUpdate) {
 							this.updatableComponents.push(component);
 						}
-						if (component.render) {
-							this.renderableComponents.push(component);
-						}
 					}
 				}
 			}
 			this.entitiesToAdd.splice(0, this.entitiesToAdd.length);
 		}
 
+		// Remove components of the scene
+		if (this.componentsToRemove.length) {
+			for (const component of this.componentsToRemove) {
+				let i = this.updatableComponents.indexOf(component);
+				if (i > -1) {
+					changed = true;
+					this.updatableComponents.splice(i, 1);
+					if (component.willUnmount) {
+						component.willUnmount();
+						yield;
+					}
+				}
+			}
+			this.componentsToRemove.splice(0, this.componentsToRemove.length);
+		}
+
+		// Add newly added components
+		if (this.componentsToAdd.length) {
+			for (const component of this.componentsToAdd) {
+				changed = true;
+				if (component.didMount) {
+					component.didMount();
+					yield;
+				}
+				if (component.update || component.fixedUpdate) {
+					this.updatableComponents.push(component);
+				}
+			}
+			this.componentsToAdd.splice(0, this.componentsToAdd.length);
+		}
+
 		// Something changed, reorder components
 		if (changed) {
-			this.updatableComponents.sort((a, b) => a.executionOrder - b.executionOrder);
-			this.renderableComponents.sort((a, b) => a.executionOrder - b.executionOrder);
+			updateEntityScenePosition(this);
+			this.updatableComponents.sort((a, b) => {
+				const d = a.executionOrder - b.executionOrder;
+				if (d === 0) {
+					return a.entity!.scenePosition - b.entity!.scenePosition;
+				}
+				return d;
+			});
 		}
 
 		// Update component
 		for (const component of this.updatableComponents) {
 			if (component.enabled && component.entity && component.entity.enabled && component.update) {
 				yield component.update(context);
-			}
-		}
-	}
-
-	*render(context: RenderContext) {
-		for (const component of this.renderableComponents) {
-			if (component.enabled && component.render && component.entity && component.entity.enabled) {
-				component.render(context);
-				yield;
 			}
 		}
 	}

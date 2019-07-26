@@ -1,4 +1,4 @@
-import { Component, Entity, RenderContext } from '../Scene'; // hack circular dependency
+import { Component, Entity, UpdateContext } from '../Scene';
 import { Camera, CameraPerspective, CameraOrthographic } from '../rendering/Camera';
 import { TransformComponent } from './Transform';
 import { Mutable } from '../util/Mutable';
@@ -9,6 +9,9 @@ import { Vector2 } from '../math/Vector2';
 import { Color } from '../math/Color';
 import { Matrix4 } from '../math/Matrix4';
 import { RenderTarget } from '../rendering/RenderTarget';
+import { RendererComponent } from './Renderer';
+import { MeshRendererComponent } from './MeshRenderer';
+import { PriorityList } from '../util/PriorityList';
 
 export enum Clear {
 	Nothing = 0,
@@ -18,6 +21,7 @@ export enum Clear {
 
 export abstract class CameraComponent extends Component {
 	public readonly transform: TransformComponent | undefined;
+	protected renderer: RendererComponent | undefined;
 
 	public viewport: Box2 = new Box2(Vector2.Zero.clone(), Vector2.One.clone());
 	public order: number = 0;
@@ -32,24 +36,22 @@ export abstract class CameraComponent extends Component {
 
 	didMount() {
 		(this as Mutable<CameraComponent>).transform = this.getComponent(TransformComponent);
+
+		const scene = this.entity!.scene;
+		this.renderer = scene ? scene.getComponent(RendererComponent) : undefined;
+		if (this.renderer) {
+			this.renderer.cameras.add(this, this.order);
+		}
 	}
 
-	update() {
-		// noop;
+	willUnmount() {
+		if (this.renderer) {
+			this.renderer.cameras.remove(this);
+		}
 	}
 
-	draw({
-		width,
-		height,
-		renderScene,
-		context,
-	}: {
-		width: number;
-		height: number;
-		renderScene: (context: RenderContext) => void;
-		context: Pick<RenderContext, 'time' | 'deltaTime' | 'timeScale' | 'debug' | 'frameCount' | 'gl'>;
-	}) {
-		const gl = context.gl;
+	draw(width: number, height: number, meshes: PriorityList<MeshRendererComponent>, context: UpdateContext) {
+		const gl = context.gl!;
 
 		gl.enable(gl.SCISSOR_TEST);
 		if (this.renderTarget) {
@@ -81,14 +83,13 @@ export abstract class CameraComponent extends Component {
 		gl.enable(gl.DEPTH_TEST);
 
 		const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
-		renderScene({
-			...context,
-			viewMatrix,
-			projectionMatrix: this.camera.projectionMatrix,
-			visibilityFlag: this.visibilityFlag,
-		});
+		const projectionMatrix = this.camera.projectionMatrix;
+		const visibilityFlag = this.visibilityFlag;
+		for (const [mesh] of meshes) {
+			mesh.render(gl, viewMatrix, projectionMatrix, visibilityFlag);
+		}
 		if (this.showDebug && context.debug) {
-			context.debug.draw(viewMatrix, this.camera.projectionMatrix, gl);
+			context.debug.draw(viewMatrix, projectionMatrix, gl);
 		}
 	}
 }
@@ -136,7 +137,7 @@ export function CameraPerspectivePrefab({
 	scale?: Vector3;
 	camera: CameraPerspectiveConstructor;
 }) {
-	return new Entity(name, new TransformComponent(position, rotation, scale), new CameraPerspectiveComponent(camera));
+	return new Entity(name, [new TransformComponent(position, rotation, scale), new CameraPerspectiveComponent(camera)]);
 }
 
 export function CameraOrthographicPrefab({
@@ -152,5 +153,5 @@ export function CameraOrthographicPrefab({
 	scale?: Vector3;
 	camera: CameraOrthographicConstructor;
 }) {
-	return new Entity(name, new TransformComponent(position, rotation, scale), new CameraOrthographicComponent(camera));
+	return new Entity(name, [new TransformComponent(position, rotation, scale), new CameraOrthographicComponent(camera)]);
 }

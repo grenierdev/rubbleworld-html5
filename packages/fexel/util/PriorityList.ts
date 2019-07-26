@@ -1,12 +1,13 @@
 import { IDisposable } from '@konstellio/disposable';
 
 export class PriorityList<T> implements IDisposable {
-	protected disposed: boolean;
-	protected list: [T, number][];
+	protected disposed: boolean = false;
+	protected list: [T, number][] = [];
 
-	constructor() {
-		this.disposed = false;
-		this.list = [];
+	constructor() {}
+
+	[Symbol.iterator]() {
+		return this.list.values();
 	}
 
 	async dispose() {

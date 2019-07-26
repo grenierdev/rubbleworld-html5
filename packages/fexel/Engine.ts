@@ -1,45 +1,25 @@
 import { IDisposable } from '@konstellio/disposable';
-import { Scene, RenderContext } from './Scene';
-import { CameraComponent } from './components/Camera';
-import { Stats } from './Stats';
+import { Scene, UpdateContext } from './Scene';
 import { Debug } from './Debug';
-
-export interface EngineStats {
-	frameCount: number;
-	frames: number;
-	drawCalls: number;
-	updates: number;
-	fixedUpdates: number;
-	render: number;
-	lastFPSUpdate: number;
-	lastUpdateTime: number;
-	lastFixedUpdateTime: number;
-}
-
-const HAS_MEMORY = !!(performance as any).memory;
+import { Stats } from './Stats';
+import { RendererComponent } from './components/Renderer';
 
 export class Engine implements IDisposable {
 	protected mainScene?: Scene;
 	protected updateRequestId: number = -1;
 	protected fixedUpdateRequestId: number = -1;
-	protected readonly bindedUpdateMethod: () => void;
-	protected readonly bindedFixedUpdateMethod: () => void;
+	protected readonly bindedUpdateMethod: (context?: Partial<UpdateContext>) => void;
+	protected readonly bindedFixedUpdateMethod: (context?: Partial<UpdateContext>) => void;
 
 	public fixedUpdateRate: number = 1000 / 15;
-	public readonly statsData: EngineStats;
+	public readonly statsData = {
+		updates: 0,
+		fixedUpdates: 0,
+		lastUpdateTime: 0,
+		lastFixedUpdateTime: 0,
+	};
 
 	constructor() {
-		this.statsData = {
-			frameCount: 0,
-			frames: 0,
-			drawCalls: 0,
-			updates: 0,
-			fixedUpdates: 0,
-			render: 0,
-			lastFPSUpdate: 0,
-			lastUpdateTime: 0,
-			lastFixedUpdateTime: 0,
-		};
 		this.bindedUpdateMethod = this.update.bind(this);
 		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
 	}
@@ -71,7 +51,7 @@ export class Engine implements IDisposable {
 		}
 	}
 
-	update() {
+	update(context?: Partial<UpdateContext>) {
 		this.statsData.updates = 0;
 
 		if (this.mainScene) {
@@ -80,6 +60,7 @@ export class Engine implements IDisposable {
 			this.statsData.lastUpdateTime = time;
 
 			const ticker = this.mainScene.update({
+				...context,
 				time,
 				deltaTime,
 				timeScale: 1,
@@ -113,11 +94,25 @@ export class Engine implements IDisposable {
 	}
 }
 
+const HAS_MEMORY = !!(performance as any).memory;
+
 export class RenderableEngine extends Engine {
 	protected renderRequestId: number = -1;
 
 	public readonly gl: WebGLRenderingContext;
 	public readonly debug: Debug;
+
+	public readonly statsData = {
+		updates: 0,
+		fixedUpdates: 0,
+		lastUpdateTime: 0,
+		lastFixedUpdateTime: 0,
+		frames: 0,
+		frameCount: 0,
+		render: 0,
+		drawCalls: 0,
+		lastFPSUpdate: 0,
+	};
 
 	constructor(protected readonly canvas: HTMLCanvasElement, public readonly stats?: Stats) {
 		super();
@@ -163,15 +158,22 @@ export class RenderableEngine extends Engine {
 		}
 	}
 
+	loadScene(scene: Scene) {
+		if (!scene.getComponent(RendererComponent)) {
+			scene.addComponent(new RendererComponent());
+		}
+		super.loadScene(scene);
+	}
+
 	start() {
-		this.updateRequestId = requestAnimationFrame(this.bindedUpdateMethod);
+		this.renderRequestId = requestAnimationFrame(this.bindedUpdateMethod as any);
 		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate) as any;
 	}
 
 	stop() {
-		if (this.updateRequestId > -1) {
-			cancelAnimationFrame(this.updateRequestId);
-			this.updateRequestId = -1;
+		if (this.renderRequestId > -1) {
+			cancelAnimationFrame(this.renderRequestId);
+			this.renderRequestId = -1;
 		}
 		if (this.fixedUpdateRequestId > -1) {
 			clearInterval(this.fixedUpdateRequestId);
@@ -180,7 +182,7 @@ export class RenderableEngine extends Engine {
 	}
 
 	update() {
-		this.updateRequestId = requestAnimationFrame(this.bindedUpdateMethod);
+		this.renderRequestId = requestAnimationFrame(this.bindedUpdateMethod as any);
 
 		this.statsData.frameCount++;
 		this.statsData.frames++;
@@ -188,57 +190,11 @@ export class RenderableEngine extends Engine {
 
 		const startTime = (performance || Date).now();
 
-		if (this.mainScene) {
-			const gl = this.gl;
-			const width = this.canvas.width;
-			const height = this.canvas.height;
-			const time = startTime;
-			const deltaTime = time - this.statsData.lastUpdateTime;
-			this.statsData.lastUpdateTime = time;
-
-			const ticker = this.mainScene.update({
-				time,
-				deltaTime,
-				timeScale: 1,
-				frameCount: this.statsData.frameCount,
-				debug: this.debug,
-			});
-			while (ticker.next().done !== true) {
-				this.statsData.updates++;
-				// TODO bail if frame took too long, emit warning ?
-			}
-
-			const cameraComponents: CameraComponent[] = [];
-			for (const component of this.mainScene.updatableComponents) {
-				if (component instanceof CameraComponent) {
-					cameraComponents.push(component);
-				}
-			}
-
-			for (const cameraComponent of cameraComponents) {
-				cameraComponent.draw({
-					width,
-					height,
-					context: {
-						gl,
-						time,
-						deltaTime,
-						timeScale: 1,
-						frameCount: this.statsData.frameCount,
-						debug: this.debug,
-					},
-					renderScene: context => {
-						const ticker = this.mainScene!.render(context);
-						while (ticker.next().done !== true) {
-							this.statsData.render++;
-							// TODO bail if frame took too long, emit warning ?
-						}
-					},
-				});
-			}
-
-			gl.flush();
-		}
+		super.update({
+			canvas: this.canvas,
+			gl: this.gl,
+			debug: this.debug,
+		});
 
 		if (this.debug) {
 			this.debug.update();
