@@ -63,7 +63,7 @@ export class Sphere {
 		return Math.abs(plane.distanceToPoint(this.center)) <= this.radius;
 	}
 
-	clampPoint(point: Vector3, target: Vector3) {
+	clampPoint(point: Vector3 | ReadonlyVector3, target: Vector3) {
 		const r = this.radius;
 		const c = this.center;
 		const deltaLengthSq = c.distanceToSquared(point);
