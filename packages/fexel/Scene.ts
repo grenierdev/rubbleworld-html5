@@ -195,7 +195,7 @@ export class Scene extends Entity {
 	}
 
 	*update(context: UpdateContext) {
-		let changed = false;
+		let needReorder = false;
 
 		// Remove entities of the scene
 		if (this.entitiesToRemove.length) {
@@ -203,14 +203,13 @@ export class Scene extends Entity {
 				const entities = [entityToRemove, ...entityToRemove.getChildren(true)];
 				for (const entity of entities) {
 					for (const component of entity.components) {
+						if (component.willUnmount) {
+							component.willUnmount();
+							yield;
+						}
 						let i = this.updatableComponents.indexOf(component);
 						if (i > -1) {
-							changed = true;
 							this.updatableComponents.splice(i, 1);
-							if (component.willUnmount) {
-								component.willUnmount();
-								yield;
-							}
 						}
 					}
 					(entity as Mutable<Entity>).parent = undefined;
@@ -225,7 +224,7 @@ export class Scene extends Entity {
 				const entities = [entityToAdd, ...entityToAdd.getChildren(true)];
 				for (const entity of entities) {
 					for (const component of entity.components) {
-						changed = true;
+						needReorder = true;
 						if (component.didMount) {
 							component.didMount();
 							yield;
@@ -244,12 +243,11 @@ export class Scene extends Entity {
 			for (const component of this.componentsToRemove) {
 				let i = this.updatableComponents.indexOf(component);
 				if (i > -1) {
-					changed = true;
-					this.updatableComponents.splice(i, 1);
 					if (component.willUnmount) {
 						component.willUnmount();
 						yield;
 					}
+					this.updatableComponents.splice(i, 1);
 				}
 			}
 			this.componentsToRemove.splice(0, this.componentsToRemove.length);
@@ -258,7 +256,7 @@ export class Scene extends Entity {
 		// Add newly added components
 		if (this.componentsToAdd.length) {
 			for (const component of this.componentsToAdd) {
-				changed = true;
+				needReorder = true;
 				if (component.didMount) {
 					component.didMount();
 					yield;
@@ -271,7 +269,7 @@ export class Scene extends Entity {
 		}
 
 		// Something changed, reorder components
-		if (changed) {
+		if (needReorder) {
 			updateEntityScenePosition(this);
 			this.updatableComponents.sort((a, b) => {
 				const d = a.executionOrder - b.executionOrder;
