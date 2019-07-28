@@ -8,6 +8,8 @@ import { Euler } from '../math/Euler';
 export class TransformComponent extends Component {
 	public executionOrder = 1000;
 
+	public breakParentChain = false;
+
 	public readonly localQuaterion: ReadonlyQuaterion = new Quaterion();
 	public readonly localMatrix: ReadonlyMatrix4 = new Matrix4();
 	public readonly worldMatrix: ReadonlyMatrix4 = new Matrix4();
@@ -40,7 +42,7 @@ export class TransformComponent extends Component {
 			(this as Mutable<TransformComponent>).parentTransform =
 				(this.entity.parent && this.entity.parent.getComponent(TransformComponent)) || undefined;
 		}
-		if (this.parentTransform) {
+		if (!this.breakParentChain && this.parentTransform) {
 			if (
 				this.lastParentTransform !== this.parentTransform ||
 				!this.lastParentWorldMatrix ||

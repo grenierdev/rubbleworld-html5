@@ -4,6 +4,8 @@ import { Debug } from './Debug';
 export interface UpdateContext {
 	time: number;
 	deltaTime: number;
+	fixedTime: number;
+	fixedDeltaTime: number;
 	frameCount: number;
 	timeScale: number;
 	debug?: Debug;
@@ -14,6 +16,8 @@ export interface UpdateContext {
 export interface FixedUpdateContext {
 	time: number;
 	deltaTime: number;
+	fixedTime: number;
+	fixedDeltaTime: number;
 	timeScale: number;
 	debug?: Debug;
 }
@@ -27,6 +31,8 @@ function updateEntityScenePosition(scene: Scene) {
 		queue.unshift(...node.children);
 	}
 }
+
+export type ComponentConstructor<T extends Component> = (new (...args: any[]) => T) | { prototype: T };
 
 export abstract class Component {
 	public executionOrder: number = 0;
@@ -42,16 +48,16 @@ export abstract class Component {
 		return this;
 	}
 
-	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
+	getComponent<T extends Component>(type: ComponentConstructor<T>): T | undefined {
 		if (this.entity) {
 			return this.entity.getComponent(type);
 		}
 		return undefined;
 	}
 
-	getComponents<T>(type: new (...args: any[]) => T): T[] {
+	getComponents<T extends Component>(type: ComponentConstructor<T>, recursive = false): T[] {
 		if (this.entity) {
-			return this.entity.getComponents(type);
+			return this.entity.getComponents(type, recursive);
 		}
 		return [];
 	}
@@ -157,15 +163,28 @@ export class Entity {
 		return this;
 	}
 
-	getComponent<T>(type: new (...args: any[]) => T): T | undefined {
-		const component = this.components.find(component => component.constructor === type);
+	getComponent<T extends Component>(type: ComponentConstructor<T>): T | undefined {
+		const component = this.components.find(component => component instanceof (type as Function));
 		if (component) {
 			return component as any;
 		}
 	}
 
-	getComponents<T>(type: new (...args: any[]) => T): T[] {
-		return this.components.filter(component => component.constructor === type) as any;
+	getComponents<T extends Component>(type: ComponentConstructor<T>, recursive = false): T[] {
+		if (recursive === true) {
+			const components = [
+				...this.components,
+				...this.getChildren(true).reduce(
+					(components, entity) => {
+						components.push(...entity.components);
+						return components;
+					},
+					[] as Component[]
+				),
+			];
+			return components.filter(component => component instanceof (type as Function)) as any;
+		}
+		return this.components.filter(component => component instanceof (type as Function)) as any;
 	}
 }
 

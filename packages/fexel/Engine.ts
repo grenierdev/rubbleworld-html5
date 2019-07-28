@@ -11,12 +11,16 @@ export class Engine implements IDisposable {
 	protected readonly bindedUpdateMethod: (context?: Partial<UpdateContext>) => void;
 	protected readonly bindedFixedUpdateMethod: (context?: Partial<UpdateContext>) => void;
 
-	public fixedUpdateRate: number = 1000 / 15;
+	public fixedUpdateRate: number = 1000 / 30;
 	public readonly statsData = {
 		updates: 0,
 		fixedUpdates: 0,
-		lastUpdateTime: 0,
-		lastFixedUpdateTime: 0,
+		time: 0,
+		deltaTime: 0,
+		fixedTime: 0,
+		fixedDeltaTime: 0,
+		lastUpdateTime: (performance || Date).now(),
+		lastFixedUpdateTime: (performance || Date).now(),
 	};
 
 	constructor() {
@@ -36,6 +40,7 @@ export class Engine implements IDisposable {
 	}
 
 	start() {
+		this.statsData.lastUpdateTime = this.statsData.lastFixedUpdateTime = -1;
 		this.updateRequestId = setInterval(this.bindedUpdateMethod, this.fixedUpdateRate) as any;
 		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate) as any;
 	}
@@ -56,13 +61,20 @@ export class Engine implements IDisposable {
 
 		if (this.mainScene) {
 			const time = (performance || Date).now();
+			if (this.statsData.lastUpdateTime === -1) {
+				this.statsData.lastUpdateTime = time;
+			}
 			const deltaTime = time - this.statsData.lastUpdateTime;
 			this.statsData.lastUpdateTime = time;
+			this.statsData.time = time;
+			this.statsData.deltaTime = deltaTime;
 
 			const ticker = this.mainScene.update({
 				...context,
 				time,
 				deltaTime,
+				fixedTime: this.statsData.fixedTime,
+				fixedDeltaTime: this.statsData.fixedDeltaTime,
 				timeScale: 1,
 				frameCount: 0,
 			});
@@ -77,13 +89,20 @@ export class Engine implements IDisposable {
 		this.statsData.fixedUpdates = 0;
 
 		if (this.mainScene) {
-			const time = (performance || Date).now();
-			const deltaTime = time - this.statsData.lastFixedUpdateTime;
-			this.statsData.lastFixedUpdateTime = time;
+			const fixedTime = (performance || Date).now();
+			if (this.statsData.lastFixedUpdateTime === -1) {
+				this.statsData.lastFixedUpdateTime = fixedTime;
+			}
+			const fixedDeltaTime = fixedTime - this.statsData.lastFixedUpdateTime;
+			this.statsData.lastFixedUpdateTime = fixedTime;
+			this.statsData.fixedTime = fixedTime;
+			this.statsData.fixedDeltaTime = fixedDeltaTime;
 
 			const ticker = this.mainScene.fixedUpdate({
-				time,
-				deltaTime,
+				time: this.statsData.time,
+				deltaTime: this.statsData.deltaTime,
+				fixedTime,
+				fixedDeltaTime,
 				timeScale: 1,
 			});
 			while (ticker.next().done !== true) {
@@ -105,8 +124,12 @@ export class RenderableEngine extends Engine {
 	public readonly statsData = {
 		updates: 0,
 		fixedUpdates: 0,
-		lastUpdateTime: 0,
-		lastFixedUpdateTime: 0,
+		time: 0,
+		deltaTime: 0,
+		fixedTime: 0,
+		fixedDeltaTime: 0,
+		lastUpdateTime: (performance || Date).now(),
+		lastFixedUpdateTime: (performance || Date).now(),
 		frames: 0,
 		frameCount: 0,
 		drawCalls: 0,
@@ -146,7 +169,8 @@ export class RenderableEngine extends Engine {
 
 		if (stats) {
 			stats.addGraph({ id: 'fps', label: 'fps', min: 0, max: 60 });
-			stats.addGraph({ id: 'ms', label: 'ms', min: 0, max: 50 });
+			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 50 });
+			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 50 });
 			if (HAS_MEMORY) {
 				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: (performance as any).memory.jsHeapSizeLimit / 1048576 });
 			}
@@ -164,8 +188,10 @@ export class RenderableEngine extends Engine {
 	}
 
 	start() {
+		super.start();
+		clearInterval(this.updateRequestId);
+		this.updateRequestId = -1;
 		this.renderRequestId = requestAnimationFrame(this.bindedUpdateMethod as any);
-		this.fixedUpdateRequestId = setInterval(this.bindedFixedUpdateMethod, this.fixedUpdateRate) as any;
 	}
 
 	stop() {
@@ -208,7 +234,7 @@ export class RenderableEngine extends Engine {
 				this.statsData.lastFPSUpdate = time;
 				this.statsData.frames = 0;
 			}
-			this.stats.updateGraph('ms', +(time - startTime).toFixed(1));
+			this.stats.updateGraph('ums', +(time - startTime).toFixed(1));
 			if (HAS_MEMORY) {
 				this.stats.updateGraph('mem', +((performance as any).memory.usedJSHeapSize / 1048576).toFixed(1));
 			}
@@ -218,9 +244,13 @@ export class RenderableEngine extends Engine {
 	}
 
 	fixedUpdate() {
+		const startTime = (performance || Date).now();
+
 		super.fixedUpdate();
 
 		if (this.stats) {
+			const time = (performance || Date).now();
+			this.stats.updateGraph('fms', +(time - startTime).toFixed(1));
 			this.stats.updateGraph('fixedupdate', this.statsData.fixedUpdates);
 		}
 	}

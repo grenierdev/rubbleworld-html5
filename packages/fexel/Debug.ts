@@ -60,10 +60,11 @@ export interface DebugDrawOptions {
 export class Debug {
 	protected stack: DebugPrimitive[];
 	protected lastTime: number;
-	protected material: Material;
+	protected pointMaterial: Material;
 	protected pointNeedsUpdate: boolean;
 	protected pointManager: PointMeshManager;
 	protected pointMesh: PointMesh;
+	protected lineMaterial: Material;
 	protected lineNeedsUpdate: boolean;
 	protected lineManager: LineMeshManager;
 	protected lineMesh: LineMesh;
@@ -71,7 +72,16 @@ export class Debug {
 	constructor() {
 		this.stack = [];
 		this.lastTime = 0;
-		this.material = new Material(
+		const fragShader = new FragmentShader(`
+				precision mediump float;
+
+				varying vec4 fragColor;
+
+				void main(void) {
+					gl_FragColor = fragColor;
+				}
+		`);
+		this.pointMaterial = new Material(
 			new VertexShader(
 				`
 				attribute vec3 vertPosition;
@@ -90,20 +100,10 @@ export class Debug {
 				}
 			`
 			),
-			new FragmentShader(
-				`
-				precision mediump float;
-
-				varying vec4 fragColor;
-
-				void main(void) {
-					gl_FragColor = fragColor;
-				}
-			`
-			)
+			fragShader
 		);
-		this.material.twoSided = true;
-		this.material.transparent = true;
+		this.pointMaterial.twoSided = true;
+		this.pointMaterial.transparent = true;
 
 		this.pointNeedsUpdate = false;
 		this.pointManager = new PointMeshManager(
@@ -125,6 +125,25 @@ export class Debug {
 			true
 		);
 
+		this.lineMaterial = new Material(
+			new VertexShader(
+				`
+				attribute vec3 vertPosition;
+				attribute vec4 vertColor;
+
+				varying vec4 fragColor;
+
+				uniform mat4 projectionMatrix;
+				uniform mat4 viewMatrix;
+
+				void main(void) {
+					fragColor = vertColor;
+					gl_Position = projectionMatrix * viewMatrix * vec4(vertPosition, 1.0);
+				}
+			`
+			),
+			fragShader
+		);
 		this.lineNeedsUpdate = false;
 		this.lineManager = new LineMeshManager(
 			{
@@ -196,14 +215,16 @@ export class Debug {
 			this.lineMesh.updateBuffers();
 		}
 
-		this.material.setUniform('viewMatrix', viewMatrix.elements);
-		this.material.setUniform('projectionMatrix', projMatrix.elements);
-		this.material.bind(gl);
-
 		if (this.pointMesh.data.count > 0) {
+			this.pointMaterial.setUniform('viewMatrix', viewMatrix.elements);
+			this.pointMaterial.setUniform('projectionMatrix', projMatrix.elements);
+			this.pointMaterial.bind(gl);
 			this.pointMesh.draw(gl);
 		}
 		if (this.lineMesh.data.count > 0) {
+			this.lineMaterial.setUniform('viewMatrix', viewMatrix.elements);
+			this.lineMaterial.setUniform('projectionMatrix', projMatrix.elements);
+			this.lineMaterial.bind(gl);
 			this.lineMesh.draw(gl);
 		}
 	}
@@ -217,7 +238,7 @@ export class Debug {
 		const color = options.color || Color.White;
 		// const matrix = options.matrix || Matrix4.Identity;
 		const points = [] as PointItem[];
-		for (let i = 0, l = positions.length; i < l; i += 3) {
+		for (let i = 0, l = positions.length / 3; i < l; ++i) {
 			points.push({
 				positions: [positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]],
 				colors: color instanceof Color ? [color.r, color.g, color.b, color.a] : color,
@@ -242,15 +263,15 @@ export class Debug {
 		const color = options.color || Color.White;
 		// const matrix = options.matrix || Matrix4.Identity;
 		const lines = [] as LineItem[];
-		for (let i = 0, l = positions.length; i < l; i += 6) {
+		for (let i = 0, l = positions.length / 6; i < l; ++i) {
 			lines.push({
 				positions: [
-					positions[i * 3 + 0],
-					positions[i * 3 + 1],
-					positions[i * 3 + 2],
-					positions[i * 3 + 3],
-					positions[i * 3 + 4],
-					positions[i * 3 + 5],
+					positions[i * 6 + 0],
+					positions[i * 6 + 1],
+					positions[i * 6 + 2],
+					positions[i * 6 + 3],
+					positions[i * 6 + 4],
+					positions[i * 6 + 5],
 				],
 				colors:
 					color instanceof Color

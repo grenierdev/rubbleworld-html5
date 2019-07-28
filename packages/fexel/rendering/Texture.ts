@@ -142,6 +142,8 @@ export class Texture implements IDisposable {
 			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, null);
 		}
 
+		gl.generateMipmap(gl.TEXTURE_2D);
+
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 

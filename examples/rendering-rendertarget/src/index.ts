@@ -3,13 +3,12 @@ import { Stats } from '@fexel/core/Stats';
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
-import { Texture, TextureWrap, TextureFilter } from '@fexel/core/rendering/Texture';
+import { Texture } from '@fexel/core/rendering/Texture';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
-import { CameraPerspectivePrefab, CameraPerspectiveComponent, Clear } from '@fexel/core/components/Camera';
+import { CameraPerspectivePrefab, CameraPerspectiveComponent, CameraComponent } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
-import { Vector2 } from '@fexel/core/math/Vector2';
 import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
 import { DEG2RAD } from '@fexel/core/math/util';
@@ -107,7 +106,7 @@ const cam1 = CameraPerspectivePrefab({
 		zoom: 2,
 	},
 });
-const cam1Comp = cam1.getComponent(CameraPerspectiveComponent)!;
+const cam1Comp = cam1.getComponent(CameraComponent)!;
 cam1Comp.backgroundColor = Color.White;
 cam1Comp.showDebug = true;
 cam1Comp.renderTarget = rt;
@@ -133,7 +132,7 @@ const cam2 = CameraPerspectivePrefab({
 	},
 });
 
-const cam2Comp = cam2.getComponent(CameraPerspectiveComponent)!;
+const cam2Comp = cam2.getComponent(CameraComponent)!;
 // cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
 cam2Comp.showDebug = true;
 cam2Comp.visibilityFlag = 1;

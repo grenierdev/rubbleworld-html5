@@ -17,7 +17,7 @@ export class Box2 {
 	}
 
 	getSize(target: Vector2) {
-		return this.isEmpty ? target.set(0, 0) : target.copy(this.min).sub(this.max);
+		return this.isEmpty ? target.set(0, 0) : target.subVectors(this.max, this.min);
 	}
 
 	equals(box: Box2 | ReadonlyBox2) {

@@ -40,13 +40,13 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		const scene = this.entity!.scene;
 		this.renderer = scene ? scene.getComponent(RendererComponent) : undefined;
 		if (this.renderer) {
-			this.renderer.renderable.add(this, this.order);
+			this.renderer.renderables.add(this, this.order);
 		}
 	}
 
 	willUnmount() {
 		if (this.renderer) {
-			this.renderer.renderable.remove(this);
+			this.renderer.renderables.remove(this);
 		}
 	}
 

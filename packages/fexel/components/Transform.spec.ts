@@ -40,6 +40,8 @@ describe('TransformComponent', () => {
 		let stepper = scene.update({
 			time: 0,
 			deltaTime: 0,
+			fixedTime: 0,
+			fixedDeltaTime: 0,
 			frameCount: 0,
 			timeScale: 1,
 		});
@@ -63,6 +65,8 @@ describe('TransformComponent', () => {
 		let stepper = scene.update({
 			time: 0,
 			deltaTime: 0,
+			fixedTime: 0,
+			fixedDeltaTime: 0,
 			frameCount: 0,
 			timeScale: 1,
 		});
@@ -89,6 +93,8 @@ describe('TransformComponent', () => {
 		let stepper = scene.update({
 			time: 0,
 			deltaTime: 0,
+			fixedTime: 0,
+			fixedDeltaTime: 0,
 			frameCount: 0,
 			timeScale: 1,
 		});
@@ -126,6 +132,8 @@ describe('TransformComponent', () => {
 		let stepper = scene.update({
 			time: 0,
 			deltaTime: 0,
+			fixedTime: 0,
+			fixedDeltaTime: 0,
 			frameCount: 0,
 			timeScale: 1,
 		});
