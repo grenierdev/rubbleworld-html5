@@ -1,15 +1,15 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"strictNullChecks": true,
-		"noImplicitAny": false,
-		"allowSyntheticDefaultImports": true,
-		"experimentalDecorators": true,
-		"emitDecoratorMetadata": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noUnusedLocals": true,
 		"target": "es6",
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"stripInternal": true,
 		"declaration": true
-	}
+	},
+	"exclude": ["src/**"]
 }
