@@ -1,6 +1,6 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Scene, UpdateContext } from './Scene';
-import { Debug } from './Debug';
+import { Debug } from './rendering/Debug';
 import { Stats } from './Stats';
 import { RendererComponent } from './components/Renderer';
 
@@ -169,14 +169,19 @@ export class RenderableEngine extends Engine {
 
 		if (stats) {
 			stats.addGraph({ id: 'fps', label: 'fps', min: 60, max: 60 });
-			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 50 });
-			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 50 });
+			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 1000 / 60 });
+			stats.addGraph({ id: 'update', label: 'upd', min: 0, max: 50 });
+			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 1000 / 30 });
+			stats.addGraph({ id: 'fixedupdate', label: 'fupd', min: 0, max: 50 });
+			stats.addGraph({ id: 'draw', label: 'draw', min: 0, max: 20 });
 			if (HAS_MEMORY) {
-				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: 100 });
+				stats.addGraph({
+					id: 'mem',
+					label: 'Mb',
+					min: 0,
+					max: (performance as any).memory.jsHeapSizeLimit / 1048576 / 10,
+				});
 			}
-			stats.addGraph({ id: 'update', label: ' upd', min: 0, max: 50 });
-			stats.addGraph({ id: 'fixedupdate', label: ' fupd', min: 0, max: 50 });
-			stats.addGraph({ id: 'draw', label: ' draws', min: 0, max: 20 });
 		}
 	}
 

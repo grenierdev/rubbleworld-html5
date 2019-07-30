@@ -1,5 +1,5 @@
 import { Mutable } from './util/Mutable';
-import { Debug } from './Debug';
+import { Debug } from './rendering/Debug';
 
 export interface UpdateContext {
 	time: number;

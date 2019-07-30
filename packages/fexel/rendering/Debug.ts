@@ -6,73 +6,20 @@ import { Material } from './Material';
 import { VertexShader, FragmentShader } from './Shader';
 import { PointMesh, LineMesh } from './Mesh';
 
-enum DebugType {
-	Points,
-	Lines,
-	Triangles,
-}
+type DebugPrimitive =
+	| DebugPrimitiveBase<'points', { count: number; positions: Float32Array; radius: Float32Array; colors: Float32Array }>
+	| DebugPrimitiveBase<'lines', { count: number; vertices: Float32Array; colors: Float32Array }>;
+// | DebugPrimitiveBase<'triangles', { vertices: Float32Array, colors: Float32Array }>
 
-type DebugPrimitive = DebugPrimitivePoint | DebugPrimitiveLine | DebugPrimitiveTriangles;
-
-interface DebugPrimitiveBase<T> {
-	ttl: number;
-	type: T;
-}
-
-interface DebugPrimitivePoint extends DebugPrimitiveBase<DebugType.Points> {
-	block: ArrayBlock<PointArray, PointItem>;
-}
-
-interface DebugPrimitiveLine extends DebugPrimitiveBase<DebugType.Lines> {
-	block: ArrayBlock<LineArray, LineItem>;
-}
-
-interface DebugPrimitiveTriangles extends DebugPrimitiveBase<DebugType.Triangles> {
-	block: ArrayBlock<Float32Array>;
-}
+type DebugPrimitiveBase<T, D = {}> = { type: T; ttl: number; data: D };
 
 export interface DebugDrawOptions {
-	color?: Color | ReadonlyColor | [number, number, number, number];
-	matrix?:
-		| Matrix4
-		| ReadonlyMatrix4
-		| [
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number,
-				number
-		  ];
+	color?: Color | ReadonlyColor;
+	matrix?: Matrix4 | ReadonlyMatrix4;
 	ttl?: number;
 }
 
-export class Debug {
-	protected stack: DebugPrimitive[];
-	protected lastTime: number;
-	protected pointMaterial: Material;
-	protected pointNeedsUpdate: boolean;
-	protected pointManager: PointMeshManager;
-	protected pointMesh: PointMesh;
-	protected lineMaterial: Material;
-	protected lineNeedsUpdate: boolean;
-	protected lineManager: LineMeshManager;
-	protected lineMesh: LineMesh;
-
-	constructor() {
-		this.stack = [];
-		this.lastTime = 0;
-		const fragShader = new FragmentShader(`
+const fragShader = new FragmentShader(`
 				precision mediump float;
 
 				varying vec4 fragColor;
@@ -81,9 +28,13 @@ export class Debug {
 					gl_FragColor = fragColor;
 				}
 		`);
-		this.pointMaterial = new Material(
-			new VertexShader(
-				`
+
+export class Debug {
+	protected primitiveList: DebugPrimitive[] = [];
+	protected lastTime: number = 0;
+	protected pointMaterial: Material = new Material(
+		new VertexShader(
+			`
 				attribute vec3 vertPosition;
 				attribute float vertSize;
 				attribute vec4 vertColor;
@@ -99,35 +50,21 @@ export class Debug {
 					gl_PointSize = vertSize;
 				}
 			`
-			),
-			fragShader
-		);
-		this.pointMaterial.twoSided = true;
-		this.pointMaterial.transparent = true;
-
-		this.pointNeedsUpdate = false;
-		this.pointManager = new PointMeshManager(
-			{
-				positions: new Float32Array(100000 * 3),
-				sizes: new Float32Array(100000 * 1),
-				colors: new Float32Array(100000 * 4),
-			},
-			100000,
-			100
-		);
-		this.pointMesh = new PointMesh(
-			{
-				count: 0,
-				positions: this.pointManager.data.positions,
-				sizes: this.pointManager.data.sizes,
-				colors: this.pointManager.data.colors,
-			},
-			true
-		);
-
-		this.lineMaterial = new Material(
-			new VertexShader(
-				`
+		),
+		fragShader
+	);
+	protected pointMesh: PointMesh = new PointMesh(
+		{
+			count: 0,
+			positions: new Float32Array(),
+			sizes: new Float32Array(),
+			colors: new Float32Array(),
+		},
+		true
+	);
+	protected lineMaterial: Material = new Material(
+		new VertexShader(
+			`
 				attribute vec3 vertPosition;
 				attribute vec4 vertColor;
 
@@ -141,26 +78,23 @@ export class Debug {
 					gl_Position = projectionMatrix * viewMatrix * vec4(vertPosition, 1.0);
 				}
 			`
-			),
-			fragShader
-		);
-		this.lineNeedsUpdate = false;
-		this.lineManager = new LineMeshManager(
-			{
-				positions: new Float32Array(100000 * 6),
-				colors: new Float32Array(100000 * 8),
-			},
-			100000,
-			100
-		);
-		this.lineMesh = new LineMesh(
-			{
-				count: 0,
-				positions: this.pointManager.data.positions,
-				colors: this.pointManager.data.colors,
-			},
-			true
-		);
+		),
+		fragShader
+	);
+	protected lineMesh: LineMesh = new LineMesh(
+		{
+			count: 0,
+			positions: new Float32Array(),
+			colors: new Float32Array(),
+		},
+		true
+	);
+
+	constructor() {
+		this.pointMaterial.twoSided = true;
+		this.pointMaterial.transparent = true;
+		this.lineMaterial.twoSided = true;
+		this.lineMaterial.transparent = true;
 	}
 
 	public update() {
@@ -168,246 +102,151 @@ export class Debug {
 		const delta = now - this.lastTime;
 		this.lastTime = now;
 
-		const oldStack: DebugPrimitive[] = [];
-		this.stack = this.stack.reduce(
+		this.primitiveList = this.primitiveList.reduce(
 			(stack, prim) => {
 				prim.ttl -= delta;
-				if (prim.ttl < 0) {
-					oldStack.push(prim);
-				} else {
+				if (prim.ttl >= 0) {
 					stack.push(prim);
 				}
 				return stack;
 			},
 			[] as DebugPrimitive[]
 		);
-
-		for (const prim of oldStack) {
-			if (prim.type === DebugType.Points) {
-				this.pointNeedsUpdate = true;
-			} else if (prim.type === DebugType.Lines) {
-				this.lineNeedsUpdate = true;
-			}
-			prim.block.free();
-		}
+		this.primitiveList.sort((a, b) => a.type.charCodeAt(0) - b.type.charCodeAt(0));
 	}
 
 	public draw(viewMatrix: Matrix4 | ReadonlyMatrix4, projMatrix: Matrix4 | ReadonlyMatrix4, gl: WebGLRenderingContext) {
-		if (this.pointNeedsUpdate) {
-			this.pointNeedsUpdate = false;
-			this.pointManager.defrag();
-			this.pointMesh.data.count = this.pointManager.tail.freed
-				? this.pointManager.tail.offset
-				: this.pointManager.tail.offset + this.pointManager.tail.size;
-			this.pointMesh.data.positions = this.pointManager.data.positions;
-			this.pointMesh.data.sizes = this.pointManager.data.sizes;
-			this.pointMesh.data.colors = this.pointManager.data.colors;
-			this.pointMesh.updateBuffers();
-		}
-		if (this.lineNeedsUpdate) {
-			this.lineNeedsUpdate = false;
-			this.lineManager.defrag();
-			this.lineMesh.data.count = this.lineManager.tail.freed
-				? this.lineManager.tail.offset
-				: this.lineManager.tail.offset + this.lineManager.tail.size;
-			this.lineMesh.data.positions = this.lineManager.data.positions;
-			this.lineMesh.data.colors = this.lineManager.data.colors;
-			this.lineMesh.updateBuffers();
+		this.pointMaterial.setUniform('viewMatrix', viewMatrix.elements);
+		this.pointMaterial.setUniform('projectionMatrix', projMatrix.elements);
+		this.lineMaterial.setUniform('viewMatrix', viewMatrix.elements);
+		this.lineMaterial.setUniform('projectionMatrix', projMatrix.elements);
+
+		let t: Float32Array | undefined;
+		let pointTotal = 0;
+		let pointLastTotal = this.pointMesh.data.positions.length / 3;
+		let pointPositions = this.pointMesh.data.positions;
+		let pointRadius = this.pointMesh.data.sizes!;
+		let pointColors = this.pointMesh.data.colors!;
+		let lineTotal = 0;
+		let lineLastTotal = this.lineMesh.data.positions.length / 6;
+		let lineVertices = this.lineMesh.data.positions;
+		let lineColors = this.lineMesh.data.colors!;
+
+		for (const primitive of this.primitiveList) {
+			if (primitive.type === 'points') {
+				const newTotal = pointTotal + primitive.data.count;
+				if (newTotal > pointLastTotal) {
+					pointLastTotal += 100;
+					pointPositions = resizeFloat32Array(pointPositions, pointLastTotal * 3);
+					pointRadius = resizeFloat32Array(pointRadius, pointLastTotal * 1);
+					pointColors = resizeFloat32Array(pointColors, pointLastTotal * 4);
+				}
+				pointPositions.set(primitive.data.positions, pointTotal * 3);
+				pointRadius.set(primitive.data.radius, pointTotal * 1);
+				pointColors.set(primitive.data.colors, pointTotal * 4);
+				pointTotal += primitive.data.count;
+			} else if (primitive.type === 'lines') {
+				const newTotal = lineTotal + primitive.data.count;
+				if (newTotal > lineLastTotal) {
+					lineLastTotal += 100;
+					lineVertices = resizeFloat32Array(lineVertices, lineLastTotal * 6);
+					lineColors = resizeFloat32Array(lineColors, lineLastTotal * 8);
+				}
+				lineVertices.set(primitive.data.vertices, lineTotal * 6);
+				lineColors.set(primitive.data.colors, lineTotal * 8);
+				lineTotal += primitive.data.count;
+			}
 		}
 
-		if (this.pointMesh.data.count > 0) {
-			this.pointMaterial.setUniform('viewMatrix', viewMatrix.elements);
-			this.pointMaterial.setUniform('projectionMatrix', projMatrix.elements);
+		if (pointTotal) {
 			this.pointMaterial.bind(gl);
+			this.pointMesh.data.positions = pointPositions;
+			this.pointMesh.data.sizes = pointRadius;
+			this.pointMesh.data.colors = pointColors;
+			this.pointMesh.data.count = pointTotal;
+			this.pointMesh.updateBuffers();
 			this.pointMesh.draw(gl);
 		}
-		if (this.lineMesh.data.count > 0) {
-			this.lineMaterial.setUniform('viewMatrix', viewMatrix.elements);
-			this.lineMaterial.setUniform('projectionMatrix', projMatrix.elements);
+		if (lineTotal) {
 			this.lineMaterial.bind(gl);
+			this.lineMesh.data.positions = lineVertices;
+			this.lineMesh.data.colors = lineColors;
+			this.lineMesh.data.count = lineTotal;
+			this.lineMesh.updateBuffers();
 			this.lineMesh.draw(gl);
 		}
 	}
 
-	public drawPrimitivePoints(positions: number[], radius: number, options: DebugDrawOptions = {}) {
+	public drawPrimitivePoints(positions: number[], radius: number, ttl: number = 0, color: Color = Color.White) {
 		if (positions.length % 3 !== 0) {
 			throw RangeError(
 				`Debug.drawPrimitivePoints expected a multiple of 3 number for positions, got ${positions.length}.`
 			);
 		}
-		const color = options.color || Color.White;
-		// const matrix = options.matrix || Matrix4.Identity;
-		const points = [] as PointItem[];
-		for (let i = 0, l = positions.length / 3; i < l; ++i) {
-			points.push({
-				positions: [positions[i * 3 + 0], positions[i * 3 + 1], positions[i * 3 + 2]],
-				colors: color instanceof Color ? [color.r, color.g, color.b, color.a] : color,
-				size: radius,
-			});
+		this.primitiveList.push({
+			type: 'points',
+			ttl,
+			data: {
+				count: positions.length / 3,
+				positions: new Float32Array(positions),
+				radius: new Float32Array(new Array(positions.length / 3).fill(radius)),
+				colors: new Float32Array(
+					new Array(positions.length / 3).fill(1).reduce(
+						(colors, _) => {
+							colors.push(color.r, color.g, color.b, color.a);
+							return colors;
+						},
+						[] as number[]
+					)
+				),
+			},
+		});
+	}
+
+	public drawPrimitiveLines(vertices: number[], ttl: number = 0, color: Color = Color.White) {
+		if (vertices.length % 6 !== 0) {
+			throw RangeError(`Debug.drawPrimitiveLines expected a multiple of 6 vertices, got ${vertices.length}.`);
 		}
-		const block = this.pointManager.alloc(points);
-		this.stack.push({
-			block,
-			ttl: options.ttl || 0,
-			type: DebugType.Points,
-		} as DebugPrimitivePoint);
-		this.pointNeedsUpdate = true;
+		this.primitiveList.push({
+			type: 'lines',
+			ttl,
+			data: {
+				count: vertices.length / 6,
+				vertices: new Float32Array(vertices),
+				colors: new Float32Array(
+					new Array(vertices.length / 3).fill(1).reduce(
+						(colors, _) => {
+							colors.push(color.r, color.g, color.b, color.a);
+							return colors;
+						},
+						[] as number[]
+					)
+				),
+			},
+		});
 	}
 
-	public drawPrimitiveLines(positions: number[], options: DebugDrawOptions = {}) {
-		if (positions.length % 6 !== 0) {
-			throw RangeError(
-				`Debug.drawPrimitiveLines expected a multiple of 6 number for positions, got ${positions.length}.`
-			);
-		}
-		const color = options.color || Color.White;
-		// const matrix = options.matrix || Matrix4.Identity;
-		const lines = [] as LineItem[];
-		for (let i = 0, l = positions.length / 6; i < l; ++i) {
-			lines.push({
-				positions: [
-					positions[i * 6 + 0],
-					positions[i * 6 + 1],
-					positions[i * 6 + 2],
-					positions[i * 6 + 3],
-					positions[i * 6 + 4],
-					positions[i * 6 + 5],
-				],
-				colors:
-					color instanceof Color
-						? [color.r, color.g, color.b, color.a, color.r, color.g, color.b, color.a]
-						: ([...color, ...color] as any),
-			});
-		}
-		const block = this.lineManager.alloc(lines);
-		this.stack.push({
-			block,
-			ttl: options.ttl || 0,
-			type: DebugType.Lines,
-		} as DebugPrimitiveLine);
-		this.lineNeedsUpdate = true;
+	public drawPoint(
+		position: Vector3 | ReadonlyVector3,
+		radius: number,
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		v0.copy(position).applyMatrix4(matrix);
+		return this.drawPrimitivePoints([v0.x, v0.y, v0.z], radius, ttl, color);
 	}
 
-	public drawPoint(position: Vector3 | ReadonlyVector3, radius: number, options: DebugDrawOptions = {}) {
-		return this.drawPrimitivePoints([position.x, position.y, position.z], radius, options);
-	}
-
-	public drawLine(start: Vector3 | ReadonlyVector3, end: Vector3 | ReadonlyVector3, options: DebugDrawOptions = {}) {
-		return this.drawPrimitiveLines([start.x, start.y, start.z, end.x, end.y, end.z], options);
-	}
-}
-
-interface PointArray {
-	sizes: Float32Array;
-	positions: Float32Array;
-	colors: Float32Array;
-}
-
-interface PointItem {
-	size: number;
-	positions: [number, number, number];
-	colors: [number, number, number, number];
-}
-
-class PointMeshManager extends ArrayVariableManager<PointArray, PointItem> {
-	resize(data: PointArray, size: number): PointArray {
-		data.sizes = resizeFloat32Array(data.sizes, size * 1);
-		data.positions = resizeFloat32Array(data.positions, size * 3);
-		data.colors = resizeFloat32Array(data.colors, size * 4);
-		return data;
-	}
-
-	move(data: PointArray, block: ArrayBlock, offset: number) {
-		data.sizes.copyWithin(offset * 1, block.offset * 1, block.offset * 1 + block.size * 1);
-		data.positions.copyWithin(offset * 3, block.offset * 3, block.offset * 3 + block.size * 3);
-		data.colors.copyWithin(offset * 4, block.offset * 4, block.offset * 4 + block.size * 4);
-	}
-
-	set(data: PointArray, index: number, value: PointItem) {
-		data.sizes[index * 1 + 0] = value.size;
-		data.positions[index * 3 + 0] = value.positions[0];
-		data.positions[index * 3 + 1] = value.positions[1];
-		data.positions[index * 3 + 2] = value.positions[2];
-		data.colors[index * 4 + 0] = value.colors[0];
-		data.colors[index * 4 + 1] = value.colors[1];
-		data.colors[index * 4 + 2] = value.colors[2];
-		data.colors[index * 4 + 3] = value.colors[3];
-	}
-
-	get(data: PointArray, index: number): PointItem {
-		return {
-			size: data.sizes[index * 1 + 0],
-			positions: [data.positions[index * 3 + 0], data.positions[index * 3 + 1], data.positions[index * 3 + 2]],
-			colors: [
-				data.colors[index * 4 + 0],
-				data.colors[index * 4 + 1],
-				data.colors[index * 4 + 2],
-				data.colors[index * 4 + 3],
-			],
-		};
-	}
-}
-
-interface LineArray {
-	positions: Float32Array;
-	colors: Float32Array;
-}
-
-interface LineItem {
-	positions: [number, number, number, number, number, number];
-	colors: [number, number, number, number, number, number, number, number];
-}
-
-class LineMeshManager extends ArrayVariableManager<LineArray, LineItem> {
-	resize(data: LineArray, size: number): LineArray {
-		data.positions = resizeFloat32Array(data.positions, size * 6);
-		data.colors = resizeFloat32Array(data.colors, size * 8);
-		return data;
-	}
-
-	move(data: LineArray, block: ArrayBlock, offset: number) {
-		data.positions.copyWithin(offset * 6, block.offset * 6, block.offset * 6 + block.size * 6);
-		data.colors.copyWithin(offset * 8, block.offset * 8, block.offset * 8 + block.size * 8);
-	}
-
-	set(data: LineArray, index: number, value: LineItem) {
-		data.positions[index * 6 + 0] = value.positions[0];
-		data.positions[index * 6 + 1] = value.positions[1];
-		data.positions[index * 6 + 2] = value.positions[2];
-		data.positions[index * 6 + 3] = value.positions[3];
-		data.positions[index * 6 + 4] = value.positions[4];
-		data.positions[index * 6 + 5] = value.positions[5];
-		data.colors[index * 8 + 0] = value.colors[0];
-		data.colors[index * 8 + 1] = value.colors[1];
-		data.colors[index * 8 + 2] = value.colors[2];
-		data.colors[index * 8 + 3] = value.colors[3];
-		data.colors[index * 8 + 4] = value.colors[4];
-		data.colors[index * 8 + 5] = value.colors[5];
-		data.colors[index * 8 + 6] = value.colors[6];
-		data.colors[index * 8 + 7] = value.colors[7];
-	}
-
-	get(data: LineArray, index: number): LineItem {
-		return {
-			positions: [
-				data.positions[index * 6 + 0],
-				data.positions[index * 6 + 1],
-				data.positions[index * 6 + 2],
-				data.positions[index * 6 + 3],
-				data.positions[index * 6 + 4],
-				data.positions[index * 6 + 5],
-			],
-			colors: [
-				data.colors[index * 8 + 0],
-				data.colors[index * 8 + 1],
-				data.colors[index * 8 + 2],
-				data.colors[index * 8 + 3],
-				data.colors[index * 8 + 4],
-				data.colors[index * 8 + 5],
-				data.colors[index * 8 + 6],
-				data.colors[index * 8 + 7],
-			],
-		};
+	public drawLine(
+		start: Vector3 | ReadonlyVector3,
+		end: Vector3 | ReadonlyVector3,
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		v0.copy(start).applyMatrix4(matrix);
+		v1.copy(end).applyMatrix4(matrix);
+		return this.drawPrimitiveLines([v0.x, v0.y, v0.z, v1.x, v1.y, v1.z], ttl, color);
 	}
 }
 
@@ -424,3 +263,4 @@ function resizeFloat32Array(data: Float32Array, newSize: number): Float32Array {
 }
 
 const v0 = new Vector3();
+const v1 = new Vector3();

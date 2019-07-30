@@ -22,7 +22,6 @@ import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
-stats.labelCanvas.style.opacity = '0.9';
 document.body.appendChild(stats.graphCanvas);
 document.body.appendChild(stats.labelCanvas);
 setInterval(() => stats.update(), 1000 / 30);
@@ -76,7 +75,7 @@ const mesh = new Mesh({
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
 });
 
-const objs = new Array(10).fill(1).map(
+const objs = new Array(50).fill(1).map(
 	() =>
 		new Entity('Obj', [
 			new TransformComponent(
@@ -122,7 +121,7 @@ const camComp = cam.getComponent(CameraComponent)!;
 // cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
 camComp.showDebug = true;
 
-const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 8, 1)], [cam, ...walls, ...objs]);
+const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 6, 2)], [cam, ...walls, ...objs]);
 
 engine.loadScene(scene);
 engine.start();

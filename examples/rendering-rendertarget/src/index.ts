@@ -16,7 +16,6 @@ import { RenderTarget } from '@fexel/core/rendering/RenderTarget';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
-stats.labelCanvas.style.opacity = '0.9';
 document.body.appendChild(stats.graphCanvas);
 document.body.appendChild(stats.labelCanvas);
 setInterval(() => stats.update(), 1000 / 30);
@@ -156,4 +155,4 @@ const scene = new Scene()
 engine.loadScene(scene);
 engine.start();
 
-engine.debug.drawPrimitivePoints([0, 0, 0], 10, { ttl: 10.0, color: [1, 1, 1, 1] });
+engine.debug.drawPrimitivePoints([0, 0, 0], 10, 10.0);

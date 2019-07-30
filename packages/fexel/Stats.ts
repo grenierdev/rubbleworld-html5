@@ -36,9 +36,8 @@ export class Stats {
 	protected labelCtx: CanvasRenderingContext2D;
 	protected labelBG: CanvasGradient;
 	protected graph: Map<string, Graph> = new Map();
-	protected hPlotted: Set<number> = new Set();
 
-	constructor(width = 200, height = 100) {
+	constructor(width = 300, height = 100) {
 		this.graphCanvas = document.createElement('canvas');
 		this.graphCanvas.style.cssText = 'position:fixed;top:0;left:0;opacity:1.0;z-index:90000';
 		this.graphCanvas.width = width;
@@ -59,8 +58,9 @@ export class Stats {
 		this.labelCtx.font = '12px monospace';
 		this.labelCtx.textBaseline = 'top';
 
-		this.labelBG = this.labelCtx.createLinearGradient(LABEL_WIDTH - 20, 0, LABEL_WIDTH, 0);
+		this.labelBG = this.labelCtx.createLinearGradient(0, 0, LABEL_WIDTH, 0);
 		this.labelBG.addColorStop(0.0, BG);
+		this.labelBG.addColorStop(0.05, BG);
 		this.labelBG.addColorStop(1.0, BGA);
 	}
 
@@ -112,7 +112,6 @@ export class Stats {
 		// Clear out last line
 		graphCtx.fillRect(graphX + graphW - 1, graphY, 1, graphH);
 
-		this.hPlotted.clear();
 		const l = this.graph.size;
 
 		// Draw graph
@@ -130,9 +129,6 @@ export class Stats {
 
 				const p = 1 - mapLinear(newMin, newMax, 0.02, 0.98, value) || -1;
 				let h = Math.round(p * graphH);
-				while (this.hPlotted.has(h)) {
-					h += 1;
-				}
 
 				graphCtx.fillStyle = graph.color;
 				graphCtx.globalAlpha = 1;
@@ -144,14 +140,12 @@ export class Stats {
 				graph.lastValue = value;
 				graph.min = newMin;
 				graph.max = newMax;
-
-				this.hPlotted.add(h);
 			}
 		}
 
 		// Clear out previous labels
 		labelCtx.clearRect(0, 0, LABEL_WIDTH, height);
-		labelCtx.globalAlpha = 0.5;
+		labelCtx.globalAlpha = 1.0;
 		labelCtx.fillStyle = this.labelBG;
 		labelCtx.fillRect(0, 0, LABEL_WIDTH, height);
 
