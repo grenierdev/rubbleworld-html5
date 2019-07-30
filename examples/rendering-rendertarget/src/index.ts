@@ -14,9 +14,11 @@ import { Euler } from '@fexel/core/math/Euler';
 import { DEG2RAD } from '@fexel/core/math/util';
 import { RenderTarget } from '@fexel/core/rendering/RenderTarget';
 
-const stats = new Stats(300);
-stats.canvas.style.opacity = '0.9';
-document.body.appendChild(stats.canvas);
+const stats = new Stats();
+stats.graphCanvas.style.opacity = '0.9';
+stats.labelCanvas.style.opacity = '0.9';
+document.body.appendChild(stats.graphCanvas);
+document.body.appendChild(stats.labelCanvas);
 setInterval(() => stats.update(), 1000 / 30);
 
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;

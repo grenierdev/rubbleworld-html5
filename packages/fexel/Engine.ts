@@ -168,14 +168,14 @@ export class RenderableEngine extends Engine {
 		})(gl.drawElements);
 
 		if (stats) {
-			stats.addGraph({ id: 'fps', label: 'fps', min: 0, max: 60 });
+			stats.addGraph({ id: 'fps', label: 'fps', min: 60, max: 60 });
 			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 50 });
 			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 50 });
 			if (HAS_MEMORY) {
-				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: (performance as any).memory.jsHeapSizeLimit / 1048576 });
+				stats.addGraph({ id: 'mem', label: 'Mb', min: 0, max: 100 });
 			}
-			stats.addGraph({ id: 'update', label: ' updates', min: 0, max: 50 });
-			stats.addGraph({ id: 'fixedupdate', label: ' fupdates', min: 0, max: 50 });
+			stats.addGraph({ id: 'update', label: ' upd', min: 0, max: 50 });
+			stats.addGraph({ id: 'fixedupdate', label: ' fupd', min: 0, max: 50 });
 			stats.addGraph({ id: 'draw', label: ' draws', min: 0, max: 20 });
 		}
 	}

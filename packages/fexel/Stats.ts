@@ -9,9 +9,10 @@ interface Graph {
 	max: number;
 }
 
-const BG = '#17285b';
-const LABEL_WIDTH = 80;
-const LABEL_HEIGHT = 10;
+const BG = 'rgba(23, 40, 91, 1.0)';
+const BGA = 'rgba(23, 40, 91, 0.0)';
+const LABEL_WIDTH = 120;
+const LABEL_HEIGHT = 12;
 const LABEL_PADDING = 2;
 const COLORS = [
 	'#EB2D2D',
@@ -29,23 +30,38 @@ const COLORS = [
 ];
 
 export class Stats {
-	public readonly canvas: HTMLCanvasElement;
-	protected ctx: CanvasRenderingContext2D;
+	public readonly graphCanvas: HTMLCanvasElement;
+	protected graphCtx: CanvasRenderingContext2D;
+	public readonly labelCanvas: HTMLCanvasElement;
+	protected labelCtx: CanvasRenderingContext2D;
+	protected labelBG: CanvasGradient;
 	protected graph: Map<string, Graph> = new Map();
 	protected hPlotted: Set<number> = new Set();
 
 	constructor(width = 200, height = 100) {
-		this.canvas = document.createElement('canvas');
-		this.canvas.style.cssText = 'position:fixed;top:0;left:0;opacity:1.0;z-index:90000';
-		this.canvas.width = width;
-		this.canvas.height = height;
+		this.graphCanvas = document.createElement('canvas');
+		this.graphCanvas.style.cssText = 'position:fixed;top:0;left:0;opacity:1.0;z-index:90000';
+		this.graphCanvas.width = width;
+		this.graphCanvas.height = height;
 
-		this.ctx = this.canvas.getContext('2d')!;
-		this.ctx.font = 'bold 9px Helvetica,Arial,sans-serif';
-		this.ctx.textBaseline = 'top';
-		this.ctx.globalAlpha = 0.9;
-		this.ctx.fillStyle = BG;
-		this.ctx.fillRect(0, 0, width, height);
+		this.labelCanvas = document.createElement('canvas');
+		this.labelCanvas.style.cssText = 'position:fixed;top:0;left:0;opacity:1.0;z-index:90001';
+		this.labelCanvas.width = LABEL_WIDTH;
+		this.labelCanvas.height = height;
+
+		this.graphCtx = this.graphCanvas.getContext('2d')!;
+		this.graphCtx.textBaseline = 'top';
+		this.graphCtx.globalAlpha = 1.0;
+		this.graphCtx.fillStyle = BG;
+		this.graphCtx.fillRect(0, 0, width, height);
+
+		this.labelCtx = this.labelCanvas.getContext('2d')!;
+		this.labelCtx.font = '12px monospace';
+		this.labelCtx.textBaseline = 'top';
+
+		this.labelBG = this.labelCtx.createLinearGradient(LABEL_WIDTH - 20, 0, LABEL_WIDTH, 0);
+		this.labelBG.addColorStop(0.0, BG);
+		this.labelBG.addColorStop(1.0, BGA);
 	}
 
 	addGraph({
@@ -75,70 +91,86 @@ export class Stats {
 
 	update() {
 		const {
-			ctx,
-			canvas,
-			canvas: { width, height },
+			graphCtx,
+			graphCanvas,
+			graphCanvas: { width, height },
+			labelCtx,
 		} = this;
 
-		const cols = Math.floor(width / (LABEL_WIDTH + LABEL_PADDING));
-		const rows = Math.ceil(this.graph.size / cols);
-
-		const graphY = (LABEL_HEIGHT + LABEL_PADDING) * rows + LABEL_PADDING;
+		const graphX = 0;
+		const graphW = width - graphX;
+		const graphY = 0;
 		const graphH = height - graphY;
 
-		// Clear out label area
-		ctx.globalAlpha = 1;
-		ctx.fillStyle = BG;
-		ctx.fillRect(0, 0, width, graphY);
+		// Reset style
+		graphCtx.globalAlpha = 1;
+		graphCtx.fillStyle = BG;
 
 		// Move graph to the left
-		ctx.drawImage(canvas, 1, graphY, width - 1, graphH, 0, graphY, width - 1, graphH);
+		graphCtx.drawImage(graphCanvas, graphX + 1, graphY, graphW - 1, graphH, graphX, graphY, graphW - 1, graphH);
 
 		// Clear out last line
-		ctx.fillRect(width - 1, graphY, 1, graphH);
+		graphCtx.fillRect(graphX + graphW - 1, graphY, 1, graphH);
 
 		this.hPlotted.clear();
+		const l = this.graph.size;
 
-		const graphs = this.graph.entries();
-
-		for (let i = 0, l = this.graph.size, r = 0; i < l && r < rows; ++r) {
-			for (let c = 0; i < l && c < cols; ++c, ++i) {
-				const [, graph] = graphs.next().value!;
-
-				if (graph.value !== undefined || graph.lastValue !== undefined) {
-					const value = graph.value !== undefined ? graph.value : graph.lastValue!;
-					let newMin = Math.min(graph.min, value);
-					if (!isFinite(newMin)) {
-						newMin = graph.min;
-					}
-					let newMax = Math.max(graph.max, value);
-					if (!isFinite(newMax)) {
-						newMax = graph.max;
-					}
-
-					const p = 1 - mapLinear(newMin, newMax, 0.02, 0.98, value) || -1;
-					let h = Math.round(p * graphH);
-					while (this.hPlotted.has(h)) {
-						h += 1;
-					}
-
-					const label = `${strPadRight(value.toString(), 6)}${graph.label} (${newMin}-${newMax})`;
-
-					ctx.globalAlpha = 1;
-					ctx.fillStyle = graph.color;
-					ctx.fillText(label, (c + 1) * LABEL_PADDING + c * LABEL_WIDTH, (r + 1) * LABEL_PADDING + r * LABEL_HEIGHT);
-
-					ctx.fillRect(width - 1, graphY + h, 1, 1);
-					ctx.globalAlpha = 0.5 / l;
-					ctx.fillRect(width - 1, graphY + h + 1, 1, graphH - 1 - h);
-
-					graph.value = undefined;
-					graph.lastValue = value;
-					graph.min = newMin;
-					graph.max = newMax;
-
-					this.hPlotted.add(h);
+		// Draw graph
+		for (const [, graph] of this.graph) {
+			if (graph.value !== undefined || graph.lastValue !== undefined) {
+				const value = graph.value !== undefined ? graph.value : graph.lastValue!;
+				let newMin = Math.min(graph.min, value);
+				if (!isFinite(newMin)) {
+					newMin = graph.min;
 				}
+				let newMax = Math.max(graph.max, value);
+				if (!isFinite(newMax)) {
+					newMax = graph.max;
+				}
+
+				const p = 1 - mapLinear(newMin, newMax, 0.02, 0.98, value) || -1;
+				let h = Math.round(p * graphH);
+				while (this.hPlotted.has(h)) {
+					h += 1;
+				}
+
+				graphCtx.fillStyle = graph.color;
+				graphCtx.globalAlpha = 1;
+				graphCtx.fillRect(graphX + graphW - 1, graphY + h, 1, 1);
+				graphCtx.globalAlpha = 0.5 / l;
+				graphCtx.fillRect(graphX + graphW - 1, graphY + h + 1, 1, graphH - 1 - h);
+
+				graph.value = undefined;
+				graph.lastValue = value;
+				graph.min = newMin;
+				graph.max = newMax;
+
+				this.hPlotted.add(h);
+			}
+		}
+
+		// Clear out previous labels
+		labelCtx.clearRect(0, 0, LABEL_WIDTH, height);
+		labelCtx.globalAlpha = 0.5;
+		labelCtx.fillStyle = this.labelBG;
+		labelCtx.fillRect(0, 0, LABEL_WIDTH, height);
+
+		labelCtx.globalAlpha = 1.0;
+
+		// Draw labels
+		let i = -1;
+		for (const [, graph] of this.graph) {
+			if (graph.value !== undefined || graph.lastValue !== undefined) {
+				++i;
+				const value = graph.value !== undefined ? graph.value : graph.lastValue!;
+
+				let label = strPadRight(Math.round(value).toString(), 4);
+				label += graph.label;
+				label += ` (${Math.round(graph.min)}`;
+				label += `-${Math.round(graph.max)})`;
+
+				labelCtx.fillStyle = graph.color;
+				labelCtx.fillText(label, 0, (i + 1) * LABEL_PADDING + i * LABEL_HEIGHT);
 			}
 		}
 	}

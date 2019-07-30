@@ -20,9 +20,11 @@ import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
 import { Material } from '@fexel/core/rendering/Material';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
 
-const stats = new Stats(340);
-stats.canvas.style.opacity = '0.9';
-document.body.appendChild(stats.canvas);
+const stats = new Stats();
+stats.graphCanvas.style.opacity = '0.9';
+stats.labelCanvas.style.opacity = '0.9';
+document.body.appendChild(stats.graphCanvas);
+document.body.appendChild(stats.labelCanvas);
 setInterval(() => stats.update(), 1000 / 30);
 
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
@@ -74,7 +76,7 @@ const mesh = new Mesh({
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
 });
 
-const objs = new Array(400).fill(1).map(
+const objs = new Array(10).fill(1).map(
 	() =>
 		new Entity('Obj', [
 			new TransformComponent(
