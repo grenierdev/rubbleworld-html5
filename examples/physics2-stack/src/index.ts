@@ -74,18 +74,18 @@ const mesh = new Mesh({
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
 });
 
-const objs = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].map(
+const objs = new Array(400).fill(1).map(
 	() =>
 		new Entity('Obj', [
 			new TransformComponent(
 				new Vector3(50 + (canvasEl.width - 100) * Math.random(), 50 + (canvasEl.height - 100) * Math.random(), 0)
 			),
-			new Physics2BodyComponent(Math.random() > 0.5 ? Physics2BodyType.Static : Physics2BodyType.Dynamic),
-			new Physics2CircleColliderComponent(10),
-			// new Physics2BoxColliderComponent(new Vector2(10, 10)),
+			new Physics2BodyComponent(Physics2BodyType.Dynamic),
+			// new Physics2CircleColliderComponent(10),
+			new Physics2BoxColliderComponent(new Vector2(10, 10)),
 			// new Physics2BoxColliderComponent(new Vector2(10 + 15 * Math.random(), 10 + 15 * Math.random())),
 			// new Physics2CircleColliderComponent(new Circle(new Vector2(), 10 + 15 * Math.random())),
-			new MeshRendererComponent(mesh, mat),
+			// new MeshRendererComponent(mesh, mat),
 		])
 );
 
@@ -120,7 +120,7 @@ const camComp = cam.getComponent(CameraComponent)!;
 // cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
 camComp.showDebug = true;
 
-const scene = new Scene([new Physics2EngineComponent()], [cam, ...walls, ...objs]);
+const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 8, 1)], [cam, ...walls, ...objs]);
 
 engine.loadScene(scene);
 engine.start();

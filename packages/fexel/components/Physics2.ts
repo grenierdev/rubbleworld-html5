@@ -3,8 +3,6 @@ import { Mutable } from '../util/Mutable';
 import { EventEmitter } from 'events';
 import { TransformComponent } from './Transform';
 import { Vector2 } from '../math/Vector2';
-import { ReadonlyBox2 } from '../math/Box2';
-import { ReadonlyCircle } from '../math/Circle';
 import { lerp, smootherstep } from '../math/util';
 import { b2Body, b2BodyDef, b2BodyType } from '@fexel/box2d/Dynamics/b2Body';
 import { b2World } from '@fexel/box2d/Dynamics/b2World';
@@ -12,16 +10,17 @@ import { b2FixtureDef } from '@fexel/box2d/Dynamics/b2Fixture';
 import { b2CircleShape } from '@fexel/box2d/Collision/Shapes/b2CircleShape';
 import { b2Shape } from '@fexel/box2d/Collision/Shapes/b2Shape';
 import { b2PolygonShape } from '@fexel/box2d/Collision/Shapes/b2PolygonShape';
+import { b2Transform } from '@fexel/box2d/Common/b2Math';
 
 export class Physics2EngineComponent extends Component {
 	public executionOrder = 900;
 
 	public readonly world: b2World;
 
-	constructor() {
+	constructor(public gravity = new Vector2(0, -10), public velocityIterations = 4, public positionIterations = 2) {
 		super();
 
-		this.world = new b2World(new Vector2(0, -10));
+		this.world = new b2World(gravity);
 	}
 
 	didMount() {
@@ -33,50 +32,57 @@ export class Physics2EngineComponent extends Component {
 
 	update(context: UpdateContext) {
 		if (context.debug) {
-			// for (let body = this.world.GetBodyList(); body; body = body.GetNext()) {
-			// 	const position = body.GetPosition();
-			// 	const asleep = !body.IsAwake;
-			// 	const type = body.GetType();
-			// 	const color: [number, number, number, number] = asleep
-			// 		? [0.3, 0.3, 0.3, 0.5]
-			// 		: type === b2BodyType.b2_staticBody
-			// 		? [0.6, 0.6, 0.6, 0.5]
-			// 		: [1.0, 1.0, 1.0, 0.5];
-			// 	for (let fixture = body.GetFixtureList(); fixture; fixture = fixture.GetNext()) {
-			// 		const shape = fixture.GetShape();
-			// 		if (shape instanceof b2CircleShape) {
-			// 		} else if (shape instanceof b2PolygonShape) {
-			// 			const vertices = shape.m_vertices;
-			// 			const wireframe: number[] = [];
-			// 			for (let i = 1, l = vertices.length; i < l; ++i) {
-			// 				wireframe.push(vertices[i - 1].x, vertices[i - 1].y, 0, vertices[i].x, vertices[i].y, 0);
-			// 			}
-			// 			wireframe.push(vertices[vertices.length - 1].x, vertices[vertices.length - 1].y, 0);
-			// 			wireframe.push(vertices[0].x, vertices[0].y, 0);
-			// 			context.debug.drawPrimitiveLines(wireframe, {
-			// 				ttl: 0,
-			// 				color,
-			// 			});
-			// 			const axis: number[] = [
-			// 				position.x,
-			// 				position.y,
-			// 				0,
-			// 				(vertices[0].x + vertices[vertices.length - 1].x) / 2,
-			// 				(vertices[0].y + vertices[vertices.length - 1].y) / 2,
-			// 				0,
-			// 			];
-			// 			context.debug.drawPrimitiveLines(axis, {
-			// 				ttl: 0,
-			// 				color: [0.803921568627451, 0.3607843137254902, 0.3607843137254902, 0.5],
-			// 			});
-			// 		}
-			// 	}
-			// }
+			for (let body = this.world.GetBodyList(); body; body = body.GetNext()) {
+				const mat = body.m_xf;
+				const position = body.GetPosition();
+				const type = body.GetType();
+				const color: [number, number, number, number] = !body.IsAwake
+					? [0.2431372549019608, 0.7176470588235294, 0.9372549019607843, 1.0]
+					: type === b2BodyType.b2_staticBody
+					? [0.6, 0.6, 0.6, 1.0]
+					: [0.4235294117647059, 1.0, 0.3568627450980392, 1.0];
+
+				context.debug.drawPrimitivePoints([position.x, position.y, 0], 2, {
+					ttl: 0,
+					color,
+				});
+				for (let fixture = body.GetFixtureList(); fixture; fixture = fixture.GetNext()) {
+					const shape = fixture.GetShape();
+					if (shape instanceof b2CircleShape) {
+						// TODO Draw Circle
+					} else if (shape instanceof b2PolygonShape) {
+						const vertices = shape.m_vertices.map(vert => b2Transform.MulXV(mat, vert, vert.Clone()));
+						const wireframe: number[] = [];
+						for (let i = 1, l = vertices.length; i < l; ++i) {
+							wireframe.push(vertices[i - 1].x, vertices[i - 1].y, 0, vertices[i].x, vertices[i].y, 0);
+						}
+						wireframe.push(vertices[vertices.length - 1].x, vertices[vertices.length - 1].y, 0);
+						wireframe.push(vertices[0].x, vertices[0].y, 0);
+						context.debug.drawPrimitiveLines(wireframe, {
+							ttl: 0,
+							color,
+						});
+						const axis: number[] = [
+							position.x,
+							position.y,
+							0,
+							(vertices[0].x + vertices[vertices.length - 1].x) / 2,
+							(vertices[0].y + vertices[vertices.length - 1].y) / 2,
+							0,
+						];
+						context.debug.drawPrimitiveLines(axis, {
+							ttl: 0,
+							color: color,
+						});
+					}
+				}
+			}
 		}
 	}
 
 	fixedUpdate(context: FixedUpdateContext) {
-		this.world.Step(context.fixedDeltaTime, 8, 3);
+		this.world.SetGravity(this.gravity);
+		this.world.Step(context.fixedDeltaTime / 1000, this.velocityIterations, this.positionIterations);
 	}
 }
 
@@ -120,6 +126,8 @@ export class Physics2BodyComponent extends Component {
 	updateBody() {
 		if (this.engine) {
 			const bodyDef = new b2BodyDef();
+			bodyDef.userData = this;
+
 			switch (this.type) {
 				case Physics2BodyType.Dynamic:
 					bodyDef.type = b2BodyType.b2_dynamicBody;
@@ -203,7 +211,7 @@ export abstract class Physics2ColliderComponent extends Component {
 
 	constructor(
 		public shape: b2Shape,
-		public density = 0,
+		public density = 0.01,
 		public friction = 0.2,
 		public restitution = 0,
 		public isSensor = false,
