@@ -1,10 +1,10 @@
-import { ArrayVariableManager, ArrayBlock } from './util/ArrayManager';
-import { Color, ReadonlyColor } from './math/Color';
-import { Matrix4, ReadonlyMatrix4 } from './math/Matrix4';
-import { Vector3, ReadonlyVector3 } from './math/Vector3';
-import { Material } from './rendering/Material';
-import { VertexShader, FragmentShader } from './rendering/Shader';
-import { PointMesh, LineMesh } from './rendering/Mesh';
+import { ArrayVariableManager, ArrayBlock } from '../util/ArrayManager';
+import { Color, ReadonlyColor } from '../math/Color';
+import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
+import { Vector3, ReadonlyVector3 } from '../math/Vector3';
+import { Material } from './Material';
+import { VertexShader, FragmentShader } from './Shader';
+import { PointMesh, LineMesh } from './Mesh';
 
 enum DebugType {
 	Points,
