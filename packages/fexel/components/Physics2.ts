@@ -46,7 +46,9 @@ export class Physics2EngineComponent extends Component {
 				for (let fixture = body.GetFixtureList(); fixture; fixture = fixture.GetNext()) {
 					const shape = fixture.GetShape();
 					if (shape instanceof b2CircleShape) {
-						// TODO Draw Circle
+						v0.set(position.x, position.y);
+						context.debug.drawCircle(v0, shape.m_radius, 0, color);
+						// TODO draw axis
 					} else if (shape instanceof b2PolygonShape) {
 						const wireframe: number[] = [];
 
@@ -164,11 +166,14 @@ export class Physics2BodyComponent extends Component {
 
 	update(context: FixedUpdateContext) {
 		if (this.body && this.transform) {
-			const alpha = smootherstep(
-				context.fixedDeltaTime > 0 ? (context.time - context.fixedTime) / context.fixedDeltaTime : 1,
-				0,
-				1
-			);
+			const alpha =
+				context.time - context.fixedTime >= context.fixedDeltaTime
+					? smootherstep(
+							context.fixedDeltaTime > 0 ? (context.time - context.fixedTime) / context.fixedDeltaTime : 1,
+							0,
+							1
+					  )
+					: 1;
 			const position = this.body.GetPosition();
 			const angle = this.body.GetAngle();
 

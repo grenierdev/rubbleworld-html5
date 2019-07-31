@@ -217,6 +217,7 @@ export class RenderableEngine extends Engine {
 		this.statsData.drawCalls = this.statsData.updates = 0;
 
 		const startTime = (performance || Date).now();
+		const deltaTime = startTime - this.statsData.lastUpdateTime;
 
 		super.update({
 			canvas: this.canvas,
@@ -225,7 +226,7 @@ export class RenderableEngine extends Engine {
 		});
 
 		if (this.debug) {
-			this.debug.update();
+			this.debug.update(deltaTime);
 		}
 
 		if (this.stats) {

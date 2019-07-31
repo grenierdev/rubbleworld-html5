@@ -1,10 +1,11 @@
-import { ArrayVariableManager, ArrayBlock } from '../util/ArrayManager';
 import { Color, ReadonlyColor } from '../math/Color';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
 import { Vector3, ReadonlyVector3 } from '../math/Vector3';
 import { Material } from './Material';
 import { VertexShader, FragmentShader } from './Shader';
 import { PointMesh, LineMesh } from './Mesh';
+import { Line3, ReadonlyLine3 } from '../math/Line3';
+import { Vector2, ReadonlyVector2 } from '../math/Vector2';
 
 type DebugPrimitive =
 	| DebugPrimitiveBase<'points', { count: number; positions: Float32Array; radius: Float32Array; colors: Float32Array }>
@@ -12,12 +13,6 @@ type DebugPrimitive =
 // | DebugPrimitiveBase<'triangles', { vertices: Float32Array, colors: Float32Array }>
 
 type DebugPrimitiveBase<T, D = {}> = { type: T; ttl: number; data: D };
-
-export interface DebugDrawOptions {
-	color?: Color | ReadonlyColor;
-	matrix?: Matrix4 | ReadonlyMatrix4;
-	ttl?: number;
-}
 
 const fragShader = new FragmentShader(`
 				precision mediump float;
@@ -31,7 +26,6 @@ const fragShader = new FragmentShader(`
 
 export class Debug {
 	protected primitiveList: DebugPrimitive[] = [];
-	protected lastTime: number = 0;
 	protected pointMaterial: Material = new Material(
 		new VertexShader(
 			`
@@ -90,6 +84,8 @@ export class Debug {
 		true
 	);
 
+	public growRate: number = 100;
+
 	constructor() {
 		this.pointMaterial.twoSided = true;
 		this.pointMaterial.transparent = true;
@@ -97,11 +93,7 @@ export class Debug {
 		this.lineMaterial.transparent = true;
 	}
 
-	public update() {
-		const now = performance.now() / 1000;
-		const delta = now - this.lastTime;
-		this.lastTime = now;
-
+	public update(delta: number) {
 		this.primitiveList = this.primitiveList.reduce(
 			(stack, prim) => {
 				prim.ttl -= delta;
@@ -136,7 +128,7 @@ export class Debug {
 			if (primitive.type === 'points') {
 				const newTotal = pointTotal + primitive.data.count;
 				if (newTotal > pointLastTotal) {
-					pointLastTotal += 100;
+					pointLastTotal += this.growRate;
 					pointPositions = resizeFloat32Array(pointPositions, pointLastTotal * 3);
 					pointRadius = resizeFloat32Array(pointRadius, pointLastTotal * 1);
 					pointColors = resizeFloat32Array(pointColors, pointLastTotal * 4);
@@ -148,7 +140,7 @@ export class Debug {
 			} else if (primitive.type === 'lines') {
 				const newTotal = lineTotal + primitive.data.count;
 				if (newTotal > lineLastTotal) {
-					lineLastTotal += 100;
+					lineLastTotal += this.growRate;
 					lineVertices = resizeFloat32Array(lineVertices, lineLastTotal * 6);
 					lineColors = resizeFloat32Array(lineColors, lineLastTotal * 8);
 				}
@@ -233,20 +225,102 @@ export class Debug {
 		color: Color = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
-		v0.copy(position).applyMatrix4(matrix);
-		return this.drawPrimitivePoints([v0.x, v0.y, v0.z], radius, ttl, color);
+		return this.drawPoints([position], radius, ttl, color, matrix);
 	}
 
-	public drawLine(
-		start: Vector3 | ReadonlyVector3,
-		end: Vector3 | ReadonlyVector3,
+	public drawPoints(
+		positions: (Vector3 | ReadonlyVector3)[],
+		radius: number,
 		ttl: number = 0,
 		color: Color = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
-		v0.copy(start).applyMatrix4(matrix);
-		v1.copy(end).applyMatrix4(matrix);
-		return this.drawPrimitiveLines([v0.x, v0.y, v0.z, v1.x, v1.y, v1.z], ttl, color);
+		const vertices: number[] = [];
+		for (const position of positions) {
+			v0.copy(position).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+		}
+		return this.drawPrimitivePoints(vertices, radius, ttl, color);
+	}
+
+	public drawLine(
+		line: Line3 | ReadonlyLine3,
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		return this.drawLines([line], ttl, color, matrix);
+	}
+
+	public drawLines(
+		lines: (Line3 | ReadonlyLine3)[],
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		const vertices: number[] = [];
+		for (const line of lines) {
+			v0.copy(line.start).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+			v0.copy(line.end).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+		}
+		return this.drawPrimitiveLines(vertices, ttl, color);
+	}
+
+	public drawConnectedLines(
+		positions: (Vector3 | ReadonlyVector3)[],
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		const vertices: number[] = [];
+		for (let i = 1, l = positions.length; i < l; ++i) {
+			v0.copy(positions[i - 1]).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+			v0.copy(positions[i]).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+		}
+		return this.drawPrimitiveLines(vertices, ttl, color);
+	}
+
+	public drawLineLoop(
+		positions: (Vector3 | ReadonlyVector3)[],
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		return this.drawConnectedLines(positions.concat([positions[0]]), ttl, color);
+	}
+
+	public drawCircle(
+		center: Vector2 | ReadonlyVector2,
+		radius: number,
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		return this.drawNGon(center, radius, 12, ttl, color, matrix);
+	}
+
+	public drawNGon(
+		center: Vector2 | ReadonlyVector2,
+		radius: number,
+		sides: number,
+		ttl: number = 0,
+		color: Color = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		const vertices: number[] = [];
+		for (let i = 1; i <= sides; ++i) {
+			let t = ((i - 1) * 2 * Math.PI) / sides;
+			v0.set(center.x + radius * Math.cos(t), center.y + radius * Math.sin(t), 0).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+			t = (i * 2 * Math.PI) / sides;
+			v0.set(center.x + radius * Math.cos(t), center.y + radius * Math.sin(t), 0).applyMatrix4(matrix);
+			vertices.push(v0.x, v0.y, v0.z);
+		}
+		return this.drawPrimitiveLines(vertices, ttl, color);
 	}
 }
 

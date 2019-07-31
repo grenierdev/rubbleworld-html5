@@ -75,17 +75,16 @@ const mesh = new Mesh({
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
 });
 
-const objs = new Array(50).fill(1).map(
+const objs = new Array(100).fill(1).map(
 	() =>
 		new Entity('Obj', [
 			new TransformComponent(
 				new Vector3(50 + (canvasEl.width - 100) * Math.random(), 50 + (canvasEl.height - 100) * Math.random(), 0)
 			),
-			new Physics2BodyComponent(Physics2BodyType.Dynamic),
-			// new Physics2CircleColliderComponent(10),
-			new Physics2BoxColliderComponent(new Vector2(10, 10)),
-			// new Physics2BoxColliderComponent(new Vector2(10 + 15 * Math.random(), 10 + 15 * Math.random())),
-			// new Physics2CircleColliderComponent(new Circle(new Vector2(), 10 + 15 * Math.random())),
+			new Physics2BodyComponent(Math.random() > 0.5 ? Physics2BodyType.Dynamic : Physics2BodyType.Static),
+			Math.random() > 0.5
+				? new Physics2CircleColliderComponent(5 + 10 * Math.random())
+				: new Physics2BoxColliderComponent(new Vector2(5 + 10 * Math.random(), 5 + 10 * Math.random())),
 			// new MeshRendererComponent(mesh, mat),
 		])
 );
