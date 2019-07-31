@@ -48,24 +48,29 @@ export class Physics2EngineComponent extends Component {
 					if (shape instanceof b2CircleShape) {
 						// TODO Draw Circle
 					} else if (shape instanceof b2PolygonShape) {
-						// TODO Better memory usage than copy the whole vertices on every frame
-						const vertices = shape.m_vertices.map(vert => b2Transform.MulXV(mat, vert, vert.Clone()));
 						const wireframe: number[] = [];
-						for (let i = 1, l = vertices.length; i < l; ++i) {
-							wireframe.push(vertices[i - 1].x, vertices[i - 1].y, 0, vertices[i].x, vertices[i].y, 0);
+
+						const l = shape.m_vertices.length;
+						b2Transform.MulXV(mat, shape.m_vertices[l - 1], v0);
+						wireframe.push(v0.x, v0.y, 0);
+						b2Transform.MulXV(mat, shape.m_vertices[0], v0);
+						wireframe.push(v0.x, v0.y, 0);
+
+						for (let i = 0; i < l - 1; ++i) {
+							b2Transform.MulXV(mat, shape.m_vertices[i], v0);
+							wireframe.push(v0.x, v0.y, 0);
+							b2Transform.MulXV(mat, shape.m_vertices[i + 1], v0);
+							wireframe.push(v0.x, v0.y, 0);
 						}
-						wireframe.push(vertices[vertices.length - 1].x, vertices[vertices.length - 1].y, 0);
-						wireframe.push(vertices[0].x, vertices[0].y, 0);
-						context.debug.drawPrimitiveLines(wireframe, 0, color);
-						const axis: number[] = [
+						wireframe.push(
 							position.x,
 							position.y,
 							0,
-							(vertices[0].x + vertices[vertices.length - 1].x) / 2,
-							(vertices[0].y + vertices[vertices.length - 1].y) / 2,
-							0,
-						];
-						context.debug.drawPrimitiveLines(axis, 0, color);
+							(wireframe[0 * 3 + 0] + wireframe[1 * 3 + 0]) / 2,
+							(wireframe[0 * 3 + 1] + wireframe[1 * 3 + 1]) / 2,
+							0
+						);
+						context.debug.drawPrimitiveLines(wireframe, 0, color);
 					}
 				}
 			}
@@ -74,7 +79,8 @@ export class Physics2EngineComponent extends Component {
 
 	fixedUpdate(context: FixedUpdateContext) {
 		this.world.SetGravity(this.gravity);
-		this.world.Step(context.fixedDeltaTime / 1000, this.velocityIterations, this.positionIterations);
+		const dt = Math.min(1000 / 60, context.fixedDeltaTime);
+		this.world.Step(dt / 1000, this.velocityIterations, this.positionIterations);
 	}
 }
 
@@ -258,3 +264,5 @@ export class Physics2CircleColliderComponent extends Physics2ColliderComponent {
 		super(new b2CircleShape(radius), density, friction, restitution, isSensor, filter);
 	}
 }
+
+const v0 = new Vector2();

@@ -121,7 +121,7 @@ const camComp = cam.getComponent(CameraComponent)!;
 // cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
 camComp.showDebug = true;
 
-const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 6, 2)], [cam, ...walls, ...objs]);
+const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 6, 6)], [cam, ...walls, ...objs]);
 
 engine.loadScene(scene);
 engine.start();

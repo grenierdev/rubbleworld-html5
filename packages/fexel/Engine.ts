@@ -11,7 +11,6 @@ export class Engine implements IDisposable {
 	protected readonly bindedUpdateMethod: (context?: Partial<UpdateContext>) => void;
 	protected readonly bindedFixedUpdateMethod: (context?: Partial<UpdateContext>) => void;
 
-	public fixedUpdateRate: number = 1000 / 30;
 	public readonly statsData = {
 		updates: 0,
 		fixedUpdates: 0,
@@ -23,7 +22,7 @@ export class Engine implements IDisposable {
 		lastFixedUpdateTime: (performance || Date).now(),
 	};
 
-	constructor() {
+	constructor(public fixedUpdateRate = 1000 / 60) {
 		this.bindedUpdateMethod = this.update.bind(this);
 		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
 	}
