@@ -11,6 +11,7 @@ interface Graph {
 
 const BG = 'rgba(23, 40, 91, 1.0)';
 const BGA = 'rgba(23, 40, 91, 0.0)';
+const BGAA = 'rgba(23, 40, 91, 0.8)';
 const LABEL_WIDTH = 120;
 const LABEL_HEIGHT = 12;
 const LABEL_PADDING = 2;
@@ -60,7 +61,8 @@ export class Stats {
 
 		this.labelBG = this.labelCtx.createLinearGradient(0, 0, LABEL_WIDTH, 0);
 		this.labelBG.addColorStop(0.0, BG);
-		this.labelBG.addColorStop(0.05, BG);
+		this.labelBG.addColorStop(0.2, BGAA);
+		this.labelBG.addColorStop(0.5, BGAA);
 		this.labelBG.addColorStop(1.0, BGA);
 	}
 
