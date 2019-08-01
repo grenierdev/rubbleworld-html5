@@ -69,42 +69,36 @@ mat.transparent = false;
 mat.setUniform('sampler', tex1);
 
 const mesh = new Mesh({
-	vertices: new Float32Array([10.0, 10.0, 0.0, -10.0, 10.0, 0.0, 10.0, -10.0, 0.0, -10.0, -10.0, 0.0]),
+	vertices: new Float32Array([20.0, 20.0, 0.0, -20.0, 20.0, 0.0, 20.0, -20.0, 0.0, -20.0, -20.0, 0.0]),
 	indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
 	uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
 	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
 });
 
-const objs = new Array(100).fill(1).map(
-	() =>
+const objs = new Array(10).fill(1).map(
+	(_, i) =>
 		new Entity('Obj', [
-			new TransformComponent(
-				new Vector3(50 + (canvasEl.width - 100) * Math.random(), 50 + (canvasEl.height - 100) * Math.random(), 0)
-			),
-			new Physics2BodyComponent(Math.random() > 0.5 ? Physics2BodyType.Dynamic : Physics2BodyType.Static),
-			Math.random() > 0.5
-				? new Physics2CircleColliderComponent(5 + 10 * Math.random())
-				: new Physics2BoxColliderComponent(new Vector2(5 + 10 * Math.random(), 5 + 10 * Math.random())),
+			new TransformComponent(new Vector3(-100 + 20 * i, 30 * i, 0)),
+			new Physics2BodyComponent(Physics2BodyType.Dynamic),
+			new Physics2CircleColliderComponent(20),
+			// new TransformComponent(
+			// 	new Vector3(50 + (canvasEl.width - 100) * Math.random(), 50 + (canvasEl.height - 100) * Math.random(), 0)
+			// ),
+			// Math.random() > 0.5
+			// 	? new Physics2CircleColliderComponent(5 + 10 * Math.random())
+			// 	: new Physics2BoxColliderComponent(new Vector2(5 + 10 * Math.random(), 5 + 10 * Math.random())),
 			// new MeshRendererComponent(mesh, mat),
 		])
 );
 
-const walls = [
-	[canvasEl.width / 2, 0, canvasEl.width, 50],
-	[canvasEl.width / 2, canvasEl.height, canvasEl.width, 50],
-	[canvasEl.width, canvasEl.height / 2, 50, canvasEl.height],
-	[0, canvasEl.height / 2, 50, canvasEl.height],
-].map(
-	size =>
-		new Entity('Wall', [
-			new TransformComponent(new Vector3(size[0], size[1], 0)),
-			new Physics2BodyComponent(Physics2BodyType.Static),
-			new Physics2BoxColliderComponent(new Vector2(size[2], size[3])),
-		])
-);
+const ground = new Entity('Wall', [
+	new TransformComponent(new Vector3(0, canvasEl.height / -2, 0)),
+	new Physics2BodyComponent(Physics2BodyType.Static),
+	new Physics2BoxColliderComponent(new Vector2(3000, 10)),
+]);
 
 const cam = CameraOrthographicPrefab({
-	position: new Vector3(canvasEl.width / -2, canvasEl.height / -2, -10),
+	position: new Vector3(0, 0, -10),
 	camera: {
 		left: canvasEl.width / -2,
 		right: canvasEl.width / 2,
@@ -112,15 +106,14 @@ const cam = CameraOrthographicPrefab({
 		bottom: canvasEl.height / -2,
 		near: 0.01,
 		far: 2000,
-		zoom: 0.9,
+		zoom: 0.5,
 	},
 });
 
 const camComp = cam.getComponent(CameraComponent)!;
-// cam2Comp.viewport.setFromCenterAndSize(new Vector2(0.5, 0.25), new Vector2(1, 0.5));
 camComp.showDebug = true;
 
-const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 6, 6)], [cam, ...walls, ...objs]);
+const scene = new Scene([new Physics2EngineComponent(new Vector2(0, -100), 6, 6)], [cam, ground, ...objs]);
 
 engine.loadScene(scene);
 engine.start();

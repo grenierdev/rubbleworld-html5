@@ -167,18 +167,19 @@ export class RenderableEngine extends Engine {
 		})(gl.drawElements);
 
 		if (stats) {
-			stats.addGraph({ id: 'fps', label: 'fps', min: 60, max: 60 });
-			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 1000 / 60 });
-			stats.addGraph({ id: 'update', label: 'upd', min: 0, max: 50 });
-			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 1000 / 30 });
-			stats.addGraph({ id: 'fixedupdate', label: 'fupd', min: 0, max: 50 });
-			stats.addGraph({ id: 'draw', label: 'draw', min: 0, max: 20 });
+			stats.addGraph({ id: 'fps', label: 'fps', min: 60, max: 60, color: '#148DD9' });
+			stats.addGraph({ id: 'update', label: 'upd', min: 0, max: 50, color: '#19B39E' });
+			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 1000 / 60, color: '#25D967' });
+			stats.addGraph({ id: 'fixedupdate', label: 'fupd', min: 0, max: 50, color: '#C7262B' });
+			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 1000 / 30, color: '#EB5C2D' });
+			stats.addGraph({ id: 'draw', label: 'draw', min: 0, max: 20, color: '#C728B7' });
 			if (HAS_MEMORY) {
 				stats.addGraph({
 					id: 'mem',
 					label: 'Mb',
 					min: 0,
 					max: (performance as any).memory.jsHeapSizeLimit / 1048576 / 10,
+					color: '#E3D324',
 				});
 			}
 		}

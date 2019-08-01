@@ -6,6 +6,10 @@ import { VertexShader, FragmentShader } from './Shader';
 import { PointMesh, LineMesh } from './Mesh';
 import { Line3, ReadonlyLine3 } from '../math/Line3';
 import { Vector2, ReadonlyVector2 } from '../math/Vector2';
+import { DEG2RAD } from '../math/util';
+import { Quaternion } from '../math/Quaternion';
+import { Euler } from '../math/Euler';
+import { Box3, ReadonlyBox3 } from '../math/Box3';
 
 type DebugPrimitive =
 	| DebugPrimitiveBase<'points', { count: number; positions: Float32Array; radius: Float32Array; colors: Float32Array }>
@@ -104,7 +108,6 @@ export class Debug {
 			},
 			[] as DebugPrimitive[]
 		);
-		this.primitiveList.sort((a, b) => a.type.charCodeAt(0) - b.type.charCodeAt(0));
 	}
 
 	public draw(viewMatrix: Matrix4 | ReadonlyMatrix4, projMatrix: Matrix4 | ReadonlyMatrix4, gl: WebGLRenderingContext) {
@@ -169,7 +172,12 @@ export class Debug {
 		}
 	}
 
-	public drawPrimitivePoints(positions: number[], radius: number, ttl: number = 0, color: Color = Color.White) {
+	public drawPrimitivePoints(
+		positions: number[],
+		radius: number,
+		ttl: number = 0,
+		color: Color | ReadonlyColor = Color.White
+	) {
 		if (positions.length % 3 !== 0) {
 			throw RangeError(
 				`Debug.drawPrimitivePoints expected a multiple of 3 number for positions, got ${positions.length}.`
@@ -195,7 +203,7 @@ export class Debug {
 		});
 	}
 
-	public drawPrimitiveLines(vertices: number[], ttl: number = 0, color: Color = Color.White) {
+	public drawPrimitiveLines(vertices: number[], ttl: number = 0, color: Color | ReadonlyColor = Color.White) {
 		if (vertices.length % 6 !== 0) {
 			throw RangeError(`Debug.drawPrimitiveLines expected a multiple of 6 vertices, got ${vertices.length}.`);
 		}
@@ -222,7 +230,7 @@ export class Debug {
 		position: Vector3 | ReadonlyVector3,
 		radius: number,
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		return this.drawPoints([position], radius, ttl, color, matrix);
@@ -232,7 +240,7 @@ export class Debug {
 		positions: (Vector3 | ReadonlyVector3)[],
 		radius: number,
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		const vertices: number[] = [];
@@ -246,7 +254,7 @@ export class Debug {
 	public drawLine(
 		line: Line3 | ReadonlyLine3,
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		return this.drawLines([line], ttl, color, matrix);
@@ -255,7 +263,7 @@ export class Debug {
 	public drawLines(
 		lines: (Line3 | ReadonlyLine3)[],
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		const vertices: number[] = [];
@@ -271,7 +279,7 @@ export class Debug {
 	public drawConnectedLines(
 		positions: (Vector3 | ReadonlyVector3)[],
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		const vertices: number[] = [];
@@ -287,17 +295,17 @@ export class Debug {
 	public drawLineLoop(
 		positions: (Vector3 | ReadonlyVector3)[],
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
-		return this.drawConnectedLines(positions.concat([positions[0]]), ttl, color);
+		return this.drawConnectedLines(positions.concat([positions[0]]), ttl, color, matrix);
 	}
 
 	public drawCircle(
 		center: Vector2 | ReadonlyVector2,
 		radius: number,
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		return this.drawNGon(center, radius, 12, ttl, color, matrix);
@@ -308,7 +316,7 @@ export class Debug {
 		radius: number,
 		sides: number,
 		ttl: number = 0,
-		color: Color = Color.White,
+		color: Color | ReadonlyColor = Color.White,
 		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
 	) {
 		const vertices: number[] = [];
@@ -322,7 +330,103 @@ export class Debug {
 		}
 		return this.drawPrimitiveLines(vertices, ttl, color);
 	}
+
+	public drawSphere(
+		center: Vector3 | ReadonlyVector3,
+		radius: number,
+		ttl: number = 0,
+		color: Color | ReadonlyColor = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		m0.compose(
+			center,
+			Quaternion.Identity,
+			Vector3.One
+		).multiply(matrix);
+		this.drawCircle(Vector2.Zero, radius, ttl, color, m0);
+		m0.multiply(mrx);
+		this.drawCircle(Vector2.Zero, radius, ttl, color, m0);
+		m0.multiply(mry);
+		this.drawCircle(Vector2.Zero, radius, ttl, color, m0);
+	}
+
+	public drawBox3(
+		box: Box3 | ReadonlyBox3,
+		ttl: number = 0,
+		color: Color | ReadonlyColor = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		const vertices: number[] = [];
+		const min = box.min;
+		const max = box.max;
+		// FRONT
+		v0.set(min.x, min.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, min.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		// BACK
+		v0.set(min.x, min.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, min.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		// BOTTOM
+		v0.set(min.x, min.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, min.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		// TOP
+		v0.set(min.x, max.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, min.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, max.z).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+
+		return this.drawPrimitiveLines(vertices, ttl, color);
+	}
 }
+
+const m0 = new Matrix4();
+const mrx = new Matrix4().compose(
+	Vector3.Zero,
+	new Quaternion().setFromEuler(new Euler(90 * DEG2RAD, 0, 0)),
+	Vector3.One
+);
+const mry = new Matrix4().compose(
+	Vector3.Zero,
+	new Quaternion().setFromEuler(new Euler(0, 90 * DEG2RAD, 0)),
+	Vector3.One
+);
 
 function resizeFloat32Array(data: Float32Array, newSize: number): Float32Array {
 	if (data.length === newSize) {

@@ -1,6 +1,6 @@
 import { Matrix4, ReadonlyMatrix4 } from './Matrix4';
 
-export class Quaterion {
+export class Quaternion {
 	constructor(public x = 0, public y = 0, public z = 0, public w = 1) {}
 
 	get length() {
@@ -11,8 +11,8 @@ export class Quaterion {
 		return this.x * this.x + this.y * this.y + this.z * this.z + this.w * this.w;
 	}
 
-	equals(quaterion: Quaterion | ReadonlyQuaterion) {
-		return this.x === quaterion.x && this.y === quaterion.y && this.z === quaterion.z && this.w === quaterion.w;
+	equals(Quaternion: Quaternion | ReadonlyQuaternion) {
+		return this.x === Quaternion.x && this.y === Quaternion.y && this.z === Quaternion.z && this.w === Quaternion.w;
 	}
 
 	set(x = 0, y = 0, z = 0, w = 0) {
@@ -116,10 +116,10 @@ export class Quaterion {
 	}
 
 	clone() {
-		return new Quaterion(this.x, this.y, this.z, this.w);
+		return new Quaternion(this.x, this.y, this.z, this.w);
 	}
 
-	copy(quaternion: Quaterion | ReadonlyQuaterion) {
+	copy(quaternion: Quaternion | ReadonlyQuaternion) {
 		this.x = quaternion.x;
 		this.y = quaternion.y;
 		this.z = quaternion.z;
@@ -155,19 +155,19 @@ export class Quaterion {
 		return this;
 	}
 
-	dot(quaterion: Quaterion | ReadonlyQuaterion) {
-		return this.x * quaterion.x + this.y * quaterion.y + this.z * quaterion.z + this.w * quaterion.w;
+	dot(Quaternion: Quaternion | ReadonlyQuaternion) {
+		return this.x * Quaternion.x + this.y * Quaternion.y + this.z * Quaternion.z + this.w * Quaternion.w;
 	}
 
-	multiply(quaterion: Quaterion | ReadonlyQuaterion) {
-		return this.multiplyQuaterions(this, quaterion);
+	multiply(Quaternion: Quaternion | ReadonlyQuaternion) {
+		return this.multiplyQuaternions(this, Quaternion);
 	}
 
-	premultiply(quaterion: Quaterion | ReadonlyQuaterion) {
-		return this.multiplyQuaterions(quaterion, this);
+	premultiply(Quaternion: Quaternion | ReadonlyQuaternion) {
+		return this.multiplyQuaternions(Quaternion, this);
 	}
 
-	multiplyQuaterions(a: Quaterion | ReadonlyQuaterion, b: Quaterion | ReadonlyQuaterion) {
+	multiplyQuaternions(a: Quaternion | ReadonlyQuaternion, b: Quaternion | ReadonlyQuaternion) {
 		const qax = a.x;
 		const qay = a.y;
 		const qaz = a.z;
@@ -183,16 +183,16 @@ export class Quaterion {
 		return this;
 	}
 
-	static readonly Identity: ReadonlyQuaterion = new Quaterion();
+	static readonly Identity: ReadonlyQuaternion = new Quaternion();
 }
 
-export type ReadonlyQuaterion = Pick<Quaterion, 'length' | 'lengthSquared' | 'equals' | 'clone' | 'dot'> & {
+export type ReadonlyQuaternion = Pick<Quaternion, 'length' | 'lengthSquared' | 'equals' | 'clone' | 'dot'> & {
 	readonly x: number;
 	readonly y: number;
 	readonly z: number;
 	readonly w: number;
 };
 
-Object.freeze(Quaterion.Identity);
+Object.freeze(Quaternion.Identity);
 
 import { Euler, RotationOrder, ReadonlyEuler } from './Euler'; // hack circular dependency

@@ -2,23 +2,16 @@ import { Matrix4 } from '../math/Matrix4';
 import { DEG2RAD } from '../math/util';
 
 export abstract class Camera {
-	public readonly projectionMatrix: Matrix4;
+	public readonly projectionMatrix: Matrix4 = new Matrix4();
+	public readonly projectionMatrixInverse: Matrix4 = new Matrix4();
 
-	constructor() {
-		this.projectionMatrix = new Matrix4();
-	}
+	constructor() {}
 
 	abstract updateProjectionMatrix(): void;
 }
 
 export class CameraPerspective extends Camera {
-	constructor(
-		public fov: number,
-		public aspect: number,
-		public near: number,
-		public far: number,
-		public zoom: number
-	) {
+	constructor(public fov: number, public aspect: number, public near: number, public far: number, public zoom: number) {
 		super();
 		this.updateProjectionMatrix();
 	}
@@ -30,14 +23,8 @@ export class CameraPerspective extends Camera {
 		const width = this.aspect * height;
 		const left = width * -0.5;
 
-		this.projectionMatrix.makePerspective(
-			left,
-			left + width,
-			top,
-			top - height,
-			near,
-			this.far
-		);
+		this.projectionMatrix.makePerspective(left, left + width, top, top - height, near, this.far);
+		this.projectionMatrixInverse.inverse(this.projectionMatrix);
 	}
 }
 
@@ -61,13 +48,7 @@ export class CameraOrthographic extends Camera {
 		const cx = (this.right + this.left) / 2;
 		const cy = (this.top + this.bottom) / 2;
 
-		this.projectionMatrix.makeOrthographic(
-			cx - dx,
-			cx + dx,
-			cy + dy,
-			cy - dy,
-			this.near,
-			this.far
-		);
+		this.projectionMatrix.makeOrthographic(cx - dx, cx + dx, cy + dy, cy - dy, this.near, this.far);
+		this.projectionMatrixInverse.inverse(this.projectionMatrix);
 	}
 }

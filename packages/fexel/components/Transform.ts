@@ -1,7 +1,7 @@
 import { Component, Entity } from '../Scene';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
 import { Vector3 } from '../math/Vector3';
-import { Quaterion, ReadonlyQuaterion } from '../math/Quaterion';
+import { Quaternion, ReadonlyQuaternion } from '../math/Quaternion';
 import { Mutable } from '../util/Mutable';
 import { Euler } from '../math/Euler';
 
@@ -10,7 +10,7 @@ export class TransformComponent extends Component {
 
 	public breakParentChain = false;
 
-	public readonly localQuaterion: ReadonlyQuaterion = new Quaterion();
+	public readonly localQuaternion: ReadonlyQuaternion = new Quaternion();
 	public readonly localMatrix: ReadonlyMatrix4 = new Matrix4();
 	public readonly worldMatrix: ReadonlyMatrix4 = new Matrix4();
 	public readonly parentTransform: TransformComponent | undefined;
@@ -30,10 +30,10 @@ export class TransformComponent extends Component {
 	}
 
 	update() {
-		(this.localQuaterion as Quaterion).setFromEuler(this.localRotation);
+		(this.localQuaternion as Quaternion).setFromEuler(this.localRotation);
 		(this.localMatrix as Matrix4).compose(
 			this.localPosition,
-			this.localQuaterion,
+			this.localQuaternion,
 			this.localScale
 		);
 

@@ -5,10 +5,12 @@
 		"@fexel/box2d": "*",
 		"@konstellio/disposable": "^0.3.3",
 		"@konstellio/eventemitter": "^0.3.3",
+		"cannon": "^0.6.2",
 		"reflect-metadata": "^0.1.13"
 	},
 	"devDependencies": {
-		"@types/chai": "4.1.3",
+		"@types/cannon": "^0.1.2",
+		"@types/chai": "^4.1.3",
 		"@types/mocha": "^5.2.7",
 		"@types/sharedworker": "^0.0.28",
 		"@types/webrtc": "^0.0.25",

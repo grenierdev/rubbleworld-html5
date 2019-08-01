@@ -1,6 +1,6 @@
 import { clamp } from './util';
 import { Matrix4, ReadonlyMatrix4 } from './Matrix4';
-import { Quaterion, ReadonlyQuaterion } from './Quaterion';
+import { Quaternion, ReadonlyQuaternion } from './Quaternion';
 import { Matrix3, ReadonlyMatrix3 } from './Matrix3';
 
 export class Vector3 {
@@ -265,14 +265,14 @@ export class Vector3 {
 		return this;
 	}
 
-	applyQuaternion(quaterion: Quaterion | ReadonlyQuaterion) {
+	applyQuaternion(Quaternion: Quaternion | ReadonlyQuaternion) {
 		const x = this.x;
 		const y = this.y;
 		const z = this.z;
-		const qx = quaterion.x;
-		const qy = quaterion.y;
-		const qz = quaterion.z;
-		const qw = quaterion.w;
+		const qx = Quaternion.x;
+		const qy = Quaternion.y;
+		const qz = Quaternion.z;
+		const qw = Quaternion.w;
 
 		const ix = qw * x + qy * z - qz * y;
 		const iy = qw * y + qz * x - qx * z;

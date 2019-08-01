@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { Scene, Entity } from '../Scene';
 import { TransformComponent, EmptyPrefab } from './Transform';
 import { Vector3 } from '../math/Vector3';
-import { Quaterion } from '../math/Quaterion';
+import { Quaternion } from '../math/Quaternion';
 import { Matrix4 } from '../math/Matrix4';
 import { DEG2RAD } from '../math/util';
 import { Euler } from '../math/Euler';
@@ -18,7 +18,7 @@ describe('TransformComponent', () => {
 			A.localMatrix.equals(
 				new Matrix4().compose(
 					Vector3.Zero,
-					Quaterion.Identity,
+					Quaternion.Identity,
 					Vector3.One
 				)
 			)
@@ -29,7 +29,7 @@ describe('TransformComponent', () => {
 		const scene = new Scene([], [new Entity('A', [A])]);
 
 		const pos = new Vector3();
-		const rot = new Quaterion();
+		const rot = new Quaternion();
 		const sca = new Vector3();
 
 		A.localMatrix.decompose(pos, rot, sca);
@@ -56,7 +56,7 @@ describe('TransformComponent', () => {
 		const scene = new Scene([], [new Entity('A', [A], [new Entity('B', [B])])]);
 
 		const pos = new Vector3();
-		const rot = new Quaterion();
+		const rot = new Quaternion();
 		const sca = new Vector3();
 
 		A.localPosition.x = 10;
@@ -84,7 +84,7 @@ describe('TransformComponent', () => {
 		const scene = new Scene([], [new Entity('A', [A], [new Entity('B', [], [new Entity('C', [C])])])]);
 
 		const pos = new Vector3();
-		const rot = new Quaterion();
+		const rot = new Quaternion();
 		const sca = new Vector3();
 
 		A.localPosition.x = 10;

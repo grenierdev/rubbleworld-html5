@@ -135,8 +135,8 @@ export class Euler {
 		return this;
 	}
 
-	setFromQuaternion(quaterion: Quaterion | ReadonlyQuaterion, order = this.order) {
-		m0.makeRotationFromQuaternion(quaterion);
+	setFromQuaternion(Quaternion: Quaternion | ReadonlyQuaternion, order = this.order) {
+		m0.makeRotationFromQuaternion(Quaternion);
 		return this.setFromRotationMatrix(m0, order);
 	}
 
@@ -161,7 +161,7 @@ export type ReadonlyEuler = Pick<Euler, 'equals' | 'clone'> & {
 
 Object.freeze(Euler.Zero);
 
-import { Quaterion, ReadonlyQuaterion } from './Quaterion'; // hack circular dependency
+import { Quaternion, ReadonlyQuaternion } from './Quaternion'; // hack circular dependency
 
 const m0 = new Matrix4();
-const q0 = new Quaterion();
+const q0 = new Quaternion();

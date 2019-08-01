@@ -1,5 +1,5 @@
 {
-	"name": "physics2-stack",
+	"name": "physics3-stack",
 	"private": true,
 	"version": "0.0.1",
 	"dependencies": {
@@ -15,7 +15,7 @@
 		"typescript": "^3.5.2"
 	},
 	"scripts": {
-		"start": "parcel ./src/index.html --port 8081 --log-level 4",
+		"start": "parcel ./src/index.html --port 8080 --log-level 4",
 		"build": "parcel build ./src/index.html --log-level 4 --public-url '/' --no-cache"
 	},
 	"browserslist": [
