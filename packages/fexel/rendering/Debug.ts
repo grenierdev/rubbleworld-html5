@@ -10,6 +10,7 @@ import { DEG2RAD } from '../math/util';
 import { Quaternion } from '../math/Quaternion';
 import { Euler } from '../math/Euler';
 import { Box3, ReadonlyBox3 } from '../math/Box3';
+import { Box2, ReadonlyBox2 } from '../math/Box2';
 
 type DebugPrimitive =
 	| DebugPrimitiveBase<'points', { count: number; positions: Float32Array; radius: Float32Array; colors: Float32Array }>
@@ -348,6 +349,36 @@ export class Debug {
 		this.drawCircle(Vector2.Zero, radius, ttl, color, m0);
 		m0.multiply(mry);
 		this.drawCircle(Vector2.Zero, radius, ttl, color, m0);
+	}
+
+	public drawBox2(
+		box: Box2 | ReadonlyBox2,
+		ttl: number = 0,
+		color: Color | ReadonlyColor = Color.White,
+		matrix: Matrix4 | ReadonlyMatrix4 = Matrix4.Identity
+	) {
+		const vertices: number[] = [];
+		const min = box.min;
+		const max = box.max;
+
+		v0.set(min.x, min.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, min.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(min.x, max.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, min.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+		v0.set(max.x, max.y, 0).applyMatrix4(matrix);
+		vertices.push(v0.x, v0.y, v0.z);
+
+		return this.drawPrimitiveLines(vertices, ttl, color);
 	}
 
 	public drawBox3(
