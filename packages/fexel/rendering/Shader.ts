@@ -1,5 +1,5 @@
 import { IDisposable } from '@konstellio/disposable';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 
 export enum ShaderType {
 	Vertex = WebGLRenderingContext.VERTEX_SHADER,

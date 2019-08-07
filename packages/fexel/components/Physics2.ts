@@ -1,5 +1,5 @@
 import { Component, Scene, FixedUpdateContext, UpdateContext } from '../Scene';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 import { EventEmitter } from 'events';
 import { TransformComponent } from './Transform';
 import { Vector2 } from '../math/Vector2';

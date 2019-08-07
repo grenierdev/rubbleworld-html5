@@ -1,5 +1,5 @@
 import { IDisposable } from '@konstellio/disposable';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 
 const LoadingImage = new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1);
 

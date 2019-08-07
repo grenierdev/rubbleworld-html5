@@ -1,6 +1,6 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Texture } from './Texture';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 
 export class RenderTarget implements IDisposable {
 	private disposed: boolean = false;

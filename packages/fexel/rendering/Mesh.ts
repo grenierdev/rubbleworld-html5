@@ -1,6 +1,6 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Material } from './Material';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 
 export interface IMesh {
 	updateBuffers(): void;

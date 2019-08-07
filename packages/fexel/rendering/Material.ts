@@ -3,7 +3,7 @@ import { VertexShader, FragmentShader } from './Shader';
 import { isArray as isarray } from 'util';
 import { Mesh } from './Mesh';
 import { Texture } from './Texture';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 
 function isArray<T>(value: any): value is T[] {
 	return isarray(value);

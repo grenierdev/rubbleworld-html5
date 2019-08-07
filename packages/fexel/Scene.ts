@@ -1,4 +1,4 @@
-import { Mutable } from './util/Mutable';
+import { Mutable } from './util/Immutable';
 import { Debug } from './rendering/Debug';
 
 export interface UpdateContext {

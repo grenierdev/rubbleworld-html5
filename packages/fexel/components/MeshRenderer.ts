@@ -2,7 +2,7 @@ import { Component } from '../Scene';
 import { IMesh } from '../rendering/Mesh';
 import { Material } from '../rendering/Material';
 import { TransformComponent } from './Transform';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
 import { RendererComponent, IDrawable } from './Renderer';
 

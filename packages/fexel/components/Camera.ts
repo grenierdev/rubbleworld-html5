@@ -1,7 +1,7 @@
 import { Component, Entity, UpdateContext } from '../Scene';
 import { Camera, CameraPerspective, CameraOrthographic } from '../rendering/Camera';
 import { TransformComponent } from './Transform';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 import { Vector3 } from '../math/Vector3';
 import { Box2 } from '../math/Box2';
 import { Euler } from '../math/Euler';

@@ -2,7 +2,7 @@ import { Component, Entity } from '../Scene';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
 import { Vector3 } from '../math/Vector3';
 import { Quaternion, ReadonlyQuaternion } from '../math/Quaternion';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 import { Euler } from '../math/Euler';
 
 export class TransformComponent extends Component {

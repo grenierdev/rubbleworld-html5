@@ -3,7 +3,7 @@ import { Component, UpdateContext, FixedUpdateContext, Scene } from '../Scene';
 import { Vector3, ReadonlyVector3 } from '../math/Vector3';
 import { EventEmitter } from '@konstellio/eventemitter';
 import { TransformComponent } from './Transform';
-import { Mutable } from '../util/Mutable';
+import { Mutable } from '../util/Immutable';
 import { smootherstep, lerp } from '../math/util';
 import { Euler, ReadonlyEuler } from '../math/Euler';
 import { Quaternion } from '../math/Quaternion';
