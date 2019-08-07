@@ -1,4 +1,4 @@
-import { Mutable } from './Mutable';
+import { Mutable } from './Immutable';
 import { isArray } from 'util';
 
 export abstract class ArrayManager<T = any, I = any> {
@@ -38,7 +38,7 @@ export abstract class ArrayManager<T = any, I = any> {
 					(block as Mutable<ArrayBlock>).size -= size;
 
 					if (this.head === block) {
-						(this as Mutable<ArrayManager<T, I>>).head = allocBlock;
+						(this.head as Mutable<ArrayBlock>) = allocBlock;
 					}
 					break;
 				}
@@ -130,7 +130,7 @@ export abstract class ArrayManager<T = any, I = any> {
 		}
 
 		if (head) {
-			(this as Mutable<ArrayManager<T, I>>).head = head;
+			(this.head as Mutable<ArrayBlock>) = head;
 		}
 
 		if (left) {
@@ -144,10 +144,10 @@ export abstract class ArrayManager<T = any, I = any> {
 					undefined
 				);
 				swapBlock(left, left.left, tail);
-				(this as Mutable<ArrayManager<T, I>>).tail = tail;
+				(this.tail as Mutable<ArrayBlock>) = tail;
 			} else {
 				swapBlock(left, left.left, undefined);
-				(this as Mutable<ArrayManager<T, I>>).tail = left;
+				(this.tail as Mutable<ArrayBlock>) = left;
 			}
 		}
 	}
@@ -192,7 +192,7 @@ export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
 			throw new SyntaxError(`ArrayVariableManager can not have a grow size of 0.`);
 		}
 
-		(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, Math.ceil(initialSize / growSize) * growSize);
+		(this.data as T) = this.resize(this.data, Math.ceil(initialSize / growSize) * growSize);
 	}
 
 	alloc(size: number): ArrayBlock<T, I>;
@@ -212,14 +212,14 @@ export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
 			const currentSize = this.tail.offset + this.tail.size;
 			const newSize = currentSize + Math.ceil(size / this.growSize) * this.growSize;
 
-			(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, newSize);
+			(this.data as T) = this.resize(this.data, newSize);
 
 			if (this.tail.freed) {
 				(this.tail as Mutable<ArrayBlock>).size = this.tail.size + (newSize - currentSize);
 			} else {
 				const tail = new ArrayBlock<T, I>(this, true, currentSize, newSize - currentSize, this.tail, undefined);
 				swapBlock(this.tail, this.tail.left, tail);
-				(this as Mutable<ArrayManager<T, I>>).tail = tail;
+				(this.tail as Mutable<ArrayBlock>) = tail;
 			}
 
 			if (items) {
@@ -233,9 +233,9 @@ export abstract class ArrayVariableManager<T, I> extends ArrayManager<T, I> {
 		if (this.tail.freed) {
 			if (this.tail.left) {
 				const newSize = Math.ceil(this.tail.offset / this.growSize) * this.growSize;
-				(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, newSize);
+				(this.data as T) = this.resize(this.data, newSize);
 			} else {
-				(this as Mutable<ArrayManager<T, I>>).data = this.resize(this.data, 0);
+				(this.data as T) = this.resize(this.data, 0);
 			}
 			(this.tail as Mutable<ArrayBlock>).size = 0;
 		}
