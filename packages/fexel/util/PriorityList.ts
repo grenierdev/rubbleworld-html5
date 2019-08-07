@@ -75,3 +75,5 @@ export class PriorityList<T> implements IDisposable {
 		}, initialValue);
 	}
 }
+
+export type ReadonlyPriorityList<T> = Omit<PriorityList<T>, 'dispose' | 'add' | 'remove'>;
