@@ -2,7 +2,7 @@ import { Curve2, Curve3 } from './Curve';
 import { Vector2 } from '../math/Vector2';
 import { Vector3 } from '../math/Vector3';
 
-export class CubicBezier2 extends Curve2 {
+export class CubicBezierCurve2 extends Curve2 {
 	constructor(
 		public v0 = new Vector2(),
 		public v1 = new Vector2(),
@@ -13,10 +13,10 @@ export class CubicBezier2 extends Curve2 {
 	}
 
 	clone() {
-		return new CubicBezier2(this.v0.clone(), this.v1.clone(), this.v2.clone(), this.v3.clone());
+		return new CubicBezierCurve2(this.v0.clone(), this.v1.clone(), this.v2.clone(), this.v3.clone());
 	}
 
-	copy(curve: CubicBezier2) {
+	copy(curve: CubicBezierCurve2) {
 		this.v0.copy(curve.v0);
 		this.v1.copy(curve.v1);
 		this.v2.copy(curve.v2);
@@ -33,7 +33,7 @@ export class CubicBezier2 extends Curve2 {
 	}
 }
 
-export class CubicBezier3 extends Curve3 {
+export class CubicBezierCurve3 extends Curve3 {
 	constructor(
 		public v0 = new Vector3(),
 		public v1 = new Vector3(),
@@ -44,10 +44,10 @@ export class CubicBezier3 extends Curve3 {
 	}
 
 	clone() {
-		return new CubicBezier3(this.v0.clone(), this.v1.clone(), this.v2.clone(), this.v3.clone());
+		return new CubicBezierCurve3(this.v0.clone(), this.v1.clone(), this.v2.clone(), this.v3.clone());
 	}
 
-	copy(curve: CubicBezier3) {
+	copy(curve: CubicBezierCurve3) {
 		this.v0.copy(curve.v0);
 		this.v1.copy(curve.v1);
 		this.v2.copy(curve.v2);

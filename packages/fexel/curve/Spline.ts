@@ -2,16 +2,16 @@ import { Curve2, Curve3 } from './Curve';
 import { Vector2 } from '../math/Vector2';
 import { Vector3 } from '../math/Vector3';
 
-export class Spline2 extends Curve2 {
+export class SplineCurve2 extends Curve2 {
 	constructor(public points: Vector2[] = []) {
 		super();
 	}
 
 	clone() {
-		return new Spline2(this.points.map(p => p.clone()));
+		return new SplineCurve2(this.points.map(p => p.clone()));
 	}
 
-	copy(curve: Spline2) {
+	copy(curve: SplineCurve2) {
 		this.points = curve.points.map(p => p.clone());
 		this.cacheArcLengths = [];
 		return this;
@@ -35,16 +35,16 @@ export class Spline2 extends Curve2 {
 	}
 }
 
-export class Spline3 extends Curve3 {
+export class SplineCurve3 extends Curve3 {
 	constructor(public points: Vector3[] = []) {
 		super();
 	}
 
 	clone() {
-		return new Spline3(this.points.map(p => p.clone()));
+		return new SplineCurve3(this.points.map(p => p.clone()));
 	}
 
-	copy(curve: Spline3) {
+	copy(curve: SplineCurve3) {
 		this.points = curve.points.map(p => p.clone());
 		this.cacheArcLengths = [];
 		return this;

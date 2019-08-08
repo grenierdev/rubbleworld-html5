@@ -8,7 +8,7 @@ export enum CatmullRomType {
 	Chordal,
 }
 
-export class CatmullRom2 extends Curve2 {
+export class CatmullRomCurve2 extends Curve2 {
 	constructor(
 		public points: Vector2[] = [],
 		public closed = false,
@@ -19,10 +19,10 @@ export class CatmullRom2 extends Curve2 {
 	}
 
 	clone() {
-		return new CatmullRom2(this.points.map(p => p.clone()), this.closed, this.type, this.tension);
+		return new CatmullRomCurve2(this.points.map(p => p.clone()), this.closed, this.type, this.tension);
 	}
 
-	copy(curve: CatmullRom2) {
+	copy(curve: CatmullRomCurve2) {
 		this.points = curve.points.map(p => p.clone());
 		this.closed = curve.closed;
 		this.type = curve.type;
@@ -82,7 +82,7 @@ export class CatmullRom2 extends Curve2 {
 	}
 }
 
-export class CatmullRom3 extends Curve3 {
+export class CatmullRomCurve3 extends Curve3 {
 	constructor(
 		public points: Vector3[] = [],
 		public closed = false,
@@ -93,10 +93,10 @@ export class CatmullRom3 extends Curve3 {
 	}
 
 	clone() {
-		return new CatmullRom3(this.points.map(p => p.clone()), this.closed, this.type, this.tension);
+		return new CatmullRomCurve3(this.points.map(p => p.clone()), this.closed, this.type, this.tension);
 	}
 
-	copy(curve: CatmullRom3) {
+	copy(curve: CatmullRomCurve3) {
 		this.points = curve.points.map(p => p.clone());
 		this.closed = curve.closed;
 		this.type = curve.type;

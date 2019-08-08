@@ -1,9 +1,9 @@
 import { Curve2, Curve3 } from './Curve';
 import { Vector2 } from '../math/Vector2';
-import { Line2, Line3 } from './Line';
+import { LineCurve2, LineCurve3 } from './Line';
 import { Vector3 } from '../math/Vector3';
 
-export class Path2 extends Curve2 {
+export class PathCurve2 extends Curve2 {
 	protected cacheLengths: number[] = [];
 
 	constructor(public curves: Curve2[] = [], public autoClose = false) {
@@ -27,10 +27,10 @@ export class Path2 extends Curve2 {
 	}
 
 	clone() {
-		return new Path2(this.curves.map(c => c.clone()));
+		return new PathCurve2(this.curves.map(c => c.clone()));
 	}
 
-	copy(path: Path2) {
+	copy(path: PathCurve2) {
 		this.curves = path.curves.map(c => c.clone());
 		this.cacheArcLengths = [];
 		return this;
@@ -46,7 +46,7 @@ export class Path2 extends Curve2 {
 		this.curves[0].getPoint(0, v20);
 		this.curves[this.curves.length - 1].getPoint(1, v21);
 		if (!v20.equals(v21)) {
-			return this.add(new Line2(v20, v21));
+			return this.add(new LineCurve2(v20, v21));
 		}
 		return this;
 	}
@@ -74,36 +74,26 @@ export class Path2 extends Curve2 {
 		return target;
 	}
 
-	getPoints(targets: Vector2[]) {
-		const l = this.autoClose ? targets.length - 1 : targets.length;
-
-		for (var i = 0; i < l; ++i) {
-			this.getPoint(i / l, targets[i]);
-		}
-
+	*getPoints(samples: number, target: Vector2) {
 		if (this.autoClose) {
-			targets[targets.length - 1] = targets[0];
+			yield* super.getPoints(samples - 1, target);
+			yield this.getPoint(0, target);
+		} else {
+			yield* super.getPoints(samples, target);
 		}
-
-		return targets;
 	}
 
-	getSpacedPoints(targets: Vector2[]) {
-		const l = this.autoClose ? targets.length - 1 : targets.length;
-
-		for (let i = 0; i < l; ++i) {
-			this.getPointAt(i / l, targets[i]);
-		}
-
+	*getSpacedPoints(samples: number, target: Vector2) {
 		if (this.autoClose) {
-			targets[targets.length - 1] = targets[0];
+			yield* super.getSpacedPoints(samples - 1, target);
+			yield this.getPointAt(0, target);
+		} else {
+			yield* super.getSpacedPoints(samples, target);
 		}
-
-		return targets;
 	}
 }
 
-export class Path3 extends Curve3 {
+export class PathCurve3 extends Curve3 {
 	protected cacheLengths: number[] = [];
 
 	constructor(public curves: Curve3[] = [], public autoClose = false) {
@@ -127,10 +117,10 @@ export class Path3 extends Curve3 {
 	}
 
 	clone() {
-		return new Path3(this.curves.map(c => c.clone()));
+		return new PathCurve3(this.curves.map(c => c.clone()));
 	}
 
-	copy(path: Path3) {
+	copy(path: PathCurve3) {
 		this.curves = path.curves.map(c => c.clone());
 		this.cacheArcLengths = [];
 		return this;
@@ -145,7 +135,7 @@ export class Path3 extends Curve3 {
 		this.curves[0].getPoint(0, v30);
 		this.curves[this.curves.length - 1].getPoint(1, v31);
 		if (!v30.equals(v31)) {
-			return this.add(new Line3(v30, v31));
+			return this.add(new LineCurve3(v30, v31));
 		}
 		return this;
 	}
@@ -173,32 +163,22 @@ export class Path3 extends Curve3 {
 		return target;
 	}
 
-	getPoints(targets: Vector3[]) {
-		const l = this.autoClose ? targets.length - 1 : targets.length;
-
-		for (var i = 0; i < l; ++i) {
-			this.getPoint(i / l, targets[i]);
-		}
-
+	*getPoints(samples: number, target: Vector3) {
 		if (this.autoClose) {
-			targets[targets.length - 1] = targets[0];
+			yield* super.getPoints(samples - 1, target);
+			yield this.getPoint(0, target);
+		} else {
+			yield* super.getPoints(samples, target);
 		}
-
-		return targets;
 	}
 
-	getSpacedPoints(targets: Vector3[]) {
-		const l = this.autoClose ? targets.length - 1 : targets.length;
-
-		for (let i = 0; i < l; ++i) {
-			this.getPointAt(i / l, targets[i]);
-		}
-
+	*getSpacedPoints(samples: number, target: Vector3) {
 		if (this.autoClose) {
-			targets[targets.length - 1] = targets[0];
+			yield* super.getSpacedPoints(samples - 1, target);
+			yield this.getPointAt(0, target);
+		} else {
+			yield* super.getSpacedPoints(samples, target);
 		}
-
-		return targets;
 	}
 }
 

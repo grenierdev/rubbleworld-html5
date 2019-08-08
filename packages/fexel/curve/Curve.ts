@@ -20,24 +20,16 @@ export abstract class Curve<V extends Vector2 | Vector3> {
 		return this.getPoint(t, target);
 	}
 
-	getPoints(targets: V[]) {
-		const l = targets.length;
-
-		for (var i = 0; i < l; ++i) {
-			this.getPoint(i / l, targets[i]);
+	*getPoints(samples: number, target: V) {
+		for (let i = 0; i < samples; ++i) {
+			yield this.getPoint(i / samples, target);
 		}
-
-		return targets;
 	}
 
-	getSpacedPoints(targets: V[]) {
-		const l = targets.length;
-
-		for (let i = 0; i < l; ++i) {
-			this.getPointAt(i / l, targets[i]);
+	*getSpacedPoints(samples: number, target: V) {
+		for (let i = 0; i < samples; ++i) {
+			yield this.getPointAt(i / samples, target);
 		}
-
-		return targets;
 	}
 
 	protected abstract getLengths(divisions?: number): number[];

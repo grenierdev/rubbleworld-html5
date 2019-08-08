@@ -2,16 +2,16 @@ import { Curve2, Curve3 } from './Curve';
 import { Vector2 } from '../math/Vector2';
 import { Vector3 } from '../math/Vector3';
 
-export class QuadraticBezier2 extends Curve2 {
+export class QuadraticBezierCurve2 extends Curve2 {
 	constructor(public v0 = new Vector2(), public v1 = new Vector2(), public v2 = new Vector2()) {
 		super();
 	}
 
 	clone() {
-		return new QuadraticBezier2(this.v0.clone(), this.v1.clone(), this.v2.clone());
+		return new QuadraticBezierCurve2(this.v0.clone(), this.v1.clone(), this.v2.clone());
 	}
 
-	copy(curve: QuadraticBezier2) {
+	copy(curve: QuadraticBezierCurve2) {
 		this.v0.copy(curve.v0);
 		this.v1.copy(curve.v1);
 		this.v2.copy(curve.v2);
@@ -27,16 +27,16 @@ export class QuadraticBezier2 extends Curve2 {
 	}
 }
 
-export class QuadraticBezier3 extends Curve3 {
+export class QuadraticBezierCurve3 extends Curve3 {
 	constructor(public v0 = new Vector3(), public v1 = new Vector3(), public v2 = new Vector3()) {
 		super();
 	}
 
 	clone() {
-		return new QuadraticBezier3(this.v0.clone(), this.v1.clone(), this.v2.clone());
+		return new QuadraticBezierCurve3(this.v0.clone(), this.v1.clone(), this.v2.clone());
 	}
 
-	copy(curve: QuadraticBezier3) {
+	copy(curve: QuadraticBezierCurve3) {
 		this.v0.copy(curve.v0);
 		this.v1.copy(curve.v1);
 		this.v2.copy(curve.v2);
