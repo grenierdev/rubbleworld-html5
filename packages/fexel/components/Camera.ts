@@ -105,8 +105,16 @@ export interface CameraPerspectiveConstructor {
 }
 
 export class CameraPerspectiveComponent extends CameraComponent {
-	constructor({ fov, aspect, far, near, zoom }: CameraPerspectiveConstructor) {
-		super(new CameraPerspective(fov, aspect, near, far, zoom));
+	constructor({ fov, far, near, zoom }: Omit<CameraPerspectiveConstructor, 'aspect'>) {
+		super(new CameraPerspective(fov, 1.0, near, far, zoom));
+	}
+
+	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
+		if (this.enabled && this.entity && this.entity.enabled) {
+			(this.camera as CameraPerspective).aspect = width / height;
+			this.camera.updateProjectionMatrix();
+			super.render(width, height, drawables, context);
+		}
 	}
 }
 
@@ -137,7 +145,7 @@ export function CameraPerspectivePrefab({
 	position?: Vector3;
 	rotation?: Euler;
 	scale?: Vector3;
-	camera: CameraPerspectiveConstructor;
+	camera: Omit<CameraPerspectiveConstructor, 'aspect'>;
 }) {
 	return new Entity(name, [new TransformComponent(position, rotation, scale), new CameraPerspectiveComponent(camera)]);
 }

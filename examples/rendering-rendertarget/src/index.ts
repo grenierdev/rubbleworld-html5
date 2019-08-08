@@ -101,7 +101,6 @@ const cam1 = CameraPerspectivePrefab({
 	position: new Vector3(0, 0, -10),
 	camera: {
 		fov: 40,
-		aspect: canvasEl.width / canvasEl.height,
 		near: 0.1,
 		far: 100.0,
 		zoom: 2,
@@ -126,7 +125,6 @@ const cam2 = CameraPerspectivePrefab({
 	rotation: new Euler(0, 0, 45 * DEG2RAD),
 	camera: {
 		fov: 40,
-		aspect: canvasEl.width / canvasEl.height,
 		near: 0.1,
 		far: 100.0,
 		zoom: 2,
