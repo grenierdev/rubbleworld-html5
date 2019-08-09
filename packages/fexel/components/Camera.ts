@@ -10,13 +10,18 @@ import { Color } from '../math/Color';
 import { Matrix4 } from '../math/Matrix4';
 import { RenderTarget } from '../rendering/RenderTarget';
 import { RendererComponent, IRenderable, IDrawable } from './Renderer';
-import { MeshRendererComponent } from './MeshRenderer';
 import { PriorityList } from '../util/PriorityList';
+import { Material } from '../rendering/Material';
+import { Mesh } from '../rendering/Mesh';
 
 export enum Clear {
 	Nothing = 0,
 	Background = WebGLRenderingContext.COLOR_BUFFER_BIT,
 	Depth = WebGLRenderingContext.DEPTH_BUFFER_BIT,
+}
+
+export class CameraEffect {
+	constructor(public material: Material, public buffer: RenderTarget) {}
 }
 
 export abstract class CameraComponent extends Component implements IRenderable {
@@ -28,7 +33,14 @@ export abstract class CameraComponent extends Component implements IRenderable {
 	public backgroundColor: Color = Color.Black.clone();
 	public clear: Clear = Clear.Background | Clear.Depth;
 	public showDebug: boolean = false;
+	public effects: CameraEffect[] = [];
 	public renderTarget?: RenderTarget;
+
+	protected effectMesh = new Mesh({
+		vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
+		indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
+		uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
+	});
 
 	constructor(public readonly camera: Camera, public visibilityFlag: number = 0xff) {
 		super();
@@ -54,44 +66,88 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		if (this.enabled && this.entity && this.entity.enabled) {
 			const gl = context.gl!;
 
-			gl.enable(gl.SCISSOR_TEST);
-			if (this.renderTarget) {
-				this.renderTarget.bind(gl);
-				gl.viewport(0, 0, this.renderTarget.width, this.renderTarget.height);
-				gl.scissor(0, 0, this.renderTarget.width, this.renderTarget.height);
+			if (this.effects.length) {
+				const firstEffect = this.effects[0];
+
+				firstEffect.buffer.bind(gl);
+				gl.enable(gl.SCISSOR_TEST);
+				gl.viewport(0, 0, firstEffect.buffer.width, firstEffect.buffer.height);
+				gl.scissor(0, 0, firstEffect.buffer.width, firstEffect.buffer.height);
+				this.drawScene(drawables, context);
+
+				for (let i = 0, l = this.effects.length; i < l; ++i) {
+					const { buffer, material } = this.effects[i];
+
+					const nextBuffer = i + 1 >= l ? null : this.effects[i + 1].buffer;
+					if (nextBuffer) {
+						nextBuffer.bind(gl);
+					} else {
+						this.setupViewport(width, height, context);
+					}
+
+					material.setUniform('sampler', buffer.texture);
+					material.bind(gl);
+					this.effectMesh.draw(gl);
+				}
+
+				this.drawDebug(context);
 			} else {
-				gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-				gl.viewport(
-					this.viewport.min.x * width,
-					this.viewport.min.y * height,
-					(this.viewport.max.x - this.viewport.min.x) * width,
-					(this.viewport.max.y - this.viewport.min.y) * height
-				);
-				gl.scissor(
-					this.viewport.min.x * width,
-					this.viewport.min.y * height,
-					(this.viewport.max.x - this.viewport.min.x) * width,
-					(this.viewport.max.y - this.viewport.min.y) * height
-				);
+				this.setupViewport(width, height, context);
+				this.drawScene(drawables, context);
+				this.drawDebug(context);
 			}
+		}
+	}
 
-			if (this.clear) {
-				gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
-				gl.clear(this.clear);
-			}
+	protected setupViewport(width: number, height: number, context: UpdateContext) {
+		const gl = context.gl!;
+		gl.enable(gl.SCISSOR_TEST);
+		if (this.renderTarget) {
+			this.renderTarget.bind(gl);
+			gl.viewport(0, 0, this.renderTarget.width, this.renderTarget.height);
+			gl.scissor(0, 0, this.renderTarget.width, this.renderTarget.height);
+		} else {
+			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+			gl.viewport(
+				this.viewport.min.x * width,
+				this.viewport.min.y * height,
+				(this.viewport.max.x - this.viewport.min.x) * width,
+				(this.viewport.max.y - this.viewport.min.y) * height
+			);
+			gl.scissor(
+				this.viewport.min.x * width,
+				this.viewport.min.y * height,
+				(this.viewport.max.x - this.viewport.min.x) * width,
+				(this.viewport.max.y - this.viewport.min.y) * height
+			);
+		}
+	}
 
-			gl.enable(gl.CULL_FACE);
-			gl.enable(gl.DEPTH_TEST);
+	protected drawScene(drawables: PriorityList<IDrawable>, context: UpdateContext) {
+		const gl = context.gl!;
+		const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
+		const projectionMatrix = this.camera.projectionMatrix;
+		const visibilityFlag = this.visibilityFlag;
 
-			const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
-			const projectionMatrix = this.camera.projectionMatrix;
-			const visibilityFlag = this.visibilityFlag;
-			for (const [drawer] of drawables) {
-				drawer.draw(gl, viewMatrix, projectionMatrix, visibilityFlag);
-			}
-			if (this.showDebug && context.debug) {
-				context.debug.draw(viewMatrix, projectionMatrix, gl);
-			}
+		if (this.clear) {
+			gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
+			gl.clear(this.clear);
+		}
+
+		gl.enable(gl.CULL_FACE);
+		gl.enable(gl.DEPTH_TEST);
+		for (const [drawer] of drawables) {
+			drawer.draw(gl, viewMatrix, projectionMatrix, visibilityFlag);
+		}
+	}
+
+	protected drawDebug(context: UpdateContext) {
+		const gl = context.gl!;
+		const viewMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
+		const projectionMatrix = this.camera.projectionMatrix;
+
+		if (this.showDebug && context.debug) {
+			context.debug.draw(viewMatrix, projectionMatrix, gl);
 		}
 	}
 }
