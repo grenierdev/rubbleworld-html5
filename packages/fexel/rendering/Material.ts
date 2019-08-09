@@ -254,12 +254,12 @@ export class Material implements IDisposable {
 	updateUniforms() {
 		if (this.gl) {
 			for (const [name, uniform] of this.uniforms) {
-				this.updateUniform(uniform);
+				this.updateUniform(name, uniform);
 			}
 		}
 	}
 
-	protected updateUniform(uniform: Uniform) {
+	protected updateUniform(name: string, uniform: Uniform) {
 		if (this.gl) {
 			const gl = this.gl;
 			switch (uniform.type) {
