@@ -81,6 +81,8 @@ export abstract class CameraComponent extends Component implements IRenderable {
 					const nextBuffer = i + 1 >= l ? null : this.effects[i + 1].buffer;
 					if (nextBuffer) {
 						nextBuffer.bind(gl);
+						gl.viewport(0, 0, nextBuffer.width, nextBuffer.height);
+						gl.scissor(0, 0, nextBuffer.width, nextBuffer.height);
 					} else {
 						this.setupViewport(width, height, context);
 					}
