@@ -227,7 +227,7 @@ export class RenderableEngine extends Engine {
 		});
 
 		if (this.debug) {
-			this.debug.update(deltaTime);
+			this.debug.update(deltaTime / 1000);
 		}
 
 		if (this.stats) {
