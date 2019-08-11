@@ -1,4 +1,4 @@
-import { clamp } from './util';
+import { clamp, NumberArray } from './util';
 import { Matrix3, ReadonlyMatrix3 } from './Matrix3';
 
 export class Vector2 {
@@ -212,6 +212,20 @@ export class Vector2 {
 		return this;
 	}
 
+	static mutateArray(data: NumberArray, mutator: (vertor: Vector2) => void, offset = 0, length?: number) {
+		length = length || data.length;
+		if (length % 2 !== 0) {
+			throw RangeError(`Vector2.mutateArray expected data of multiple of 2, got ${length}.`);
+		}
+
+		for (let i = offset, l = offset + length; i < l; i += 2) {
+			mutable.set(data[i + 0], data[i + 1]);
+			mutator(mutable);
+			data[i + 0] = mutable.x;
+			data[i + 1] = mutable.y;
+		}
+	}
+
 	static readonly One: ReadonlyVector2 = new Vector2(1, 1);
 	static readonly Zero: ReadonlyVector2 = new Vector2(0, 0);
 	static readonly Right: ReadonlyVector2 = new Vector2(1, 0);
@@ -240,3 +254,4 @@ Object.freeze(Vector2.Right);
 Object.freeze(Vector2.Up);
 
 const tmp = new Vector2();
+const mutable = new Vector2();

@@ -1,4 +1,3 @@
-import { Matrix4, ReadonlyMatrix4 } from './Matrix4';
 import { clamp } from './util';
 import { Vector3, ReadonlyVector3 } from './Vector3';
 
@@ -161,6 +160,7 @@ export type ReadonlyEuler = Pick<Euler, 'equals' | 'clone'> & {
 
 Object.freeze(Euler.Zero);
 
+import { Matrix4, ReadonlyMatrix4 } from './Matrix4'; // hack circular dependency
 import { Quaternion, ReadonlyQuaternion } from './Quaternion'; // hack circular dependency
 
 const m0 = new Matrix4();

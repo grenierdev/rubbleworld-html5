@@ -1,5 +1,4 @@
 import { Vector3, ReadonlyVector3 } from './Vector3';
-import { Quaternion, ReadonlyQuaternion } from './Quaternion';
 
 export class Matrix4 {
 	public elements: number[];
@@ -458,72 +457,96 @@ export class Matrix4 {
 		scale.z = sz;
 	}
 
-	makeTranslation(x: number, y: number, z: number) {
-		return this.set(1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1);
-	}
+	// makeTranslation(x: number, y: number, z: number) {
+	// 	return this.set(1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1);
+	// }
 
-	makeRotationX(theta: number) {
-		const c = Math.cos(theta);
-		const s = Math.sin(theta);
-		return this.set(1, 0, 0, 0, 0, c, -s, 0, 0, s, c, 0, 0, 0, 0, 1);
-	}
+	// makeRotationX(theta: number) {
+	// 	const c = Math.cos(theta);
+	// 	const s = Math.sin(theta);
+	// 	return this.set(1, 0, 0, 0, 0, c, -s, 0, 0, s, c, 0, 0, 0, 0, 1);
+	// }
 
-	makeRotationY(theta: number) {
-		const c = Math.cos(theta);
-		const s = Math.sin(theta);
-		return this.set(c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0, 0, 0, 0, 1);
-	}
+	// makeRotationY(theta: number) {
+	// 	const c = Math.cos(theta);
+	// 	const s = Math.sin(theta);
+	// 	return this.set(c, 0, s, 0, 0, 1, 0, 0, -s, 0, c, 0, 0, 0, 0, 1);
+	// }
 
-	makeRotationZ(theta: number) {
-		const c = Math.cos(theta);
-		const s = Math.sin(theta);
-		return this.set(c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-	}
+	// makeRotationZ(theta: number) {
+	// 	const c = Math.cos(theta);
+	// 	const s = Math.sin(theta);
+	// 	return this.set(c, -s, 0, 0, s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+	// }
 
-	makeRotationAxis(axis: Vector3 | ReadonlyVector3, angle: number) {
-		const c = Math.cos(angle);
-		const s = Math.sin(angle);
-		const t = 1 - c;
-		const x = axis.x;
-		const y = axis.y;
-		const z = axis.z;
-		const tx = t * x;
-		const ty = t * y;
-		return this.set(
-			tx * x + c,
-			tx * y - s * z,
-			tx * z + s * y,
-			0,
-			tx * y + s * z,
-			ty * y + c,
-			ty * z - s * x,
-			0,
-			tx * z - s * y,
-			ty * z + s * x,
-			t * z * z + c,
-			0,
-			0,
-			0,
-			0,
-			1
-		);
-	}
+	// makeRotationAxis(axis: Vector3 | ReadonlyVector3, angle: number) {
+	// 	const c = Math.cos(angle);
+	// 	const s = Math.sin(angle);
+	// 	const t = 1 - c;
+	// 	const x = axis.x;
+	// 	const y = axis.y;
+	// 	const z = axis.z;
+	// 	const tx = t * x;
+	// 	const ty = t * y;
+	// 	return this.set(
+	// 		tx * x + c,
+	// 		tx * y - s * z,
+	// 		tx * z + s * y,
+	// 		0,
+	// 		tx * y + s * z,
+	// 		ty * y + c,
+	// 		ty * z - s * x,
+	// 		0,
+	// 		tx * z - s * y,
+	// 		ty * z + s * x,
+	// 		t * z * z + c,
+	// 		0,
+	// 		0,
+	// 		0,
+	// 		0,
+	// 		1
+	// 	);
+	// }
 
-	makeRotationFromQuaternion(Quaternion: Quaternion | ReadonlyQuaternion) {
+	makeTranslationFromVector3(vector: Vector3 | ReadonlyVector3) {
 		return this.compose(
-			Vector3.Zero,
-			Quaternion,
+			vector,
+			Quaternion.Identity,
 			Vector3.One
 		);
 	}
 
-	makeScale(x: number, y: number, z: number) {
-		return this.set(x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1);
+	makeRotationFromQuaternion(quaternion: Quaternion | ReadonlyQuaternion) {
+		return this.compose(
+			Vector3.Zero,
+			quaternion,
+			Vector3.One
+		);
 	}
 
-	makeShear(x: number, y: number, z: number) {
-		return this.set(1, y, z, 0, x, 1, z, 0, x, y, 1, 0, 0, 0, 0, 1);
+	makeRotationFromEuler(euler: Euler | ReadonlyEuler) {
+		return this.compose(
+			Vector3.Zero,
+			tq0.setFromEuler(euler),
+			Vector3.One
+		);
 	}
+
+	makeScaleFromVector3(vector: Vector3 | ReadonlyVector3) {
+		return this.compose(
+			Vector3.Zero,
+			Quaternion.Identity,
+			vector
+		);
+	}
+
+	// makeScale(x: number, y: number, z: number) {
+	// 	return this.set(x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1);
+	// }
+
+	// makeShear(x: number, y: number, z: number) {
+	// 	return this.set(1, y, z, 0, x, 1, z, 0, x, y, 1, 0, 0, 0, 0, 1);
+	// }
 
 	makePerspective(left: number, right: number, top: number, bottom: number, near: number, far: number) {
 		const te = this.elements;
@@ -624,7 +647,11 @@ export type ReadonlyMatrix4 = Pick<Matrix4, 'equals' | 'clone' | 'determinant' |
 
 Object.freeze(Matrix4.Identity);
 
+import { Quaternion, ReadonlyQuaternion } from './Quaternion'; // hack circular dependency
+import { Euler, ReadonlyEuler } from './Euler'; // hack circular dependency
+
 const tv0 = new Vector3();
 const tv1 = new Vector3();
 const tv2 = new Vector3();
 const tm0 = new Matrix4();
+const tq0 = new Quaternion();

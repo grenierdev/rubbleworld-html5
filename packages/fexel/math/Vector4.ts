@@ -1,4 +1,4 @@
-import { clamp } from './util';
+import { clamp, NumberArray } from './util';
 import { Matrix4, ReadonlyMatrix4 } from './Matrix4';
 
 export class Vector4 {
@@ -277,6 +277,22 @@ export class Vector4 {
 
 		return this;
 	}
+
+	static mutateArray(data: NumberArray, mutator: (vertor: Vector4) => void, offset = 0, length?: number) {
+		length = length || data.length;
+		if (length % 4 !== 0) {
+			throw RangeError(`Vector4.mutateArray expected data of multiple of 4, got ${length}.`);
+		}
+
+		for (let i = offset, l = offset + length; i < l; i += 4) {
+			mutable.set(data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
+			mutator(mutable);
+			data[i + 0] = mutable.x;
+			data[i + 1] = mutable.y;
+			data[i + 2] = mutable.z;
+			data[i + 3] = mutable.w;
+		}
+	}
 }
 
 export type ReadonlyVector4 = Pick<
@@ -294,3 +310,4 @@ export type ReadonlyVector4 = Pick<
 > & { readonly x: number; readonly y: number; readonly z: number; readonly w: number };
 
 const tmp = new Vector4();
+const mutable = new Vector4();
