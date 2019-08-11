@@ -1,3 +1,8 @@
+export interface NumberArray {
+	length: number;
+	[idx: number]: number;
+}
+
 export const DEG2RAD = Math.PI / 180;
 export const RAD2DEG = 180 / Math.PI;
 
@@ -12,13 +17,7 @@ export function euclideanModulo(n: number, m: number) {
 	return ((n % m) + m) % m;
 }
 
-export function mapLinear(
-	a1: number,
-	a2: number,
-	b1: number,
-	b2: number,
-	t: number
-) {
+export function mapLinear(a1: number, a2: number, b1: number, b2: number, t: number) {
 	return b1 + ((t - a1) * (b2 - b1)) / (a2 - a1);
 }
 
