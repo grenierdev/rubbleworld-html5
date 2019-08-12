@@ -6,6 +6,7 @@
 		"@konstellio/disposable": "^0.3.3",
 		"@konstellio/eventemitter": "^0.3.3",
 		"cannon": "^0.6.2",
+		"lodash.set": "^4.3.2",
 		"reflect-metadata": "^0.1.13"
 	},
 	"devDependencies": {

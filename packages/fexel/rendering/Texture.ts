@@ -24,6 +24,8 @@ export enum TextureFormat {
 	LUMINANCE_ALPHA = WebGLRenderingContext.LUMINANCE_ALPHA,
 	LUMINANCE = WebGLRenderingContext.LUMINANCE,
 	ALPHA = WebGLRenderingContext.ALPHA,
+	DEPTH_COMPONENT = WebGLRenderingContext.DEPTH_COMPONENT,
+	DEPTH_COMPONENT16 = WebGLRenderingContext.DEPTH_COMPONENT16,
 }
 
 export enum TextureType {
@@ -57,6 +59,7 @@ export class Texture implements IDisposable {
 	public readonly height?: number;
 	public readonly wrap = TextureWrap.CLAMP_TO_EDGE;
 	public readonly filter = TextureFilter.NEAREST_MIPMAP_LINEAR;
+	public readonly internalFormat = TextureFormat.RGBA;
 	public readonly format = TextureFormat.RGBA;
 	public readonly type = WebGLRenderingContext.UNSIGNED_BYTE;
 
@@ -65,6 +68,7 @@ export class Texture implements IDisposable {
 		height,
 		wrap,
 		filter,
+		internalFormat,
 		format,
 		type,
 	}: {
@@ -72,6 +76,7 @@ export class Texture implements IDisposable {
 		height: number;
 		wrap?: TextureWrap;
 		filter?: TextureFilter;
+		internalFormat?: TextureFormat;
 		format?: TextureFormat;
 		type?: TextureType;
 	});
@@ -79,12 +84,14 @@ export class Texture implements IDisposable {
 		data,
 		wrap,
 		filter,
+		internalFormat,
 		format,
 		type,
 	}: {
 		data: HTMLImageElement | ImageData | ImageBitmap;
 		wrap?: TextureWrap;
 		filter?: TextureFilter;
+		internalFormat?: TextureFormat;
 		format?: TextureFormat;
 		type?: TextureType;
 	});
@@ -94,6 +101,7 @@ export class Texture implements IDisposable {
 		height,
 		wrap,
 		filter,
+		internalFormat,
 		format,
 		type,
 	}: {
@@ -102,6 +110,7 @@ export class Texture implements IDisposable {
 		height?: number;
 		wrap?: TextureWrap;
 		filter?: TextureFilter;
+		internalFormat?: TextureFormat;
 		format?: TextureFormat;
 		type?: TextureType;
 	}) {
@@ -110,6 +119,7 @@ export class Texture implements IDisposable {
 		this.height = height;
 		this.wrap = wrap || TextureWrap.CLAMP_TO_EDGE;
 		this.filter = filter || TextureFilter.LINEAR;
+		this.internalFormat = internalFormat || TextureFormat.RGBA;
 		this.format = format || TextureFormat.RGBA;
 		this.type = type || TextureType.UNSIGNED_BYTE;
 	}
@@ -131,15 +141,15 @@ export class Texture implements IDisposable {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.filter);
 
 		if (this.data instanceof HTMLImageElement && this.data.complete === false) {
-			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, LoadingImage);
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.format, this.type, LoadingImage);
 			this.data.onload = () => {
 				gl.bindTexture(gl.TEXTURE_2D, this.texture!);
-				gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, this.data!);
+				gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.format, this.type, this.data!);
 			};
 		} else if (this.data) {
-			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.format, this.type, this.data);
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.format, this.type, this.data);
 		} else if (this.width && this.height) {
-			gl.texImage2D(gl.TEXTURE_2D, 0, this.format, this.width, this.height, 0, this.format, this.type, null);
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.width, this.height, 0, this.format, this.type, null);
 		}
 
 		gl.generateMipmap(gl.TEXTURE_2D);

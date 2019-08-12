@@ -1,30 +1,30 @@
 import { IDisposable } from '@konstellio/disposable';
 import { VertexShader, FragmentShader } from './Shader';
-import { isArray as isarray } from 'util';
+import { isArray as isarray, isNull } from 'util';
 import { Mesh } from './Mesh';
 import { Texture } from './Texture';
 import { Mutable } from '../util/Immutable';
+import setPath from 'lodash.set';
 
 function isArray<T>(value: any): value is T[] {
 	return isarray(value);
 }
 
 export enum Type {
-	Int = 'int',
-	Float = 'float',
-	IVec2 = 'ivec2',
-	IVec3 = 'ivec3',
-	IVec4 = 'ivec4',
-	Vec2 = 'vec2',
-	Vec3 = 'vec3',
-	Vec4 = 'vec4',
-	Mat2 = 'mat2',
-	Mat3 = 'mat3',
-	Mat4 = 'mat4',
-	Sampler = 'sampler',
-	Sampler2D = 'sampler2d',
-	SamplerCube = 'samplercube',
-	Unknown = 'unknown',
+	Int = WebGLRenderingContext.INT,
+	Float = WebGLRenderingContext.FLOAT,
+	IVec2 = WebGLRenderingContext.INT_VEC2,
+	IVec3 = WebGLRenderingContext.INT_VEC3,
+	IVec4 = WebGLRenderingContext.INT_VEC4,
+	Vec2 = WebGLRenderingContext.FLOAT_VEC2,
+	Vec3 = WebGLRenderingContext.FLOAT_VEC3,
+	Vec4 = WebGLRenderingContext.FLOAT_VEC4,
+	Mat2 = WebGLRenderingContext.FLOAT_MAT2,
+	Mat3 = WebGLRenderingContext.FLOAT_MAT3,
+	Mat4 = WebGLRenderingContext.FLOAT_MAT4,
+	Sampler = WebGLRenderingContext.SAMPLER_2D,
+	Sampler2D = WebGLRenderingContext.SAMPLER_2D,
+	SamplerCube = WebGLRenderingContext.SAMPLER_CUBE,
 }
 
 export interface Attribute {
@@ -32,74 +32,60 @@ export interface Attribute {
 	type: Type;
 }
 
-export interface UniformBase<T, V> {
-	location: WebGLUniformLocation;
-	type: T;
-	value: undefined | V;
-}
+export type AttributeStruct = { [key: string]: Attribute };
 
-export interface UniformMatrixBase<T, V> {
+export interface UniformBase {
+	type: Type;
 	location: WebGLUniformLocation;
-	type: T;
-	value: undefined | V;
-	transpose?: boolean;
-}
-
-export interface UniformSamplerBase<T, V> {
-	location: WebGLUniformLocation;
-	type: T;
-	value: undefined | V;
+	value?: number | number[] | Texture;
 	slot?: number;
 }
 
-export type UniformUnknown = UniformBase<Type.Unknown, any>;
-export type UniformInt = UniformBase<Type.Int, number | number[]>;
-export type UniformFloat = UniformBase<Type.Float, number | number[]>;
-export type UniformIVec2 = UniformBase<Type.IVec2, number[]>;
-export type UniformIVec3 = UniformBase<Type.IVec3, number[]>;
-export type UniformIVec4 = UniformBase<Type.IVec4, number[]>;
-export type UniformVec2 = UniformBase<Type.Vec2, number[]>;
-export type UniformVec3 = UniformBase<Type.Vec3, number[]>;
-export type UniformVec4 = UniformBase<Type.Vec4, number[]>;
-export type UniformMat2 = UniformMatrixBase<Type.Mat2, number[]>;
-export type UniformMat3 = UniformMatrixBase<Type.Mat3, number[]>;
-export type UniformMat4 = UniformMatrixBase<Type.Mat4, number[]>;
-export type UniformSampler = UniformSamplerBase<Type.Sampler, Texture>;
-export type UniformSampler2D = UniformSamplerBase<Type.Sampler2D, Texture>;
-export type UniformSamplerCube = UniformSamplerBase<Type.SamplerCube, Texture>;
+export type UniformStruct = { [key: string]: Uniform };
 
-export type Uniform =
-	| UniformUnknown
-	| UniformInt
-	| UniformFloat
-	| UniformIVec2
-	| UniformIVec3
-	| UniformIVec4
-	| UniformVec2
-	| UniformVec3
-	| UniformVec4
-	| UniformMat2
-	| UniformMat3
-	| UniformMat4
-	| UniformSampler
-	| UniformSampler2D
-	| UniformSamplerCube;
+export type Uniform = UniformBase | UniformBase[] | UniformStruct;
 
-const attrRegex = /attribute\s+([^\s]+)\s+([^\s;]+);/gi;
-const uniformRegex = /uniform\s+([^\s]+)\s+([^\s;]+);/gi;
-const structRegex = /struct\s+([^\s]+)\s+\{([^}]*)\};/gi;
-const varRegex = /\s*([^\s]+)\s+([^\s;]+);/gi;
-
-function isSampler(type: string): boolean {
-	return type === 'sampler' || type === 'sampler2d' || type === 'samplercube';
+function isUniformBase(uniform: any): uniform is UniformBase {
+	return typeof uniform.type === 'number' && uniform.location instanceof WebGLUniformLocation;
 }
 
-export enum MaterialQueue {
-	Background = 1000,
-	Geometry = 2000,
-	AlphaTest = 2450,
-	Transparent = 3000,
-	Overlay = 4000,
+function isSampler(type: number): boolean {
+	return type === Type.Sampler || type === Type.Sampler2D || type === Type.SamplerCube;
+}
+
+export enum MaterialSide {
+	FRONT = WebGLRenderingContext.FRONT,
+	BACK = WebGLRenderingContext.BACK,
+	BOTH = WebGLRenderingContext.FRONT_AND_BACK,
+}
+
+export enum MaterialBlend {
+	ZERO = WebGLRenderingContext.ZERO,
+	ONE = WebGLRenderingContext.ONE,
+	SRC_COLOR = WebGLRenderingContext.SRC_COLOR,
+	ONE_MINUS_SRC_COLOR = WebGLRenderingContext.ONE_MINUS_SRC_COLOR,
+	DST_COLOR = WebGLRenderingContext.DST_COLOR,
+	ONE_MINUS_DST_COLOR = WebGLRenderingContext.ONE_MINUS_DST_COLOR,
+	SRC_ALPHA = WebGLRenderingContext.SRC_ALPHA,
+	ONE_MINUS_SRC_ALPHA = WebGLRenderingContext.ONE_MINUS_SRC_ALPHA,
+	DST_ALPHA = WebGLRenderingContext.DST_ALPHA,
+	ONE_MINUS_DST_ALPHA = WebGLRenderingContext.ONE_MINUS_DST_ALPHA,
+	CONSTANT_COLOR = WebGLRenderingContext.CONSTANT_COLOR,
+	ONE_MINUS_CONSTANT_COLOR = WebGLRenderingContext.ONE_MINUS_CONSTANT_COLOR,
+	CONSTANT_ALPHA = WebGLRenderingContext.CONSTANT_ALPHA,
+	ONE_MINUS_CONSTANT_ALPHA = WebGLRenderingContext.ONE_MINUS_CONSTANT_ALPHA,
+	SRC_ALPHA_SATURATE = WebGLRenderingContext.SRC_ALPHA_SATURATE,
+}
+
+export enum MaterialDepth {
+	NEVER = WebGLRenderingContext.NEVER,
+	LESS = WebGLRenderingContext.LESS,
+	EQUAL = WebGLRenderingContext.EQUAL,
+	LEQUAL = WebGLRenderingContext.LEQUAL,
+	GREATER = WebGLRenderingContext.GREATER,
+	NOTEQUAL = WebGLRenderingContext.NOTEQUAL,
+	GEQUAL = WebGLRenderingContext.GEQUAL,
+	ALWAYS = WebGLRenderingContext.ALWAYS,
 }
 
 export class Material implements IDisposable {
@@ -108,14 +94,23 @@ export class Material implements IDisposable {
 	private disposed: boolean = false;
 	protected gl?: WebGLRenderingContext;
 
-	public readonly attributes: Map<string, Attribute> = new Map();
+	public readonly attributes: AttributeStruct = {};
 	public readonly program?: WebGLProgram;
-	public queue: MaterialQueue | number = 0;
-	public transparent: boolean = false;
-	public twoSided: boolean = false;
-	public readonly uniforms: Map<string, Uniform> = new Map();
+	public readonly queue: number = 0;
+	public readonly uniforms: UniformStruct = {};
+	protected readonly uniformsInitializer: Map<string, any> = new Map();
 
-	constructor(public readonly vertexShader: VertexShader, public readonly fragmentShader: FragmentShader) {}
+	constructor(
+		public readonly vertexShader: VertexShader,
+		public readonly fragmentShader: FragmentShader,
+		public readonly side = MaterialSide.BOTH,
+		public readonly depthTest = true,
+		public readonly writeDepth = true,
+		public readonly blend = false,
+		public readonly depthFunc = MaterialDepth.LESS,
+		public readonly blendFuncSource = MaterialBlend.ONE,
+		public readonly blendFuncDestination = MaterialBlend.ZERO
+	) {}
 
 	async dispose() {
 		if (this.disposed === false) {
@@ -137,17 +132,26 @@ export class Material implements IDisposable {
 			Material.currentMaterial = this;
 			Mesh.currentMesh = undefined;
 			gl.useProgram(this.program!);
-			if (this.twoSided) {
+			if (this.side === MaterialSide.BOTH) {
 				gl.disable(gl.CULL_FACE);
 			} else {
 				gl.enable(gl.CULL_FACE);
+				gl.cullFace(this.side);
 			}
-			if (this.transparent) {
-				gl.disable(gl.DEPTH_TEST);
-				gl.enable(gl.BLEND);
-				gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-			} else {
+			if (this.depthTest) {
 				gl.enable(gl.DEPTH_TEST);
+			} else {
+				gl.disable(gl.DEPTH_TEST);
+			}
+			if (this.writeDepth) {
+				gl.depthMask(true);
+			} else {
+				gl.depthMask(false);
+			}
+			if (this.blend) {
+				gl.enable(gl.BLEND);
+				gl.blendFunc(this.blendFuncSource, this.blendFuncDestination);
+			} else {
 				gl.disable(gl.BLEND);
 			}
 		}
@@ -182,55 +186,38 @@ export class Material implements IDisposable {
 		gl.detachShader(this.program!, this.fragmentShader.shader!);
 
 		let textureUnits = 0;
-		let matches: RegExpExecArray | null;
-		while ((matches = attrRegex.exec(this.vertexShader.source + this.fragmentShader.source))) {
-			const [, type, name] = matches;
-			this.attributes.set(name, {
-				location: gl.getAttribLocation(this.program!, name),
-				type: type.toLocaleLowerCase() as Type,
-			});
-		}
-		const structMap = new Map<string, Map<string, string>>();
-		while ((matches = structRegex.exec(this.vertexShader.source + this.fragmentShader.source))) {
-			const [, nameStruct, def] = matches;
-			const vars = new Map<string, string>();
-			while ((matches = varRegex.exec(def))) {
-				const [, type, varName] = matches;
-				vars.set(varName, type);
+		for (let i = 0, l = gl.getProgramParameter(this.program!, gl.ACTIVE_ATTRIBUTES); i < l; ++i) {
+			const info = gl.getActiveAttrib(this.program!, i);
+			if (info) {
+				const loc = gl.getAttribLocation(this.program!, info.name);
+				if (!isNull(loc)) {
+					this.attributes[info.name] = {
+						location: loc,
+						type: info.type,
+					};
+				}
 			}
-			structMap.set(nameStruct, vars);
 		}
 
-		// TODO: getUniformLocation for arrays
-		while ((matches = uniformRegex.exec(this.vertexShader.source + this.fragmentShader.source))) {
-			const [, type, name] = matches;
-			if (structMap.has(type)) {
-				const vars = structMap.get(type)!;
-				for (const [varName, varType] of vars) {
-					const loc = gl.getUniformLocation(this.program!, name + '.' + varName);
-					if (loc) {
-						const existingUniform = this.uniforms.get(name + '.' + varName);
-						this.uniforms.set(name + '.' + varName, {
-							location: loc,
-							type: varType.toLocaleLowerCase() as Type,
-							value: existingUniform ? existingUniform.value : undefined,
-							...(isSampler(type.toLocaleLowerCase()) ? { slot: textureUnits++ } : {}),
-						} as Uniform);
-					}
-				}
-			} else {
-				const loc = gl.getUniformLocation(this.program!, name);
+		for (let i = 0, l = gl.getProgramParameter(this.program!, gl.ACTIVE_UNIFORMS); i < l; ++i) {
+			const info = gl.getActiveUniform(this.program!, i);
+			if (info) {
+				const loc = gl.getUniformLocation(this.program!, info.name);
 				if (loc) {
-					const existingUniform = this.uniforms.get(name);
-					this.uniforms.set(name, {
+					setPath(this.uniforms, info.name, {
+						type: info.type,
 						location: loc,
-						type: type.toLocaleLowerCase() as Type,
-						value: existingUniform ? existingUniform.value : undefined,
-						...(isSampler(type.toLocaleLowerCase()) ? { slot: textureUnits++ } : {}),
-					} as Uniform);
+						value: undefined,
+						slot: isSampler(info.type) ? textureUnits++ : undefined,
+					});
 				}
 			}
 		}
+
+		for (const [name, value] of this.uniformsInitializer) {
+			this.setUniform(name, value);
+		}
+		this.uniformsInitializer.clear();
 
 		gl.useProgram(null);
 
@@ -238,30 +225,49 @@ export class Material implements IDisposable {
 		Mesh.currentMesh = undefined;
 	}
 
-	setUniform(name: string, value: number | number[] | Texture) {
-		if (!this.uniforms.has(name)) {
-			this.uniforms.set(name, {
-				location: -1,
-				type: Type.Unknown,
-				value: undefined,
-			});
-		}
-
-		const uniform = this.uniforms.get(name)!;
-		uniform.value = value;
-	}
-
-	updateUniforms() {
-		if (this.gl) {
-			for (const [name, uniform] of this.uniforms) {
-				this.updateUniform(name, uniform);
+	setUniform(name: string, value: any) {
+		if (typeof this.uniforms[name] === 'undefined') {
+			this.uniformsInitializer.set(name, value);
+		} else {
+			const uniform = this.uniforms[name];
+			if (isUniformBase(uniform)) {
+				uniform.value = value;
+			} else if (isArray(uniform)) {
+				// UniformBase[]
+				debugger;
+			} else {
+				// UniformStruct
+				debugger;
 			}
 		}
 	}
 
-	protected updateUniform(name: string, uniform: Uniform) {
+	updateUniforms() {
+		if (this.gl) {
+			for (const name in this.uniforms) {
+				this.updateUniform(this.uniforms[name], name);
+			}
+		}
+	}
+
+	protected updateUniform(uniform: Uniform, name: string) {
+		if (isUniformBase(uniform)) {
+			this.updateUniformBase(uniform, name);
+		} else if (uniform instanceof Array) {
+			for (let i = 0, l = uniform.length; i < l; ++i) {
+				this.updateUniformBase(uniform[i], `${name}[${i}]`);
+			}
+		} else {
+			for (const key in uniform) {
+				this.updateUniform(uniform[key], `${name}.${key}`);
+			}
+		}
+	}
+
+	protected updateUniformBase(uniform: UniformBase, name: string) {
 		if (this.gl) {
 			const gl = this.gl;
+
 			switch (uniform.type) {
 				case Type.Sampler:
 				case Type.Sampler2D:
@@ -269,35 +275,35 @@ export class Material implements IDisposable {
 					if (uniform.value instanceof Texture && typeof uniform.slot === 'number') {
 						gl.uniform1i(uniform.location, uniform.slot!);
 						uniform.value.bind(gl, uniform.slot!);
-					} else {
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be a Texture.`);
 					}
 					break;
 				case Type.Int:
 					if (isArray(uniform.value)) {
 						gl.uniform1iv(uniform.location, uniform.value);
-					} else if (uniform.value) {
+					} else if (typeof uniform.value === 'number') {
 						gl.uniform1i(uniform.location, uniform.value);
 					}
 					break;
 				case Type.Float:
 					if (isArray(uniform.value)) {
 						gl.uniform1fv(uniform.location, uniform.value);
-					} else if (uniform.value) {
+					} else if (typeof uniform.value === 'number') {
 						gl.uniform1f(uniform.location, uniform.value);
 					}
 					break;
 				case Type.IVec2:
 					if (isArray(uniform.value)) {
 						gl.uniform2iv(uniform.location, uniform.value);
-					} else {
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.IVec3:
 					if (isArray(uniform.value)) {
 						gl.uniform3iv(uniform.location, uniform.value);
-					} else {
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
@@ -311,42 +317,45 @@ export class Material implements IDisposable {
 				case Type.Vec2:
 					if (isArray(uniform.value)) {
 						gl.uniform2fv(uniform.location, uniform.value);
-					} else {
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Vec3:
 					if (isArray(uniform.value)) {
 						gl.uniform3fv(uniform.location, uniform.value);
-					} else {
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Vec4:
 					if (isArray(uniform.value)) {
 						gl.uniform4fv(uniform.location, uniform.value);
-					} else {
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Mat2:
 					if (isArray(uniform.value)) {
-						gl.uniformMatrix2fv(uniform.location, uniform.transpose === true, uniform.value);
-					} else {
+						// gl.uniformMatrix2fv(uniform.location, uniform.transpose === true, uniform.value);
+						gl.uniformMatrix2fv(uniform.location, false, uniform.value);
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Mat3:
 					if (isArray(uniform.value)) {
-						gl.uniformMatrix3fv(uniform.location, uniform.transpose === true, uniform.value);
-					} else {
+						// gl.uniformMatrix3fv(uniform.location, uniform.transpose === true, uniform.value);
+						gl.uniformMatrix3fv(uniform.location, false, uniform.value);
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;
 				case Type.Mat4:
 					if (isArray(uniform.value)) {
-						gl.uniformMatrix4fv(uniform.location, uniform.transpose === true, uniform.value);
-					} else {
+						// gl.uniformMatrix4fv(uniform.location, uniform.transpose === true, uniform.value);
+						gl.uniformMatrix4fv(uniform.location, false, uniform.value);
+					} else if (uniform.value) {
 						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
 					}
 					break;

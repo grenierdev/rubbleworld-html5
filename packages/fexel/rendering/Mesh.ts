@@ -161,29 +161,29 @@ export class Mesh implements IDisposable, IMesh {
 			if (material) {
 				const gl = this.gl!;
 
-				if (material.attributes.has('vertPosition')) {
-					const attribute = material.attributes.get('vertPosition')!;
+				if (material.attributes['vertPosition']) {
+					const attribute = material.attributes['vertPosition'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer!);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
-				if (this.normalBuffer && material.attributes.has('vertNormal')) {
-					const attribute = material.attributes.get('vertNormal')!;
+				if (this.normalBuffer && material.attributes['vertNormal']) {
+					const attribute = material.attributes['vertNormal'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.normalBuffer);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
 				for (let i = 0, l = this.uvsBuffer.length; i < l; ++i) {
-					if (material.attributes.has('vertUV' + (i + 1))) {
-						const attribute = material.attributes.get('vertUV' + (i + 1))!;
+					if (material.attributes['vertUV' + (i + 1)]) {
+						const attribute = material.attributes['vertUV' + (i + 1)];
 						gl.bindBuffer(gl.ARRAY_BUFFER, this.uvsBuffer[i]);
 						gl.vertexAttribPointer(attribute.location, 2, gl.FLOAT, false, 0, 0);
 						gl.enableVertexAttribArray(attribute.location);
 					}
 				}
 				for (let i = 0, l = this.colorsBuffer.length; i < l; ++i) {
-					if (material.attributes.has('vertColor' + (i + 1))) {
-						const attribute = material.attributes.get('vertColor' + (i + 1))!;
+					if (material.attributes['vertColor' + (i + 1)]) {
+						const attribute = material.attributes['vertColor' + (i + 1)];
 						gl.bindBuffer(gl.ARRAY_BUFFER, this.colorsBuffer[i]);
 						gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
 						gl.enableVertexAttribArray(attribute.location);
@@ -313,20 +313,20 @@ export class PointMesh implements IDisposable, IMesh {
 			if (material) {
 				const gl = this.gl!;
 
-				if (material.attributes.has('vertPosition')) {
-					const attribute = material.attributes.get('vertPosition')!;
+				if (material.attributes['vertPosition']) {
+					const attribute = material.attributes['vertPosition'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
-				if (material.attributes.has('vertSize')) {
-					const attribute = material.attributes.get('vertSize')!;
+				if (material.attributes['vertSize']) {
+					const attribute = material.attributes['vertSize'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.sizeBuffer!);
 					gl.vertexAttribPointer(attribute.location, 1, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
-				if (material.attributes.has('vertColor')) {
-					const attribute = material.attributes.get('vertColor')!;
+				if (material.attributes['vertColor']) {
+					const attribute = material.attributes['vertColor'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
 					gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
@@ -441,14 +441,14 @@ export class LineMesh implements IDisposable, IMesh {
 			if (material) {
 				const gl = this.gl!;
 
-				if (material.attributes.has('vertPosition')) {
-					const attribute = material.attributes.get('vertPosition')!;
+				if (material.attributes['vertPosition']) {
+					const attribute = material.attributes['vertPosition'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer!);
 					gl.vertexAttribPointer(attribute.location, 3, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
 				}
-				if (material.attributes.has('vertColor')) {
-					const attribute = material.attributes.get('vertColor')!;
+				if (material.attributes['vertColor']) {
+					const attribute = material.attributes['vertColor'];
 					gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer!);
 					gl.vertexAttribPointer(attribute.location, 4, gl.FLOAT, false, 0, 0);
 					gl.enableVertexAttribArray(attribute.location);
