@@ -13,6 +13,7 @@ export class TransformComponent extends Component {
 	public readonly localQuaternion: ReadonlyQuaternion = new Quaternion();
 	public readonly localMatrix: ReadonlyMatrix4 = new Matrix4();
 	public readonly worldMatrix: ReadonlyMatrix4 = new Matrix4();
+	public readonly worldMatrixInverse: ReadonlyMatrix4 = new Matrix4();
 	public readonly parentTransform: TransformComponent | undefined;
 
 	private lastParent: Entity | undefined;
@@ -51,6 +52,7 @@ export class TransformComponent extends Component {
 			) {
 				(this.lastLocalMatrix as Matrix4).copy(this.localMatrix);
 				(this.worldMatrix as Matrix4).multiplyMatrices(this.parentTransform.worldMatrix, this.localMatrix);
+				(this.worldMatrixInverse as Matrix4).inverse(this.worldMatrix);
 				this.lastParentWorldMatrix = this.lastParentWorldMatrix
 					? (this.lastParentWorldMatrix as Matrix4).copy(this.parentTransform.worldMatrix)
 					: this.parentTransform.worldMatrix.clone();
@@ -58,6 +60,7 @@ export class TransformComponent extends Component {
 		} else if (!this.lastLocalMatrix.equals(this.localMatrix)) {
 			(this.lastLocalMatrix as Matrix4).copy(this.localMatrix);
 			(this.worldMatrix as Matrix4).copy(this.localMatrix);
+			(this.worldMatrixInverse as Matrix4).inverse(this.worldMatrix);
 		}
 	}
 
