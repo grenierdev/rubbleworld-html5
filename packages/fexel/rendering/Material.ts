@@ -93,6 +93,7 @@ export class Material implements IDisposable {
 	public static currentMaterial?: Material;
 
 	public static override?: Material;
+	public static readonly globals: Map<string, any> = new Map();
 
 	private disposed: boolean = false;
 	protected gl?: WebGLRenderingContext;
@@ -272,6 +273,11 @@ export class Material implements IDisposable {
 
 	updateUniforms() {
 		if (this.gl) {
+			for (const [name, value] of Material.globals) {
+				if (typeof this.uniforms[name] !== 'undefined') {
+					this.setUniformValue(this.uniforms[name], name, value);
+				}
+			}
 			for (const name in this.uniforms) {
 				this.updateUniform(this.uniforms[name], name);
 			}

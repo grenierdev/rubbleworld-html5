@@ -9,14 +9,14 @@ export class UnlitSampledMaterial extends Material {
 				attribute vec2 vertUV1;
 
 				uniform mat4 ProjectionMatrix;
-				uniform mat4 ViewMatrix;
+				uniform mat4 WorldMatrix;
 				uniform mat4 ModelMatrix;
 
 				varying vec2 fragUV;
 
 				void main(void) {
 					fragUV = vertUV1;
-					gl_Position = ProjectionMatrix * ViewMatrix * ModelMatrix * vec4(Position0, 1.0);
+					gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
 				}
 			`),
 			new FragmentShader(`

@@ -9,6 +9,14 @@ export class Color {
 		return new Color(this.r, this.g, this.b, this.a);
 	}
 
+	fromRGBA(r: number, g: number, b: number, a = 255) {
+		this.r = r / 255;
+		this.g = g / 255;
+		this.b = b / 255;
+		this.a = a / 255;
+		return this;
+	}
+
 	static readonly White: ReadonlyColor = new Color(1, 1, 1);
 	static readonly Black: ReadonlyColor = new Color(0, 0, 0);
 }

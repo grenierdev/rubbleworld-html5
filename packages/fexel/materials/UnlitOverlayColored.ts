@@ -11,11 +11,11 @@ export class UnlitOverlayColoredMaterial extends Material {
 				varying vec4 fragColor;
 
 				uniform mat4 ProjectionMatrix;
-				uniform mat4 ViewMatrix;
+				uniform mat4 WorldMatrix;
 
 				void main(void) {
 					fragColor = Color0;
-					gl_Position = ProjectionMatrix * ViewMatrix * vec4(Position0, 1.0);
+					gl_Position = ProjectionMatrix * WorldMatrix * vec4(Position0, 1.0);
 				}
 			`),
 			new FragmentShader(`
@@ -50,11 +50,11 @@ export class UnlitOverlayColoredPointMaterial extends Material {
 				varying vec4 fragColor;
 
 				uniform mat4 ProjectionMatrix;
-				uniform mat4 ViewMatrix;
+				uniform mat4 WorldMatrix;
 
 				void main(void) {
 					fragColor = Color0;
-					gl_Position = ProjectionMatrix * ViewMatrix * vec4(Position0, 1.0);
+					gl_Position = ProjectionMatrix * WorldMatrix * vec4(Position0, 1.0);
 					gl_PointSize = vertSize;
 				}
 			`

@@ -57,10 +57,14 @@ export class Debug {
 		);
 	}
 
-	public draw(ViewMatrix: Matrix4 | ReadonlyMatrix4, projMatrix: Matrix4 | ReadonlyMatrix4, gl: WebGLRenderingContext) {
-		this.pointMaterial.setUniform('ViewMatrix', ViewMatrix.elements);
+	public draw(
+		worldMatrix: Matrix4 | ReadonlyMatrix4,
+		projMatrix: Matrix4 | ReadonlyMatrix4,
+		gl: WebGLRenderingContext
+	) {
+		this.pointMaterial.setUniform('WorldMatrix', worldMatrix.elements);
 		this.pointMaterial.setUniform('ProjectionMatrix', projMatrix.elements);
-		this.lineMaterial.setUniform('ViewMatrix', ViewMatrix.elements);
+		this.lineMaterial.setUniform('WorldMatrix', worldMatrix.elements);
 		this.lineMaterial.setUniform('ProjectionMatrix', projMatrix.elements);
 
 		let pointTotal = 0;

@@ -41,7 +41,7 @@ export class MeshRendererComponent extends Component implements IDrawable {
 				'ModelMatrix',
 				this.transform ? this.transform.worldMatrix.elements : Matrix4.Identity.elements
 			);
-			this.material.setUniform('ViewMatrix', viewMatrix.elements);
+			this.material.setUniform('WorldMatrix', viewMatrix.elements);
 			this.material.setUniform('ProjectionMatrix', projectionMatrix.elements);
 
 			this.material.bind(gl);
