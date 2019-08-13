@@ -15,9 +15,8 @@ import {
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
 import { Color } from '@fexel/core/math/Color';
-import { Euler } from '@fexel/core/math/Euler';
-import { DEG2RAD } from '@fexel/core/math/util';
 import { RenderTarget } from '@fexel/core/rendering/RenderTarget';
+import { UnlitSampledMaterial } from '@fexel/core/materials/UnlitSampled';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
@@ -32,39 +31,7 @@ const tex = new Texture({
 	data: document.getElementById('uvdebug')! as HTMLImageElement,
 });
 
-const mat = new Material(
-	new VertexShader(
-		`
-		attribute vec3 vertPosition;
-		attribute vec2 vertUV1;
-
-		uniform mat4 projectionMatrix;
-		uniform mat4 viewMatrix;
-		uniform mat4 worldMatrix;
-
-		varying vec2 fragUV;
-
-		void main(void) {
-			fragUV = vertUV1;
-			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1.0);
-		}
-	`
-	),
-	new FragmentShader(
-		`
-		precision mediump float;
-
-		varying vec2 fragUV;
-		uniform sampler2D sampler;
-
-		void main(void) {
-			gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);
-		}
-	`
-	)
-);
-mat.twoSided = true;
-mat.transparent = false;
+const mat = new UnlitSampledMaterial();
 mat.setUniform('sampler', tex);
 
 const mesh = new Mesh({
@@ -93,13 +60,13 @@ class MoverComponent extends Component {
 const sepiaEffect = new CameraEffect(
 	new Material(
 		new VertexShader(`
-			attribute vec3 vertPosition;
+			attribute vec3 Position0;
 			attribute vec2 vertUV1;
 			varying vec2 fragUV;
 
 			void main(void) {
 				fragUV = vertUV1;
-				gl_Position = vec4(vertPosition, 1.0);
+				gl_Position = vec4(Position0, 1.0);
 			}
 		`),
 		new FragmentShader(`
@@ -134,13 +101,13 @@ const sepiaEffect = new CameraEffect(
 const vignetteEffect = new CameraEffect(
 	new Material(
 		new VertexShader(`
-			attribute vec3 vertPosition;
+			attribute vec3 Position0;
 			attribute vec2 vertUV1;
 			varying vec2 fragUV;
 
 			void main(void) {
 				fragUV = vertUV1;
-				gl_Position = vec4(vertPosition, 1.0);
+				gl_Position = vec4(Position0, 1.0);
 			}
 		`),
 		new FragmentShader(`

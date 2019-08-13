@@ -13,6 +13,7 @@ import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
 import { DEG2RAD } from '@fexel/core/math/util';
 import { RenderTarget } from '@fexel/core/rendering/RenderTarget';
+import { UnlitSampledMaterial } from '@fexel/core/materials/UnlitSampled';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
@@ -31,45 +32,10 @@ const tex2 = new Texture({
 	width: 512,
 	height: 512,
 });
-
-const vertShader = new VertexShader(
-	`
-		attribute vec3 vertPosition;
-		attribute vec2 vertUV1;
-
-		uniform mat4 projectionMatrix;
-		uniform mat4 viewMatrix;
-		uniform mat4 worldMatrix;
-
-		varying vec2 fragUV;
-
-		void main(void) {
-			fragUV = vertUV1;
-			gl_Position = projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1.0);
-		}
-	`
-);
-const fragShader = new FragmentShader(
-	`
-		precision mediump float;
-
-		varying vec2 fragUV;
-		uniform sampler2D sampler;
-
-		void main(void) {
-			gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);
-		}
-	`
-);
-
-const uvMaterial = new Material(vertShader, fragShader);
-uvMaterial.twoSided = true;
-uvMaterial.transparent = false;
+const uvMaterial = new UnlitSampledMaterial();
 uvMaterial.setUniform('sampler', tex1);
 
-const rtMaterial = new Material(vertShader, fragShader);
-rtMaterial.twoSided = true;
-rtMaterial.transparent = false;
+const rtMaterial = new UnlitSampledMaterial();
 rtMaterial.setUniform('sampler', tex2);
 
 const mesh = new Mesh({

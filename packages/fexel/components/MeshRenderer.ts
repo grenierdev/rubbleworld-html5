@@ -38,11 +38,11 @@ export class MeshRendererComponent extends Component implements IDrawable {
 	) {
 		if (this.enabled && this.entity && this.entity.enabled && visibilityFlag & this.visibilityFlag) {
 			this.material.setUniform(
-				'worldMatrix',
+				'ModelMatrix',
 				this.transform ? this.transform.worldMatrix.elements : Matrix4.Identity.elements
 			);
-			this.material.setUniform('viewMatrix', viewMatrix.elements);
-			this.material.setUniform('projectionMatrix', projectionMatrix.elements);
+			this.material.setUniform('ViewMatrix', viewMatrix.elements);
+			this.material.setUniform('ProjectionMatrix', projectionMatrix.elements);
 
 			this.material.bind(gl);
 			this.mesh.draw(gl);

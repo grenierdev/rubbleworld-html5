@@ -1,7 +1,7 @@
 import { Color, ReadonlyColor } from '../math/Color';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
 import { Vector3, ReadonlyVector3 } from '../math/Vector3';
-import { Material } from './Material';
+import { Material, MaterialSide, MaterialDepth, MaterialBlend } from './Material';
 import { VertexShader, FragmentShader } from './Shader';
 import { PointMesh, LineMesh } from './Mesh';
 import { Line3, ReadonlyLine3 } from '../math/Line3';
@@ -11,6 +11,7 @@ import { Quaternion } from '../math/Quaternion';
 import { Euler } from '../math/Euler';
 import { Box3, ReadonlyBox3 } from '../math/Box3';
 import { Box2, ReadonlyBox2 } from '../math/Box2';
+import { UnlitOverlayColoredPointMaterial, UnlitOverlayColoredMaterial } from '../materials/UnlitOverlayColored';
 
 type DebugPrimitive =
 	| DebugPrimitiveBase<'points', { count: number; positions: Float32Array; radius: Float32Array; colors: Float32Array }>
@@ -19,39 +20,9 @@ type DebugPrimitive =
 
 type DebugPrimitiveBase<T, D = {}> = { type: T; ttl: number; data: D };
 
-const fragShader = new FragmentShader(`
-				precision mediump float;
-
-				varying vec4 fragColor;
-
-				void main(void) {
-					gl_FragColor = fragColor;
-				}
-		`);
-
 export class Debug {
 	protected primitiveList: DebugPrimitive[] = [];
-	protected pointMaterial: Material = new Material(
-		new VertexShader(
-			`
-				attribute vec3 vertPosition;
-				attribute float vertSize;
-				attribute vec4 vertColor;
-
-				varying vec4 fragColor;
-
-				uniform mat4 projectionMatrix;
-				uniform mat4 viewMatrix;
-
-				void main(void) {
-					fragColor = vertColor;
-					gl_Position = projectionMatrix * viewMatrix * vec4(vertPosition, 1.0);
-					gl_PointSize = vertSize;
-				}
-			`
-		),
-		fragShader
-	);
+	protected pointMaterial: Material = new UnlitOverlayColoredPointMaterial();
 	protected pointMesh: PointMesh = new PointMesh(
 		{
 			count: 0,
@@ -61,25 +32,7 @@ export class Debug {
 		},
 		true
 	);
-	protected lineMaterial: Material = new Material(
-		new VertexShader(
-			`
-				attribute vec3 vertPosition;
-				attribute vec4 vertColor;
-
-				varying vec4 fragColor;
-
-				uniform mat4 projectionMatrix;
-				uniform mat4 viewMatrix;
-
-				void main(void) {
-					fragColor = vertColor;
-					gl_Position = projectionMatrix * viewMatrix * vec4(vertPosition, 1.0);
-				}
-			`
-		),
-		fragShader
-	);
+	protected lineMaterial: Material = new UnlitOverlayColoredMaterial();
 	protected lineMesh: LineMesh = new LineMesh(
 		{
 			count: 0,
@@ -90,13 +43,6 @@ export class Debug {
 	);
 
 	public growRate: number = 100;
-
-	constructor() {
-		this.pointMaterial.twoSided = true;
-		this.pointMaterial.transparent = true;
-		this.lineMaterial.twoSided = true;
-		this.lineMaterial.transparent = true;
-	}
 
 	public update(delta: number) {
 		this.primitiveList = this.primitiveList.reduce(
@@ -111,13 +57,12 @@ export class Debug {
 		);
 	}
 
-	public draw(viewMatrix: Matrix4 | ReadonlyMatrix4, projMatrix: Matrix4 | ReadonlyMatrix4, gl: WebGLRenderingContext) {
-		this.pointMaterial.setUniform('viewMatrix', viewMatrix.elements);
-		this.pointMaterial.setUniform('projectionMatrix', projMatrix.elements);
-		this.lineMaterial.setUniform('viewMatrix', viewMatrix.elements);
-		this.lineMaterial.setUniform('projectionMatrix', projMatrix.elements);
+	public draw(ViewMatrix: Matrix4 | ReadonlyMatrix4, projMatrix: Matrix4 | ReadonlyMatrix4, gl: WebGLRenderingContext) {
+		this.pointMaterial.setUniform('ViewMatrix', ViewMatrix.elements);
+		this.pointMaterial.setUniform('ProjectionMatrix', projMatrix.elements);
+		this.lineMaterial.setUniform('ViewMatrix', ViewMatrix.elements);
+		this.lineMaterial.setUniform('ProjectionMatrix', projMatrix.elements);
 
-		let t: Float32Array | undefined;
 		let pointTotal = 0;
 		let pointLastTotal = this.pointMesh.data.positions.length / 3;
 		let pointPositions = this.pointMesh.data.positions;

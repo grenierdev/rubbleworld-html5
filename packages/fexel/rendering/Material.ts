@@ -89,7 +89,10 @@ export enum MaterialDepth {
 }
 
 export class Material implements IDisposable {
+	/** @internal */
 	public static currentMaterial?: Material;
+
+	public static override?: Material;
 
 	private disposed: boolean = false;
 	protected gl?: WebGLRenderingContext;
@@ -100,17 +103,30 @@ export class Material implements IDisposable {
 	public readonly uniforms: UniformStruct = {};
 	protected readonly uniformsInitializer: Map<string, any> = new Map();
 
+	public readonly side: MaterialSide = MaterialSide.BOTH;
+	public readonly depthTest: boolean = true;
+	public readonly writeDepth: boolean = true;
+	public readonly blend: boolean = false;
+	public readonly depthFunc: MaterialDepth = MaterialDepth.LESS;
+	public readonly blendFuncSource: MaterialBlend = MaterialBlend.ONE;
+	public readonly blendFuncDestination: MaterialBlend = MaterialBlend.ZERO;
+
 	constructor(
 		public readonly vertexShader: VertexShader,
 		public readonly fragmentShader: FragmentShader,
-		public readonly side = MaterialSide.BOTH,
-		public readonly depthTest = true,
-		public readonly writeDepth = true,
-		public readonly blend = false,
-		public readonly depthFunc = MaterialDepth.LESS,
-		public readonly blendFuncSource = MaterialBlend.ONE,
-		public readonly blendFuncDestination = MaterialBlend.ZERO
-	) {}
+		options?: Partial<
+			Pick<
+				Material,
+				'side' | 'depthTest' | 'writeDepth' | 'blend' | 'depthFunc' | 'blendFuncSource' | 'blendFuncDestination'
+			>
+		>
+	) {
+		if (options) {
+			for (const key in options) {
+				this[key] = options[key];
+			}
+		}
+	}
 
 	async dispose() {
 		if (this.disposed === false) {
@@ -126,6 +142,10 @@ export class Material implements IDisposable {
 	}
 
 	bind(gl: WebGLRenderingContext) {
+		if (Material.override) {
+			return Material.override.bind(gl);
+		}
+
 		this.createProgram(gl);
 
 		if (Material.currentMaterial !== this) {
@@ -230,14 +250,22 @@ export class Material implements IDisposable {
 			this.uniformsInitializer.set(name, value);
 		} else {
 			const uniform = this.uniforms[name];
-			if (isUniformBase(uniform)) {
-				uniform.value = value;
-			} else if (isArray(uniform)) {
-				// UniformBase[]
-				debugger;
-			} else {
-				// UniformStruct
-				debugger;
+			this.setUniformValue(uniform, name, value);
+		}
+	}
+
+	protected setUniformValue(uniform: Uniform, name: string, value: any) {
+		if (isUniformBase(uniform)) {
+			uniform.value = value;
+		} else if (isArray(uniform)) {
+			if (isArray<any>(value)) {
+				for (let i = 0, l = value.length; i < l; ++i) {
+					this.setUniformValue(uniform[i], name, value[i]);
+				}
+			}
+		} else {
+			for (const key in uniform) {
+				this.setUniformValue(uniform[key], name, value[key]);
 			}
 		}
 	}
@@ -255,7 +283,7 @@ export class Material implements IDisposable {
 			this.updateUniformBase(uniform, name);
 		} else if (uniform instanceof Array) {
 			for (let i = 0, l = uniform.length; i < l; ++i) {
-				this.updateUniformBase(uniform[i], `${name}[${i}]`);
+				this.updateUniform(uniform[i], `${name}[${i}]`);
 			}
 		} else {
 			for (const key in uniform) {
