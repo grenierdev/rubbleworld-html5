@@ -23,7 +23,7 @@ export class UnlitSampledMaterial extends Material {
 				precision mediump float;
 
 				varying vec2 fragUV;
-				uniform sampler2D sampler;
+				uniform sampler2D Sampler;
 
 				void main(void) {
 					gl_FragColor = vec4(texture2D(sampler, fragUV).xyz, 0.25);

@@ -32,7 +32,7 @@ const tex = new Texture({
 });
 
 const mat = new UnlitSampledMaterial();
-mat.setUniform('sampler', tex);
+mat.setUniform('Sampler', tex);
 
 const mesh = new Mesh({
 	vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
@@ -72,7 +72,7 @@ const sepiaEffect = new CameraEffect(
 		new FragmentShader(`
 			precision mediump float;
 
-			uniform sampler2D sampler;
+			uniform sampler2D Sampler;
 			varying vec2 fragUV;
 
 			const float opacity = 0.75;
@@ -113,7 +113,7 @@ const vignetteEffect = new CameraEffect(
 		new FragmentShader(`
 			precision mediump float;
 
-			uniform sampler2D sampler;
+			uniform sampler2D Sampler;
 			varying vec2 fragUV;
 
 			const float radius = 0.75;

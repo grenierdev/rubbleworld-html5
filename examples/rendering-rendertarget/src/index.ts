@@ -33,10 +33,10 @@ const tex2 = new Texture({
 	height: 512,
 });
 const uvMaterial = new UnlitSampledMaterial();
-uvMaterial.setUniform('sampler', tex1);
+uvMaterial.setUniform('Sampler', tex1);
 
 const rtMaterial = new UnlitSampledMaterial();
-rtMaterial.setUniform('sampler', tex2);
+rtMaterial.setUniform('Sampler', tex2);
 
 const mesh = new Mesh({
 	vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
