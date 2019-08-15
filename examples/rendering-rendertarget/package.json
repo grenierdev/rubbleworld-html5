@@ -15,8 +15,8 @@
 		"typescript": "^3.5.2"
 	},
 	"scripts": {
-		"start": "parcel ./src/index.html --port 8080 --log-level 4",
-		"build": "parcel build ./src/index.html --log-level 4 --public-url '/' --no-cache"
+		"start": "parcel ./src/index.html --port 8080",
+		"build": "parcel build ./src/index.html --public-url '/' --no-cache"
 	},
 	"browserslist": [
 		"last 1 chrome versions"

@@ -42,7 +42,7 @@ const tex1 = new Texture({
 });
 
 const mat = new UnlitSampledMaterial();
-mat.setUniform('Sampler', tex1);
+mat.uniforms.Texture0 = tex1;
 
 const mesh = new Mesh({
 	vertices: new Float32Array([20.0, 20.0, 0.0, -20.0, 20.0, 0.0, 20.0, -20.0, 0.0, -20.0, -20.0, 0.0]),

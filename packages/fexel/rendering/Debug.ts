@@ -62,10 +62,10 @@ export class Debug {
 		projMatrix: Matrix4 | ReadonlyMatrix4,
 		gl: WebGLRenderingContext
 	) {
-		this.pointMaterial.setUniform('WorldMatrix', worldMatrix.elements);
-		this.pointMaterial.setUniform('ProjectionMatrix', projMatrix.elements);
-		this.lineMaterial.setUniform('WorldMatrix', worldMatrix.elements);
-		this.lineMaterial.setUniform('ProjectionMatrix', projMatrix.elements);
+		this.pointMaterial.uniforms.WorldMatrix = worldMatrix;
+		this.pointMaterial.uniforms.ProjectionMatrix = projMatrix;
+		this.lineMaterial.uniforms.WorldMatrix = worldMatrix;
+		this.lineMaterial.uniforms.ProjectionMatrix = projMatrix;
 
 		let pointTotal = 0;
 		let pointLastTotal = this.pointMesh.data.positions.length / 3;

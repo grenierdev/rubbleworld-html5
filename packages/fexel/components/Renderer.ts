@@ -1,8 +1,11 @@
 import { Component, Scene, UpdateContext } from '../Scene';
 import { PriorityList } from '../util/PriorityList';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
-import { LightComponent } from './Light';
-import { Material } from '../rendering/Material';
+import { Material, UniformMap } from '../rendering/Material';
+import { Texture } from '../rendering/Texture';
+import { Vector3, ReadonlyVector3 } from '../math/Vector3';
+import { Color, ReadonlyColor } from '../math/Color';
+import { UnlitMaterial } from '../materials/Unlit';
 
 export interface IRenderable {
 	render(width: number, height: number, meshes: PriorityList<IDrawable>, context: UpdateContext): void;
@@ -19,15 +22,17 @@ export interface IDrawable {
 
 export interface LightUniform {
 	type: number;
-	position: [number, number, number];
-	direction: [number, number, number];
+	position: Vector3 | ReadonlyVector3;
+	direction: Vector3 | ReadonlyVector3;
 	intensity: number;
-	color: [number, number, number];
+	color: Color | ReadonlyColor;
+	shadowtexture?: Texture;
+	shadowtransform?: Matrix4 | ReadonlyMatrix4;
 }
 
 export interface ILight {
 	getUniform(): LightUniform | undefined;
-	render(width: number, height: number, meshes: PriorityList<IDrawable>, context: UpdateContext): void;
+	renderShadow(width: number, height: number, meshes: PriorityList<IDrawable>, context: UpdateContext): void;
 }
 
 export class RendererComponent extends Component {
@@ -36,6 +41,8 @@ export class RendererComponent extends Component {
 	public readonly drawables: PriorityList<IDrawable> = new PriorityList();
 	public readonly renderables: PriorityList<IRenderable> = new PriorityList();
 	public readonly lights: PriorityList<ILight> = new PriorityList();
+
+	private shadowMaterial = new UnlitMaterial();
 
 	didMount() {
 		if (!(this.entity instanceof Scene)) {
@@ -49,18 +56,25 @@ export class RendererComponent extends Component {
 			const height = context.canvas.height;
 			const drawables = this.drawables;
 
+			Material.globals.LightCount = 0;
+			Material.globals.Lights = [];
+			const prevOverride = Material.override;
+			// Material.override = this.shadowMaterial;
+
 			const lights = this.lights;
 			const uniforms: LightUniform[] = [];
 			for (const [light] of lights) {
-				light.render(width, height, drawables, context);
+				light.renderShadow(width, height, drawables, context);
 				const uniform = light.getUniform();
 				if (uniform) {
 					uniforms.push(uniform);
 				}
 			}
 
-			Material.globals.set('LightCount', uniforms.length);
-			Material.globals.set('Lights', uniforms);
+			Material.globals.LightCount = uniforms.length;
+			Material.globals.Lights = uniforms as any;
+			Material.globals.ShadowTextures = uniforms.map(u => u.shadowtexture) as any;
+			Material.override = prevOverride;
 
 			for (const [renderable] of this.renderables) {
 				renderable.render(width, height, drawables, context);

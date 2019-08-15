@@ -4,7 +4,14 @@ import { isArray as isarray, isNull } from 'util';
 import { Mesh } from './Mesh';
 import { Texture } from './Texture';
 import { Mutable } from '../util/Immutable';
-import setPath from 'lodash.set';
+import { Matrix3, ReadonlyMatrix3 } from '../math/Matrix3';
+import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
+import { Vector2, ReadonlyVector2 } from '../math/Vector2';
+import { Vector3, ReadonlyVector3 } from '../math/Vector3';
+import { Vector4, ReadonlyVector4 } from '../math/Vector4';
+import { Euler } from '../math/Euler';
+import { Color, ReadonlyColor } from '../math/Color';
+import { Quaternion, ReadonlyQuaternion } from '../math/Quaternion';
 
 function isArray<T>(value: any): value is T[] {
 	return isarray(value);
@@ -34,20 +41,37 @@ export interface Attribute {
 
 export type AttributeStruct = { [key: string]: Attribute };
 
-export interface UniformBase {
+export interface UniformDefinition {
+	path: string[];
 	type: Type;
 	location: WebGLUniformLocation;
-	value?: number | number[] | Texture;
 	slot?: number;
 }
 
-export type UniformStruct = { [key: string]: Uniform };
+export type UniformPrimitive =
+	| number
+	| number[]
+	| Color
+	| ReadonlyColor
+	| Vector2
+	| ReadonlyVector2
+	| Vector3
+	| ReadonlyVector3
+	| Vector4
+	| ReadonlyVector4
+	| Quaternion
+	| ReadonlyQuaternion
+	| Matrix3
+	| ReadonlyMatrix3
+	| Matrix4
+	| ReadonlyMatrix4
+	| Texture;
 
-export type Uniform = UniformBase | UniformBase[] | UniformStruct;
+export type UniformMap = {
+	[key: string]: Uniform;
+};
 
-function isUniformBase(uniform: any): uniform is UniformBase {
-	return typeof uniform.type === 'number' && uniform.location instanceof WebGLUniformLocation;
-}
+export type Uniform = UniformPrimitive | UniformPrimitive[] | UniformMap;
 
 function isSampler(type: number): boolean {
 	return type === Type.Sampler || type === Type.Sampler2D || type === Type.SamplerCube;
@@ -93,16 +117,16 @@ export class Material implements IDisposable {
 	public static currentMaterial?: Material;
 
 	public static override?: Material;
-	public static readonly globals: Map<string, any> = new Map();
+	public static readonly globals: UniformMap = {};
 
 	private disposed: boolean = false;
 	protected gl?: WebGLRenderingContext;
+	protected uniformsDefinition: UniformDefinition[] = [];
 
 	public readonly attributes: AttributeStruct = {};
 	public readonly program?: WebGLProgram;
 	public readonly queue: number = 0;
-	public readonly uniforms: UniformStruct = {};
-	protected readonly uniformsInitializer: Map<string, any> = new Map();
+	public readonly uniforms: UniformMap = {};
 
 	public readonly side: MaterialSide = MaterialSide.BOTH;
 	public readonly depthTest: boolean = true;
@@ -143,7 +167,8 @@ export class Material implements IDisposable {
 	}
 
 	bind(gl: WebGLRenderingContext) {
-		if (Material.override) {
+		if (Material.override && Material.override !== this) {
+			(Material.override as any).uniforms = this.uniforms;
 			return Material.override.bind(gl);
 		}
 
@@ -161,6 +186,7 @@ export class Material implements IDisposable {
 			}
 			if (this.depthTest) {
 				gl.enable(gl.DEPTH_TEST);
+				gl.depthFunc(this.depthFunc);
 			} else {
 				gl.disable(gl.DEPTH_TEST);
 			}
@@ -225,20 +251,15 @@ export class Material implements IDisposable {
 			if (info) {
 				const loc = gl.getUniformLocation(this.program!, info.name);
 				if (loc) {
-					setPath(this.uniforms, info.name, {
+					this.uniformsDefinition.push({
+						path: info.name.replace(/\]/g, '').split(/[.\[]/),
 						type: info.type,
 						location: loc,
-						value: undefined,
 						slot: isSampler(info.type) ? textureUnits++ : undefined,
 					});
 				}
 			}
 		}
-
-		for (const [name, value] of this.uniformsInitializer) {
-			this.setUniform(name, value);
-		}
-		this.uniformsInitializer.clear();
 
 		gl.useProgram(null);
 
@@ -246,154 +267,154 @@ export class Material implements IDisposable {
 		Mesh.currentMesh = undefined;
 	}
 
-	setUniform(name: string, value: any) {
-		if (typeof this.uniforms[name] === 'undefined') {
-			this.uniformsInitializer.set(name, value);
-		} else {
-			const uniform = this.uniforms[name];
-			this.setUniformValue(uniform, name, value);
-		}
-	}
-
-	protected setUniformValue(uniform: Uniform, name: string, value: any) {
-		if (isUniformBase(uniform)) {
-			uniform.value = value;
-		} else if (isArray(uniform)) {
-			if (isArray<any>(value)) {
-				for (let i = 0, l = value.length; i < l; ++i) {
-					this.setUniformValue(uniform[i], name, value[i]);
-				}
-			}
-		} else {
-			for (const key in uniform) {
-				this.setUniformValue(uniform[key], name, value[key]);
-			}
-		}
-	}
-
 	updateUniforms() {
 		if (this.gl) {
-			for (const [name, value] of Material.globals) {
-				if (typeof this.uniforms[name] !== 'undefined') {
-					this.setUniformValue(this.uniforms[name], name, value);
-				}
-			}
-			for (const name in this.uniforms) {
-				this.updateUniform(this.uniforms[name], name);
+			for (const definition of this.uniformsDefinition) {
+				this.setUniformFromDefinition(definition, 1, this.uniforms[definition.path[0]]);
 			}
 		}
 	}
 
-	protected updateUniform(uniform: Uniform, name: string) {
-		if (isUniformBase(uniform)) {
-			this.updateUniformBase(uniform, name);
-		} else if (uniform instanceof Array) {
-			for (let i = 0, l = uniform.length; i < l; ++i) {
-				this.updateUniform(uniform[i], `${name}[${i}]`);
-			}
+	private setUniformFromDefinition(definition: UniformDefinition, path: number, value: undefined | Uniform) {
+		if (typeof value === 'undefined') {
+			value = get(Material.globals, ...definition.path.slice(0, path));
+		}
+		if (typeof value === 'undefined' || (value instanceof Array && value.length === 0)) {
+			return;
+		}
+		if (definition.path.length === path) {
+			setUniform(this.gl!, definition, value);
 		} else {
-			for (const key in uniform) {
-				this.updateUniform(uniform[key], `${name}.${key}`);
-			}
+			this.setUniformFromDefinition(definition, path + 1, value[definition.path[path]]);
 		}
 	}
+}
 
-	protected updateUniformBase(uniform: UniformBase, name: string) {
-		if (this.gl) {
-			const gl = this.gl;
+function get(obj: any, ...props: string[]): any {
+	return obj && props.reduce((result, prop) => (result == null ? undefined : result[prop]), obj);
+}
 
-			switch (uniform.type) {
-				case Type.Sampler:
-				case Type.Sampler2D:
-				case Type.SamplerCube:
-					if (uniform.value instanceof Texture && typeof uniform.slot === 'number') {
-						gl.uniform1i(uniform.location, uniform.slot!);
-						uniform.value.bind(gl, uniform.slot!);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be a Texture.`);
-					}
-					break;
-				case Type.Int:
-					if (isArray(uniform.value)) {
-						gl.uniform1iv(uniform.location, uniform.value);
-					} else if (typeof uniform.value === 'number') {
-						gl.uniform1i(uniform.location, uniform.value);
-					}
-					break;
-				case Type.Float:
-					if (isArray(uniform.value)) {
-						gl.uniform1fv(uniform.location, uniform.value);
-					} else if (typeof uniform.value === 'number') {
-						gl.uniform1f(uniform.location, uniform.value);
-					}
-					break;
-				case Type.IVec2:
-					if (isArray(uniform.value)) {
-						gl.uniform2iv(uniform.location, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.IVec3:
-					if (isArray(uniform.value)) {
-						gl.uniform3iv(uniform.location, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.IVec4:
-					if (isArray(uniform.value)) {
-						gl.uniform4iv(uniform.location, uniform.value);
-					} else {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.Vec2:
-					if (isArray(uniform.value)) {
-						gl.uniform2fv(uniform.location, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.Vec3:
-					if (isArray(uniform.value)) {
-						gl.uniform3fv(uniform.location, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.Vec4:
-					if (isArray(uniform.value)) {
-						gl.uniform4fv(uniform.location, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.Mat2:
-					if (isArray(uniform.value)) {
-						// gl.uniformMatrix2fv(uniform.location, uniform.transpose === true, uniform.value);
-						gl.uniformMatrix2fv(uniform.location, false, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.Mat3:
-					if (isArray(uniform.value)) {
-						// gl.uniformMatrix3fv(uniform.location, uniform.transpose === true, uniform.value);
-						gl.uniformMatrix3fv(uniform.location, false, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
-				case Type.Mat4:
-					if (isArray(uniform.value)) {
-						// gl.uniformMatrix4fv(uniform.location, uniform.transpose === true, uniform.value);
-						gl.uniformMatrix4fv(uniform.location, false, uniform.value);
-					} else if (uniform.value) {
-						throw new SyntaxError(`Expected uniform ${name} to be an array of number.`);
-					}
-					break;
+function setUniform(gl: WebGLRenderingContext, uniform: UniformDefinition, value: unknown) {
+	switch (uniform.type) {
+		case Type.Sampler:
+		case Type.Sampler2D:
+		case Type.SamplerCube:
+			if (value instanceof Texture && typeof uniform.slot === 'number') {
+				gl.uniform1i(uniform.location, uniform.slot!);
+				value.bind(gl, uniform.slot!);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be a Texture.`);
 			}
-		}
+			break;
+		case Type.Int:
+			if (isArray<number>(value)) {
+				gl.uniform1iv(uniform.location, value);
+			} else if (typeof value === 'number') {
+				gl.uniform1i(uniform.location, value);
+			}
+			break;
+		case Type.Float:
+			if (isArray<number>(value)) {
+				gl.uniform1fv(uniform.location, value);
+			} else if (typeof value === 'number') {
+				gl.uniform1f(uniform.location, value);
+			}
+			break;
+		case Type.IVec2:
+			if (isArray<number>(value)) {
+				gl.uniform2iv(uniform.location, value);
+			} else if (value instanceof Vector2) {
+				gl.uniform2i(uniform.location, value.x, value.y);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or Vector2 object.`);
+			}
+			break;
+		case Type.IVec3:
+			if (isArray<number>(value)) {
+				gl.uniform3iv(uniform.location, value);
+			} else if (value instanceof Vector3) {
+				gl.uniform3i(uniform.location, value.x, value.y, value.z);
+			} else if (value instanceof Euler) {
+				gl.uniform3i(uniform.location, value.x, value.y, value.z);
+			} else if (value instanceof Color) {
+				gl.uniform3i(uniform.location, value.r, value.g, value.b);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or Vector3 or Color object.`);
+			}
+			break;
+		case Type.IVec4:
+			if (isArray<number>(value)) {
+				gl.uniform4iv(uniform.location, value);
+			} else if (value instanceof Vector4) {
+				gl.uniform4i(uniform.location, value.x, value.y, value.z, value.w);
+			} else if (value instanceof Quaternion) {
+				gl.uniform4i(uniform.location, value.x, value.y, value.z, value.w);
+			} else if (value instanceof Color) {
+				gl.uniform4i(uniform.location, value.r, value.g, value.b, value.a);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or Vector4 or Color object.`);
+			}
+			break;
+		case Type.Vec2:
+			if (isArray<number>(value)) {
+				gl.uniform2fv(uniform.location, value);
+			} else if (value instanceof Vector2) {
+				gl.uniform2f(uniform.location, value.x, value.y);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or Vector2 object.`);
+			}
+			break;
+		case Type.Vec3:
+			if (isArray<number>(value)) {
+				gl.uniform3fv(uniform.location, value);
+			} else if (value instanceof Vector3) {
+				gl.uniform3f(uniform.location, value.x, value.y, value.z);
+			} else if (value instanceof Euler) {
+				gl.uniform3f(uniform.location, value.x, value.y, value.z);
+			} else if (value instanceof Color) {
+				gl.uniform3f(uniform.location, value.r, value.g, value.b);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or Vector3 or Color object.`);
+			}
+			break;
+		case Type.Vec4:
+			if (isArray<number>(value)) {
+				gl.uniform4fv(uniform.location, value);
+			} else if (value instanceof Vector4) {
+				gl.uniform4f(uniform.location, value.x, value.y, value.z, value.w);
+			} else if (value instanceof Quaternion) {
+				gl.uniform4f(uniform.location, value.x, value.y, value.z, value.w);
+			} else if (value instanceof Color) {
+				gl.uniform4f(uniform.location, value.r, value.g, value.b, value.a);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or Vector4 or Color object.`);
+			}
+			break;
+		case Type.Mat2:
+			if (isArray<number>(value)) {
+				// gl.uniformMatrix2fv(uniform.location, uniform.transpose === true, value);
+				gl.uniformMatrix2fv(uniform.location, false, value);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number.`);
+			}
+			break;
+		case Type.Mat3:
+			if (isArray<number>(value)) {
+				gl.uniformMatrix3fv(uniform.location, false, value);
+			} else if (value instanceof Matrix3) {
+				gl.uniformMatrix3fv(uniform.location, false, value.elements);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or a Matrix3 object.`);
+			}
+			break;
+		case Type.Mat4:
+			if (isArray<number>(value)) {
+				gl.uniformMatrix4fv(uniform.location, false, value);
+			} else if (value instanceof Matrix4) {
+				gl.uniformMatrix4fv(uniform.location, false, value.elements);
+			} else if (value) {
+				throw new SyntaxError(`Expected uniform ${uniform.path} to be an array of number or a Matrix4 object.`);
+			}
+			break;
 	}
 }

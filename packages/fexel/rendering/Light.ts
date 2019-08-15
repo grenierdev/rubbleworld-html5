@@ -1,13 +1,12 @@
 import { Color } from '../math/Color';
 import { Vector3 } from '../math/Vector3';
-import { Euler } from '../math/Euler';
 
 export abstract class Light {
 	constructor(public intensity: number = 0.5, public color: Color = Color.White.clone()) {}
 }
 
 export class DirectionalLight extends Light {
-	constructor(public direction: Euler, intensity?: number, color?: Color) {
+	constructor(public direction: Vector3, intensity?: number, color?: Color) {
 		super(intensity, color);
 	}
 }
@@ -15,7 +14,7 @@ export class DirectionalLight extends Light {
 export class SpotLight extends Light {
 	constructor(
 		public position: Vector3,
-		public direction: Euler,
+		public direction: Vector3,
 		public angle: number,
 		public range: number,
 		intensity?: number,

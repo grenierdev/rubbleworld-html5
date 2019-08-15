@@ -29,6 +29,7 @@ export class UnlitOverlayColoredMaterial extends Material {
 			`),
 			{
 				depthTest: false,
+				depthFunc: MaterialDepth.ALWAYS,
 				writeDepth: false,
 				blend: true,
 				blendFuncSource: MaterialBlend.SRC_ALPHA,

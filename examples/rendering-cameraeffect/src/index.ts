@@ -1,8 +1,9 @@
 import { RenderableEngine } from '@fexel/core/Engine';
 import { Stats } from '@fexel/core/Stats';
 import { Material } from '@fexel/core/rendering/Material';
-import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
+import { Vector3 } from '@fexel/core/math/Vector3';
+import { PlaneGeometry } from '@fexel/core/geometries/Plane';
 import { Texture } from '@fexel/core/rendering/Texture';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
@@ -15,7 +16,7 @@ import {
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
 import { Color } from '@fexel/core/math/Color';
-import { RenderTarget } from '@fexel/core/rendering/RenderTarget';
+import { RenderTarget, RenderTargetAttachment } from '@fexel/core/rendering/RenderTarget';
 import { UnlitSampledMaterial } from '@fexel/core/materials/UnlitSampled';
 
 const stats = new Stats();
@@ -32,14 +33,9 @@ const tex = new Texture({
 });
 
 const mat = new UnlitSampledMaterial();
-mat.setUniform('Sampler', tex);
+mat.uniforms.Texture0 = tex;
 
-const mesh = new Mesh({
-	vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
-	indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
-	uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
-	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
-});
+const mesh = new Mesh(new PlaneGeometry().meshData);
 
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;
@@ -57,28 +53,30 @@ class MoverComponent extends Component {
 	}
 }
 
+const obj = new Entity('UV', [new TransformComponent(), new MoverComponent(), new MeshRendererComponent(mesh, mat)]);
+
 const sepiaEffect = new CameraEffect(
 	new Material(
 		new VertexShader(`
 			attribute vec3 Position0;
-			attribute vec2 vertUV1;
+			attribute vec2 UV0;
 			varying vec2 fragUV;
 
 			void main(void) {
-				fragUV = vertUV1;
+				fragUV = UV0;
 				gl_Position = vec4(Position0, 1.0);
 			}
 		`),
 		new FragmentShader(`
 			precision mediump float;
 
-			uniform sampler2D Sampler;
+			uniform sampler2D Texture0;
 			varying vec2 fragUV;
 
 			const float opacity = 0.75;
 
 			void main(void) {
-				vec4 texColor = texture2D(sampler, fragUV);
+				vec4 texColor = texture2D(Texture0, fragUV);
 				float grey = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
 
 				vec3 sepia = vec3(grey);
@@ -96,24 +94,24 @@ const sepiaEffect = new CameraEffect(
 			}
 		`)
 	),
-	new RenderTarget(500, 500, new Texture({ width: 500, height: 500 }))
+	new RenderTarget(512, 512, new Map([[RenderTargetAttachment.COLOR0, new Texture({ width: 512, height: 512 })]]))
 );
 const vignetteEffect = new CameraEffect(
 	new Material(
 		new VertexShader(`
 			attribute vec3 Position0;
-			attribute vec2 vertUV1;
+			attribute vec2 UV0;
 			varying vec2 fragUV;
 
 			void main(void) {
-				fragUV = vertUV1;
+				fragUV = UV0;
 				gl_Position = vec4(Position0, 1.0);
 			}
 		`),
 		new FragmentShader(`
 			precision mediump float;
 
-			uniform sampler2D Sampler;
+			uniform sampler2D Texture0;
 			varying vec2 fragUV;
 
 			const float radius = 0.75;
@@ -121,7 +119,7 @@ const vignetteEffect = new CameraEffect(
 			const float opacity = 0.5;
 
 			void main(void) {
-				vec4 texColor = texture2D(sampler, fragUV);
+				vec4 texColor = texture2D(Texture0, fragUV);
 				vec2 position = fragUV.xy - vec2(0.5);
 				
 				float vignette = smoothstep(
@@ -140,11 +138,11 @@ const vignetteEffect = new CameraEffect(
 			}
 		`)
 	),
-	new RenderTarget(500, 500, new Texture({ width: 500, height: 500 }))
+	new RenderTarget(512, 512, new Map([[RenderTargetAttachment.COLOR0, new Texture({ width: 512, height: 512 })]]))
 );
 
 const cam = CameraPerspectivePrefab({
-	position: new Vector3(0, 0, -10),
+	position: new Vector3(0, 0, 10),
 	camera: {
 		fov: 40,
 		near: 0.1,
@@ -157,8 +155,6 @@ cam1Comp.backgroundColor = Color.White;
 cam1Comp.showDebug = true;
 cam1Comp.effects.push(sepiaEffect);
 cam1Comp.effects.push(vignetteEffect);
-
-const obj = new Entity('UV', [new TransformComponent(), new MoverComponent(), new MeshRendererComponent(mesh, mat)]);
 
 const scene = new Scene().addChild(cam).addChild(obj);
 

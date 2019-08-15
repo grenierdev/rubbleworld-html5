@@ -1,7 +1,9 @@
 import { IDisposable } from '@konstellio/disposable';
 import { Mutable } from '../util/Immutable';
 
-const LoadingImage = new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1);
+const LOADING_IMAGE = new ImageData(new Uint8ClampedArray([255, 0, 255, 255]), 1, 1);
+const ZERO_IMAGE = new ImageData(new Uint8ClampedArray([0, 0, 0, 0]), 1, 1);
+const ONE_IMAGE = new ImageData(new Uint8ClampedArray([1, 1, 1, 1]), 1, 1);
 
 export enum TextureWrap {
 	REPEAT = WebGLRenderingContext.REPEAT,
@@ -62,6 +64,7 @@ export class Texture implements IDisposable {
 	public readonly internalFormat = TextureFormat.RGBA;
 	public readonly format = TextureFormat.RGBA;
 	public readonly type = WebGLRenderingContext.UNSIGNED_BYTE;
+	public readonly mipmap: boolean = true;
 
 	constructor({
 		width,
@@ -71,6 +74,7 @@ export class Texture implements IDisposable {
 		internalFormat,
 		format,
 		type,
+		mipmap,
 	}: {
 		width: number;
 		height: number;
@@ -79,6 +83,7 @@ export class Texture implements IDisposable {
 		internalFormat?: TextureFormat;
 		format?: TextureFormat;
 		type?: TextureType;
+		mipmap?: boolean;
 	});
 	constructor({
 		data,
@@ -87,6 +92,7 @@ export class Texture implements IDisposable {
 		internalFormat,
 		format,
 		type,
+		mipmap,
 	}: {
 		data: HTMLImageElement | ImageData | ImageBitmap;
 		wrap?: TextureWrap;
@@ -94,6 +100,7 @@ export class Texture implements IDisposable {
 		internalFormat?: TextureFormat;
 		format?: TextureFormat;
 		type?: TextureType;
+		mipmap?: boolean;
 	});
 	constructor({
 		data,
@@ -104,6 +111,7 @@ export class Texture implements IDisposable {
 		internalFormat,
 		format,
 		type,
+		mipmap,
 	}: {
 		data?: HTMLImageElement | ImageData | ImageBitmap;
 		width?: number;
@@ -113,6 +121,7 @@ export class Texture implements IDisposable {
 		internalFormat?: TextureFormat;
 		format?: TextureFormat;
 		type?: TextureType;
+		mipmap?: boolean;
 	}) {
 		this.data = data;
 		this.width = width;
@@ -122,6 +131,7 @@ export class Texture implements IDisposable {
 		this.internalFormat = internalFormat || TextureFormat.RGBA;
 		this.format = format || TextureFormat.RGBA;
 		this.type = type || TextureType.UNSIGNED_BYTE;
+		this.mipmap = typeof mipmap === 'undefined' ? false : mipmap;
 	}
 
 	public createTexture(gl: WebGLRenderingContext) {
@@ -133,6 +143,15 @@ export class Texture implements IDisposable {
 			return;
 		}
 
+		if (
+			this.internalFormat === WebGLRenderingContext.DEPTH_COMPONENT ||
+			this.internalFormat === WebGLRenderingContext.DEPTH_COMPONENT16 ||
+			this.format === WebGLRenderingContext.DEPTH_COMPONENT ||
+			this.format === WebGLRenderingContext.DEPTH_COMPONENT16
+		) {
+			gl.getExtension('WEBGL_depth_texture');
+		}
+
 		(this as Mutable<Texture>).texture = gl.createTexture()!;
 		gl.bindTexture(gl.TEXTURE_2D, this.texture!);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, this.wrap);
@@ -141,7 +160,7 @@ export class Texture implements IDisposable {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.filter);
 
 		if (this.data instanceof HTMLImageElement && this.data.complete === false) {
-			gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.format, this.type, LoadingImage);
+			gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.format, this.type, LOADING_IMAGE);
 			this.data.onload = () => {
 				gl.bindTexture(gl.TEXTURE_2D, this.texture!);
 				gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.format, this.type, this.data!);
@@ -152,7 +171,9 @@ export class Texture implements IDisposable {
 			gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, this.width, this.height, 0, this.format, this.type, null);
 		}
 
-		gl.generateMipmap(gl.TEXTURE_2D);
+		if (this.mipmap) {
+			gl.generateMipmap(gl.TEXTURE_2D);
+		}
 
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
@@ -176,4 +197,7 @@ export class Texture implements IDisposable {
 		gl.bindTexture(gl.TEXTURE_2D, this.texture!);
 		gl.activeTexture(gl[`TEXTURE${slot}`]);
 	}
+
+	static Empty = new Texture({ data: ZERO_IMAGE });
+	static EmptyDepth = new Texture({ data: ZERO_IMAGE });
 }
