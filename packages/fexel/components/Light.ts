@@ -55,8 +55,7 @@ export abstract class LightComponent extends Component {
 					// 	RenderTargetAttachment.COLOR0,
 					// 	new Texture({ width: this.shadowMap.width!, height: this.shadowMap.height! }),
 					// ],
-					// [RenderTargetAttachment.DEPTH, this.shadowMap],
-					[RenderTargetAttachment.COLOR0, this.shadowMap],
+					[RenderTargetAttachment.DEPTH, this.shadowMap],
 				])
 			);
 		}
