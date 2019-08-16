@@ -61,7 +61,7 @@ export function makePlane(
 			mesh.normals[p * 3 + 2] = v0.z;
 
 			mesh.uvs[0][p * 2 + 0] = ix / gridX;
-			mesh.uvs[0][p * 2 + 1] = iy / gridY;
+			mesh.uvs[0][p * 2 + 1] = 1 - iy / gridY;
 		}
 	}
 
