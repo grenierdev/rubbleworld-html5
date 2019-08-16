@@ -5,7 +5,7 @@ import { Material, UniformMap } from '../rendering/Material';
 import { Texture } from '../rendering/Texture';
 import { Vector3, ReadonlyVector3 } from '../math/Vector3';
 import { Color, ReadonlyColor } from '../math/Color';
-import { UnlitMaterial } from '../materials/Unlit';
+import { ShadowCasterMaterial } from '../materials/ShadowCaster';
 
 export interface IRenderable {
 	render(width: number, height: number, meshes: PriorityList<IDrawable>, context: UpdateContext): void;
@@ -42,7 +42,7 @@ export class RendererComponent extends Component {
 	public readonly renderables: PriorityList<IRenderable> = new PriorityList();
 	public readonly lights: PriorityList<ILight> = new PriorityList();
 
-	private shadowMaterial = new UnlitMaterial();
+	private shadowMaterial = new ShadowCasterMaterial();
 
 	didMount() {
 		if (!(this.entity instanceof Scene)) {
@@ -59,7 +59,7 @@ export class RendererComponent extends Component {
 			Material.globals.LightCount = 0;
 			Material.globals.Lights = [];
 			const prevOverride = Material.override;
-			// Material.override = this.shadowMaterial;
+			Material.override = this.shadowMaterial;
 
 			const lights = this.lights;
 			const uniforms: LightUniform[] = [];

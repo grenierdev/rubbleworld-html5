@@ -1,7 +1,7 @@
 import { Material, MaterialDepth, MaterialSide } from '../rendering/Material';
 import { VertexShader, FragmentShader } from '../rendering/Shader';
 
-export class UnlitMaterial extends Material {
+export class ShadowCasterMaterial extends Material {
 	constructor() {
 		super(
 			new VertexShader(`
@@ -21,10 +21,7 @@ export class UnlitMaterial extends Material {
 				void main(void) {
 					gl_FragColor = vec4(1.0);
 				}
-			`),
-			{
-				depthFunc: MaterialDepth.LESS,
-			}
+			`)
 		);
 	}
 }

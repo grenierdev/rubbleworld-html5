@@ -34,12 +34,9 @@ setInterval(() => stats.update(), 1000 / 30);
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
 const engine = ((window as any).engine = new RenderableEngine(canvasEl, stats));
 
-const tex1 = new Texture({
-	data: document.getElementById('uvdebug')! as HTMLImageElement,
-});
-
-const uvMaterial = new UnlitSampledMaterial();
-uvMaterial.uniforms.Texture0 = tex1;
+const uvDebugTex = new Texture({ data: document.getElementById('uvdebug')! as HTMLImageElement });
+const uvDebugMat = new UnlitSampledMaterial();
+uvDebugMat.uniforms.Texture0 = uvDebugTex;
 
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;
@@ -66,13 +63,13 @@ class MoverComponent extends Component {
 }
 
 const mainCam = CameraPerspectivePrefab({
-	position: new Vector3(0, -10, 5),
-	rotation: new Euler(70 * DEG2RAD, 0, 0),
+	position: new Vector3(0, -3, -30),
+	rotation: new Euler(-70 * DEG2RAD, 0, 0),
 	camera: {
 		fov: 40,
 		near: 0.01,
 		far: 100,
-		zoom: 0.5,
+		zoom: 1,
 	},
 });
 mainCam.getComponent(CameraComponent)!.viewport.setFromCenterAndSize(new Vector2(0.25, 0.5), new Vector2(0.5, 1.0));
@@ -81,22 +78,22 @@ mainCam.getComponent(CameraComponent)!.showDebug = true;
 mainCam.getComponent(CameraComponent)!.visibilityFlag ^= 2;
 
 const plane = new PlaneGeometry(10, 10);
-const meshPlane = new Mesh(plane.meshData);
-const objPlane = new Entity('Plane', [new TransformComponent(), new MeshRendererComponent(meshPlane, uvMaterial)]);
+const planeMesh = new Mesh(plane.meshData);
+const planeEnt = new Entity('Plane', [new TransformComponent(), new MeshRendererComponent(planeMesh, uvDebugMat)]);
 
 const box = new BoxGeometry(2, 2, 2);
-const meshBox = new Mesh(box.meshData);
-const objBox = new Entity('Box', [
+const boxMesh = new Mesh(box.meshData);
+const boxEnt = new Entity('Box', [
 	new TransformComponent(),
-	new MeshRendererComponent(meshBox, uvMaterial),
+	new MeshRendererComponent(boxMesh, uvDebugMat),
 	new MoverComponent(new Vector3(-1, 1, 2)),
 ]);
 
 const sphere = new SphereGeometry(1);
-const meshSphere = new Mesh(sphere.meshData);
-const objSphere = new Entity('Sphere', [
+const sphereMesh = new Mesh(sphere.meshData);
+const sphereEnt = new Entity('Sphere', [
 	new TransformComponent(),
-	new MeshRendererComponent(meshSphere, uvMaterial),
+	new MeshRendererComponent(sphereMesh, uvDebugMat),
 	new MoverComponent(new Vector3(1, 1, 2)),
 ]);
 
@@ -123,16 +120,13 @@ const topLight = new Entity('Light', [
 topLight.getComponent(LightComponent)!.visibilityFlag ^= 2;
 
 const topCam = CameraOrthographicPrefab({
-	name: 'Top',
-	position: new Vector3(0, 0, 10),
-	rotation: new Euler(0, 0, 0),
 	camera: {
 		left: -5,
 		right: 5,
 		top: 5,
 		bottom: -5,
-		near: 5,
-		far: 12,
+		near: -5,
+		far: 20,
 		zoom: 1,
 	},
 });
@@ -140,16 +134,13 @@ topCam.getComponent(CameraComponent)!.viewport.setFromCenterAndSize(new Vector2(
 topCam.getComponent(CameraComponent)!.visibilityFlag ^= 2;
 
 const debugCam = CameraOrthographicPrefab({
-	name: 'Debug',
-	position: new Vector3(0, 0, 10),
-	rotation: new Euler(0, 0, 0),
 	camera: {
 		left: -5,
 		right: 5,
 		top: -5,
 		bottom: 5,
-		near: 0.01,
-		far: 100,
+		near: -5,
+		far: 20,
 		zoom: 1,
 	},
 });
@@ -165,6 +156,6 @@ const debugPlane = new Entity('RT', [
 ]);
 debugPlane.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
 
-const scene = new Scene().addChild(mainCam, objPlane, objBox, objSphere, topLight, topCam, debugCam, debugPlane);
+const scene = new Scene().addChild(mainCam, planeEnt, boxEnt, sphereEnt, topLight, topCam, debugCam, debugPlane);
 engine.loadScene(scene);
 engine.start();
