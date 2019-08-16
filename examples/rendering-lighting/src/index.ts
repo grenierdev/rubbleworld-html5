@@ -38,6 +38,98 @@ const uvDebugTex = new Texture({ data: document.getElementById('uvdebug')! as HT
 const uvDebugMat = new UnlitSampledMaterial();
 uvDebugMat.uniforms.Texture0 = uvDebugTex;
 
+const shadeMat = new Material(
+	new VertexShader(`
+		precision mediump int;
+		precision highp float;
+		const int maxLightCount = 4;
+		struct light {
+			int type;
+			vec3 position;
+			vec3 direction;
+			float intensity;
+			vec3 color;
+			mat4 shadowtransform;
+		};
+		attribute vec3 Position0;
+		attribute vec3 Normal0;
+		attribute vec2 UV0;
+		uniform mat4 ProjectionMatrix;
+		uniform mat4 WorldMatrix;
+		uniform mat4 ModelMatrix;
+		uniform int LightCount;
+		uniform light Lights[maxLightCount];
+		uniform sampler2D ShadowTextures[maxLightCount];
+		varying vec3 v_Normal;
+		varying vec2 v_UV;
+		varying vec4 v_ShadowPosition[maxLightCount];
+
+		const mat4 texUnitConverter = mat4(0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.5, 1.0);
+
+		void main(void) {
+			for (int i = 0; i < maxLightCount; ++i) {
+				if (i < LightCount) {
+					// v_ShadowPosition[i] = texUnitConverter * Lights[i].shadowtransform * ModelMatrix * vec4(Position0, 1.0);
+					v_ShadowPosition[i] = Lights[i].shadowtransform * ModelMatrix * vec4(Position0, 1.0);
+				}
+			}
+
+			v_UV = UV0;
+			v_Normal = mat3(WorldMatrix) * mat3(ModelMatrix) * Normal0;
+			gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
+		}
+	`),
+	new FragmentShader(`
+		precision mediump int;
+		precision highp float;
+		const int maxLightCount = 4;
+		struct light {
+			int type;
+			vec3 position;
+			vec3 direction;
+			float intensity;
+			vec3 color;
+			mat4 shadowtransform;
+		};
+		uniform int LightCount;
+		uniform light Lights[maxLightCount];
+		uniform sampler2D ShadowTextures[maxLightCount];
+		uniform vec3 Ambient;
+		uniform sampler2D Texture0;
+		varying vec3 v_Normal;
+		varying vec2 v_UV;
+		varying vec4 v_ShadowPosition[maxLightCount];
+
+		void main(void) {
+			// vec4 color = texture2D(Texture0, v_UV);
+			// gl_FragColor = vec4(color.xyz, 1.0);
+
+			// gl_FragColor = vec4(v_ShadowPosition[0].xy, 0.0, 1.0);
+
+			vec3 shadowUV = v_ShadowPosition[0].xyz / v_ShadowPosition[0].w;
+			shadowUV = shadowUV * 0.5 + 0.5;
+			float depth = texture2D(ShadowTextures[0], shadowUV.xy).r;
+
+			// gl_FragColor = vec4(shadowUV.xy, 0.0, 1.0);
+			// gl_FragColor = vec4(shadowUV.z, 0.0, 0.0, 1.0); // Z WORKS !
+			gl_FragColor = vec4(shadowUV.xyz, 1.0);
+
+			// if (v_ShadowPosition[0].z <= -13.0) {
+			// 	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+			// } else {
+			// 	gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+			// }
+
+			// if (shadowUV.z <= -6.0) {
+			// 	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+			// } else {
+			// 	gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+			// }
+		}
+	`)
+);
+shadeMat.uniforms.Texture0 = uvDebugTex;
+
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;
 	constructor(public offset = new Vector3()) {
@@ -49,15 +141,15 @@ class MoverComponent extends Component {
 	update({ time }) {
 		if (this.transform) {
 			this.transform.localPosition.set(
-				this.offset.x + Math.sin(Math.max(0, time) / 500),
-				this.offset.y + Math.cos(Math.max(0, time) / 500),
+				this.offset.x + Math.sin(Math.max(0, time) / 500) * 2,
+				this.offset.y + Math.cos(Math.max(0, time) / 500) * 2,
 				this.offset.z
 			);
-			this.transform.localRotation.set(
-				this.transform.localRotation.x + 1 * DEG2RAD,
-				this.transform.localRotation.y + 1 * DEG2RAD,
-				this.transform.localRotation.z + 1 * DEG2RAD
-			);
+			// this.transform.localRotation.set(
+			// 	this.transform.localRotation.x + 1 * DEG2RAD,
+			// 	this.transform.localRotation.y + 1 * DEG2RAD,
+			// 	this.transform.localRotation.z + 1 * DEG2RAD
+			// );
 		}
 	}
 }
@@ -79,13 +171,13 @@ mainCam.getComponent(CameraComponent)!.visibilityFlag ^= 2;
 
 const plane = new PlaneGeometry(10, 10);
 const planeMesh = new Mesh(plane.meshData);
-const planeEnt = new Entity('Plane', [new TransformComponent(), new MeshRendererComponent(planeMesh, uvDebugMat)]);
+const planeEnt = new Entity('Plane', [new TransformComponent(), new MeshRendererComponent(planeMesh, shadeMat)]);
 
 const box = new BoxGeometry(2, 2, 2);
 const boxMesh = new Mesh(box.meshData);
 const boxEnt = new Entity('Box', [
-	new TransformComponent(),
-	new MeshRendererComponent(boxMesh, uvDebugMat),
+	new TransformComponent(new Vector3(), new Euler(0, 45 * DEG2RAD, 45 * DEG2RAD)),
+	new MeshRendererComponent(boxMesh, shadeMat),
 	new MoverComponent(new Vector3(-1, 1, 2)),
 ]);
 
@@ -93,8 +185,8 @@ const sphere = new SphereGeometry(1);
 const sphereMesh = new Mesh(sphere.meshData);
 const sphereEnt = new Entity('Sphere', [
 	new TransformComponent(),
-	new MeshRendererComponent(sphereMesh, uvDebugMat),
-	new MoverComponent(new Vector3(1, 1, 2)),
+	new MeshRendererComponent(sphereMesh, shadeMat),
+	new MoverComponent(new Vector3(1.5, 1, 2)),
 ]);
 
 const shadowTex = new Texture({
@@ -102,31 +194,32 @@ const shadowTex = new Texture({
 	height: 512,
 	internalFormat: TextureFormat.DEPTH_COMPONENT,
 	format: TextureFormat.DEPTH_COMPONENT,
-	type: TextureType.UNSIGNED_INT,
+	type: TextureType.UNSIGNED_SHORT,
 });
 
 const topLight = new Entity('Light', [
-	new TransformComponent(new Vector3(0, 0, 10)),
+	new TransformComponent(new Vector3(0, 0, -10)),
 	new DirectionalLightComponent(
 		{
 			intensity: 1.0,
 			color: new Color().fromRGBA(231, 210, 179),
 			shadowMap: shadowTex,
 		},
-		5,
+		0,
 		12
 	),
 ]);
 topLight.getComponent(LightComponent)!.visibilityFlag ^= 2;
 
 const topCam = CameraOrthographicPrefab({
+	position: new Vector3(0, 0, -10),
 	camera: {
 		left: -5,
 		right: 5,
 		top: 5,
 		bottom: -5,
-		near: -5,
-		far: 20,
+		near: 0,
+		far: 10.5,
 		zoom: 1,
 	},
 });
@@ -137,8 +230,8 @@ const debugCam = CameraOrthographicPrefab({
 	camera: {
 		left: -5,
 		right: 5,
-		top: -5,
-		bottom: 5,
+		top: 5,
+		bottom: -5,
 		near: -5,
 		far: 20,
 		zoom: 1,

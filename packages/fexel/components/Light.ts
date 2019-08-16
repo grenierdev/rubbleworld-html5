@@ -77,9 +77,11 @@ export interface DirectionalLightConstructor {
 export class DirectionalLightComponent extends LightComponent {
 	protected readonly camera: CameraOrthographic;
 
+	private m0 = new Matrix4();
+
 	constructor({ intensity, color, shadowMap }: DirectionalLightConstructor, public near = 0.01, public far = 2000) {
 		super(new DirectionalLight(Vector3.Zero.clone(), intensity, color), shadowMap);
-		this.camera = new CameraOrthographic(-5, 5, -5, 5, near, far, 1);
+		this.camera = new CameraOrthographic(-5, 5, 5, -5, near, far, 1.0);
 	}
 
 	getUniform() {
@@ -92,8 +94,8 @@ export class DirectionalLightComponent extends LightComponent {
 			color: light.color,
 			shadowtexture: this.shadowMap || Texture.EmptyDepth,
 			shadowtransform: this.shadowMap
-				? m0.multiplyMatrices(
-						this.transform ? this.transform.worldMatrixInverse : Matrix4.Identity,
+				? this.m0.multiplyMatrices(
+						this.transform ? this.transform.worldMatrix : Matrix4.Identity,
 						this.camera.projectionMatrix
 				  )
 				: undefined,
@@ -104,7 +106,7 @@ export class DirectionalLightComponent extends LightComponent {
 	renderShadow(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
 		if (context.gl && this.enabled && this.entity!.enabled && this.shadowMap && this.transform) {
 			const gl = context.gl;
-			const worldMatrix = this.transform ? this.transform.worldMatrixInverse : Matrix4.Identity;
+			const worldMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
 			this.camera.updateProjectionMatrix();
 			const projectionMatrix = this.camera.projectionMatrix;
 			const visibilityFlag = this.visibilityFlag;
