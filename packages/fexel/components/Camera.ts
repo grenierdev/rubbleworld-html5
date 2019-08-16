@@ -13,6 +13,7 @@ import { RendererComponent, IRenderable, IDrawable } from './Renderer';
 import { PriorityList } from '../util/PriorityList';
 import { Material } from '../rendering/Material';
 import { Mesh } from '../rendering/Mesh';
+import { PlaneGeometry } from '../geometries/Plane';
 
 export enum CameraClear {
 	Nothing = 0,
@@ -44,11 +45,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 	public effects: CameraEffect[] = [];
 	public renderTarget?: RenderTarget;
 
-	protected effectMesh = new Mesh({
-		vertices: new Float32Array([1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0]),
-		indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
-		uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
-	});
+	protected effectMesh = new Mesh(new PlaneGeometry(2, 2).meshData);
 
 	constructor(public readonly camera: Camera, public visibilityFlag: number = CameraVisibility.Everything) {
 		super();
@@ -96,7 +93,12 @@ export abstract class CameraComponent extends Component implements IRenderable {
 						this.setupViewport(width, height, context);
 					}
 
+					gl.clearColor(0, 0, 0, 1);
+					gl.clearDepth(1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
 					material.uniforms.Texture0 = buffer.attachments.get(RenderTargetAttachment.COLOR0)!;
+					material.uniforms.Texture1 = buffer.attachments.get(RenderTargetAttachment.DEPTH)!;
 					material.bind(gl);
 					this.effectMesh.draw(gl);
 				}
@@ -105,8 +107,6 @@ export abstract class CameraComponent extends Component implements IRenderable {
 				this.drawScene(drawables, context);
 				this.drawDebug(context);
 			}
-
-			gl.flush();
 		}
 	}
 
@@ -115,6 +115,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		gl.enable(gl.SCISSOR_TEST);
 		if (this.renderTarget) {
 			this.renderTarget.bind(gl);
+			// TODO Take into account the camera viewport ?
 			gl.viewport(0, 0, this.renderTarget.width, this.renderTarget.height);
 			gl.scissor(0, 0, this.renderTarget.width, this.renderTarget.height);
 		} else {
@@ -136,7 +137,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 
 	protected drawScene(drawables: PriorityList<IDrawable>, context: UpdateContext) {
 		const gl = context.gl!;
-		const worldMatrix = this.transform ? this.transform.worldMatrixInverse : Matrix4.Identity;
+		const worldMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
 		const projectionMatrix = this.camera.projectionMatrix;
 		const visibilityFlag = this.visibilityFlag;
 
@@ -153,7 +154,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 
 	protected drawDebug(context: UpdateContext) {
 		const gl = context.gl!;
-		const worldMatrix = this.transform ? this.transform.worldMatrixInverse : Matrix4.Identity;
+		const worldMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
 		const projectionMatrix = this.camera.projectionMatrix;
 
 		if (this.showDebug && context.debug) {
@@ -177,7 +178,7 @@ export class CameraPerspectiveComponent extends CameraComponent {
 	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
 		if (this.enabled && this.entity && this.entity.enabled) {
 			(this.camera as CameraPerspective).aspect =
-				(this.viewport.max.x - this.viewport.min.x) / (this.viewport.max.y - this.viewport.min.y);
+				((this.viewport.max.x - this.viewport.min.x) * width) / ((this.viewport.max.y - this.viewport.min.y) * height);
 			this.camera.updateProjectionMatrix();
 			super.render(width, height, drawables, context);
 		}

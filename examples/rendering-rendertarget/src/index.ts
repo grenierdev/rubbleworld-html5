@@ -6,7 +6,12 @@ import { Mesh } from '@fexel/core/rendering/Mesh';
 import { Texture, TextureFormat, TextureType } from '@fexel/core/rendering/Texture';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
-import { CameraPerspectivePrefab, CameraPerspectiveComponent, CameraComponent } from '@fexel/core/components/Camera';
+import {
+	CameraPerspectivePrefab,
+	CameraPerspectiveComponent,
+	CameraComponent,
+	CameraOrthographicPrefab,
+} from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
 import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
 import { Color } from '@fexel/core/math/Color';
@@ -17,6 +22,7 @@ import { UnlitSampledMaterial } from '@fexel/core/materials/UnlitSampled';
 import { PlaneGeometry } from '@fexel/core/geometries/Plane';
 import { BoxGeometry } from '@fexel/core/geometries/Box';
 import { SphereGeometry } from '@fexel/core/geometries/Sphere';
+import { Vector2 } from '@fexel/core/math/Vector2';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
@@ -27,12 +33,9 @@ setInterval(() => stats.update(), 1000 / 30);
 const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
 const engine = ((window as any).engine = new RenderableEngine(canvasEl, stats));
 
-const tex1 = new Texture({
-	data: document.getElementById('uvdebug')! as HTMLImageElement,
-});
-
-const uvMaterial = new UnlitSampledMaterial();
-uvMaterial.uniforms.Texture0 = tex1;
+const uvDebugTex = new Texture({ data: document.getElementById('uvdebug')! as HTMLImageElement });
+const uvDebugMat = new UnlitSampledMaterial();
+uvDebugMat.uniforms.Texture0 = uvDebugTex;
 
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;
@@ -57,7 +60,6 @@ class MoverComponent extends Component {
 		}
 	}
 }
-
 const screenColorTex = new Texture({ width: 512, height: 512 });
 const screenDepthTex = new Texture({
 	width: 512,
@@ -73,8 +75,8 @@ const rt = new RenderTarget(
 	new Map([[RenderTargetAttachment.COLOR0, screenColorTex], [RenderTargetAttachment.DEPTH, screenDepthTex]])
 );
 
-const cam1 = CameraPerspectivePrefab({
-	position: new Vector3(0, 0, 10),
+const recorderCam = CameraPerspectivePrefab({
+	position: new Vector3(0, 0, -10),
 	camera: {
 		fov: 40,
 		near: 8,
@@ -82,70 +84,77 @@ const cam1 = CameraPerspectivePrefab({
 		zoom: 0.5,
 	},
 });
-const cam1Comp = cam1.getComponent(CameraComponent)!;
-cam1Comp.backgroundColor = Color.White;
-cam1Comp.showDebug = true;
-cam1Comp.renderTarget = rt;
-cam1Comp.visibilityFlag = 2;
+recorderCam.getComponent(CameraComponent)!.viewport.setFromCenterAndSize(new Vector2(0.5, 0.5), new Vector2(0.5, 0.5));
+recorderCam.getComponent(CameraComponent)!.backgroundColor = Color.White;
+recorderCam.getComponent(CameraComponent)!.showDebug = true;
+recorderCam.getComponent(CameraComponent)!.renderTarget = rt;
+recorderCam.getComponent(CameraComponent)!.visibilityFlag = 2;
 
 const plane = new PlaneGeometry(10, 10);
-const meshPlane = new Mesh(plane.meshData);
-const objPlane = new Entity('Plane', [new TransformComponent(), new MeshRendererComponent(meshPlane, uvMaterial)]);
-objPlane.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
+const planeMesh = new Mesh(plane.meshData);
+const planeEnt = new Entity('Plane', [new TransformComponent(), new MeshRendererComponent(planeMesh, uvDebugMat)]);
+planeEnt.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
 
 const box = new BoxGeometry(2, 2, 2);
-const meshBox = new Mesh(box.meshData);
-const objBox = new Entity('Box', [
+const boxMesh = new Mesh(box.meshData);
+const boxEnt = new Entity('Box', [
 	new TransformComponent(),
-	new MeshRendererComponent(meshBox, uvMaterial),
+	new MeshRendererComponent(boxMesh, uvDebugMat),
 	new MoverComponent(new Vector3(-1, 1, 0)),
 ]);
-objBox.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
+boxEnt.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
 
 const sphere = new SphereGeometry(1);
-const meshSphere = new Mesh(sphere.meshData);
-const objSphere = new Entity('Sphere', [
+const sphereMesh = new Mesh(sphere.meshData);
+const sphereEnt = new Entity('Sphere', [
 	new TransformComponent(),
-	new MeshRendererComponent(meshSphere, uvMaterial),
+	new MeshRendererComponent(sphereMesh, uvDebugMat),
 	new MoverComponent(new Vector3(1, 1, 0)),
 ]);
-objSphere.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
+sphereEnt.getComponent(MeshRendererComponent)!.visibilityFlag = 2;
 
-const cam2 = CameraPerspectivePrefab({
-	position: new Vector3(0, 0, 10),
-	// rotation: new Euler(0, 0, 45 * DEG2RAD),
+// const mainCam = CameraPerspectivePrefab({
+// 	position: new Vector3(0, 0, -10),
+// 	camera: {
+// 		fov: 40,
+// 		near: 0.1,
+// 		far: 100.0,
+// 		zoom: 2,
+// 	},
+// });
+const mainCam = CameraOrthographicPrefab({
 	camera: {
-		fov: 40,
-		near: 0.1,
-		far: 100.0,
-		zoom: 2,
+		left: -1,
+		right: 1,
+		top: 1,
+		bottom: -1,
+		near: -10,
+		far: 10,
+		zoom: 1,
 	},
 });
 
-cam2.getComponent(CameraComponent)!.showDebug = true;
-cam2.getComponent(CameraComponent)!.visibilityFlag = 1;
+mainCam.getComponent(CameraComponent)!.showDebug = true;
+mainCam.getComponent(CameraComponent)!.visibilityFlag = 1;
 
-const screenGeo = new PlaneGeometry(1.8, 1.8);
+const screenGeo = new PlaneGeometry();
 const screenColorMat = new UnlitSampledMaterial();
 screenColorMat.uniforms.Texture0 = screenColorTex;
-const screenColor = new Entity('RT', [
-	new TransformComponent(new Vector3(-0.9, 0, 0)),
-	// new MoverComponent(),
+const screenColor = new Entity('ScreenColor', [
+	new TransformComponent(new Vector3(-0.5, 0, 0)),
 	new MeshRendererComponent(new Mesh(screenGeo.meshData), screenColorMat),
 ]);
 screenColor.getComponent(MeshRendererComponent)!.visibilityFlag = 1;
 
 const screenDepthMat = new UnlitSampledMaterial();
 screenDepthMat.uniforms.Texture0 = screenDepthTex;
-// screenDepthMat.uniforms.Texture0 = screenColorTex;
-const screenDepth = new Entity('RT', [
-	new TransformComponent(new Vector3(0.9, 0, 0)),
-	// new MoverComponent(),
+const screenDepth = new Entity('ScreenDepth', [
+	new TransformComponent(new Vector3(0.5, 0, 0)),
 	new MeshRendererComponent(new Mesh(screenGeo.meshData), screenDepthMat),
 ]);
 screenDepth.getComponent(MeshRendererComponent)!.visibilityFlag = 1;
 
-const scene = new Scene().addChild(cam1, cam2, objPlane, objBox, objSphere, screenColor, screenDepth);
+const scene = new Scene().addChild(recorderCam, mainCam, planeEnt, boxEnt, sphereEnt, screenColor, screenDepth);
 
 engine.loadScene(scene);
 engine.start();

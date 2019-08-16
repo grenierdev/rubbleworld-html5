@@ -45,7 +45,7 @@ export class UnlitOverlayColoredPointMaterial extends Material {
 			new VertexShader(
 				`
 				attribute vec3 Position0;
-				attribute float vertSize;
+				attribute float Size;
 				attribute vec4 Color0;
 
 				varying vec4 fragColor;
@@ -56,7 +56,7 @@ export class UnlitOverlayColoredPointMaterial extends Material {
 				void main(void) {
 					fragColor = Color0;
 					gl_Position = ProjectionMatrix * WorldMatrix * vec4(Position0, 1.0);
-					gl_PointSize = vertSize;
+					gl_PointSize = Size;
 				}
 			`
 			),
@@ -71,7 +71,8 @@ export class UnlitOverlayColoredPointMaterial extends Material {
 			`),
 			{
 				depthTest: false,
-				writeDepth: false,
+				depthFunc: MaterialDepth.ALWAYS,
+				writeDepth: true,
 				blend: true,
 				blendFuncSource: MaterialBlend.SRC_ALPHA,
 				blendFuncDestination: MaterialBlend.ONE_MINUS_SRC_ALPHA,

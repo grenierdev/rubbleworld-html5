@@ -190,11 +190,7 @@ export class Material implements IDisposable {
 			} else {
 				gl.disable(gl.DEPTH_TEST);
 			}
-			if (this.writeDepth) {
-				gl.depthMask(true);
-			} else {
-				gl.depthMask(false);
-			}
+			gl.depthMask(this.writeDepth);
 			if (this.blend) {
 				gl.enable(gl.BLEND);
 				gl.blendFunc(this.blendFuncSource, this.blendFuncDestination);
