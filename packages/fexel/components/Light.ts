@@ -95,8 +95,8 @@ export class DirectionalLightComponent extends LightComponent {
 			shadowtexture: this.shadowMap || Texture.EmptyDepth,
 			shadowtransform: this.shadowMap
 				? this.m0.multiplyMatrices(
-						this.transform ? this.transform.worldMatrix : Matrix4.Identity,
-						this.camera.projectionMatrix
+						this.camera.projectionMatrix,
+						this.transform ? this.transform.worldMatrix : Matrix4.Identity
 				  )
 				: undefined,
 		};

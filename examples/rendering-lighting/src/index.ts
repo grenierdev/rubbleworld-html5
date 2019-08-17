@@ -3,7 +3,7 @@ import { Stats } from '@fexel/core/Stats';
 import { Material } from '@fexel/core/rendering/Material';
 import { Vector3 } from '@fexel/core/math/Vector3';
 import { Mesh } from '@fexel/core/rendering/Mesh';
-import { Texture, TextureFormat, TextureType } from '@fexel/core/rendering/Texture';
+import { Texture, TextureFormat, TextureType, TextureWrap } from '@fexel/core/rendering/Texture';
 import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
 import {
@@ -101,30 +101,24 @@ const shadeMat = new Material(
 		varying vec4 v_ShadowPosition[maxLightCount];
 
 		void main(void) {
-			// vec4 color = texture2D(Texture0, v_UV);
-			// gl_FragColor = vec4(color.xyz, 1.0);
-
-			// gl_FragColor = vec4(v_ShadowPosition[0].xy, 0.0, 1.0);
+			vec4 color = vec4(texture2D(Texture0, v_UV).xyz, 1.0);
 
 			vec3 shadowUV = v_ShadowPosition[0].xyz / v_ShadowPosition[0].w;
 			shadowUV = shadowUV * 0.5 + 0.5;
 			float depth = texture2D(ShadowTextures[0], shadowUV.xy).r;
 
-			// gl_FragColor = vec4(shadowUV.xy, 0.0, 1.0);
-			// gl_FragColor = vec4(shadowUV.z, 0.0, 0.0, 1.0); // Z WORKS !
-			gl_FragColor = vec4(shadowUV.xyz, 1.0);
+			// gl_FragColor = vec4(shadowUV.xyz, 1.0);
 
-			// if (v_ShadowPosition[0].z <= -13.0) {
-			// 	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-			// } else {
-			// 	gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-			// }
+			// cosTheta is dot( n,l ), clamped between 0 and 1
+			// float bias = 0.001 * tan(acos(cosTheta));
+			float bias = 0.001;
+			bias = clamp(bias, 0.0, 0.01);
 
-			// if (shadowUV.z <= -6.0) {
-			// 	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-			// } else {
-			// 	gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-			// }
+			if (shadowUV.z < depth + bias) {
+				gl_FragColor = color;
+			} else {
+				gl_FragColor = vec4(color.xyz * 0.4, 1.0);
+			}
 		}
 	`)
 );
@@ -145,11 +139,11 @@ class MoverComponent extends Component {
 				this.offset.y + Math.cos(Math.max(0, time) / 500) * 2,
 				this.offset.z
 			);
-			// this.transform.localRotation.set(
-			// 	this.transform.localRotation.x + 1 * DEG2RAD,
-			// 	this.transform.localRotation.y + 1 * DEG2RAD,
-			// 	this.transform.localRotation.z + 1 * DEG2RAD
-			// );
+			this.transform.localRotation.set(
+				this.transform.localRotation.x + 1 * DEG2RAD,
+				this.transform.localRotation.y + 1 * DEG2RAD,
+				this.transform.localRotation.z + 1 * DEG2RAD
+			);
 		}
 	}
 }
@@ -176,9 +170,9 @@ const planeEnt = new Entity('Plane', [new TransformComponent(), new MeshRenderer
 const box = new BoxGeometry(2, 2, 2);
 const boxMesh = new Mesh(box.meshData);
 const boxEnt = new Entity('Box', [
-	new TransformComponent(new Vector3(), new Euler(0, 45 * DEG2RAD, 45 * DEG2RAD)),
+	new TransformComponent(),
 	new MeshRendererComponent(boxMesh, shadeMat),
-	new MoverComponent(new Vector3(-1, 1, 2)),
+	new MoverComponent(new Vector3(-1, 0, 2)),
 ]);
 
 const sphere = new SphereGeometry(1);
@@ -186,7 +180,7 @@ const sphereMesh = new Mesh(sphere.meshData);
 const sphereEnt = new Entity('Sphere', [
 	new TransformComponent(),
 	new MeshRendererComponent(sphereMesh, shadeMat),
-	new MoverComponent(new Vector3(1.5, 1, 2)),
+	new MoverComponent(new Vector3(1, 0, 2)),
 ]);
 
 const shadowTex = new Texture({

@@ -194,8 +194,8 @@ export class Texture implements IDisposable {
 	bind(gl: WebGLRenderingContext, slot = 0) {
 		this.createTexture(gl);
 
+		gl.activeTexture(gl.TEXTURE0 + slot);
 		gl.bindTexture(gl.TEXTURE_2D, this.texture!);
-		gl.activeTexture(gl[`TEXTURE${slot}`]);
 	}
 
 	static Empty = new Texture({ data: ZERO_IMAGE });
