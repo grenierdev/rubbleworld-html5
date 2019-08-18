@@ -56,7 +56,6 @@ export class RendererComponent extends Component {
 			const height = context.canvas.height;
 			const drawables = this.drawables;
 
-			Material.globals.LightCount = 0;
 			Material.globals.Lights = [];
 			const prevOverride = Material.override;
 			Material.override = this.shadowMaterial;
@@ -71,9 +70,9 @@ export class RendererComponent extends Component {
 				}
 			}
 
-			Material.globals.LightCount = uniforms.length;
-			Material.globals.Lights = uniforms as any;
-			Material.globals.ShadowTextures = uniforms.map(u => u.shadowtexture) as any;
+			// Material.globals.Lights = uniforms as any;
+			Material.globals.uDirectionalShadowTransform = uniforms.map(u => u.shadowtransform) as any;
+			Material.globals.uDirectionalShadowMap = uniforms.map(u => u.shadowtexture) as any;
 			Material.override = prevOverride;
 
 			for (const [renderable] of this.renderables) {

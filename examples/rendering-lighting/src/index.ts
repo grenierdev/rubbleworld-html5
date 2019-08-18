@@ -13,7 +13,13 @@ import {
 	CameraOrthographicPrefab,
 } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
-import { VertexShader, FragmentShader } from '@fexel/core/rendering/Shader';
+import {
+	VertexShader,
+	FragmentShader,
+	PartialShader,
+	ShaderType,
+	mergeShaderPartials,
+} from '@fexel/core/rendering/Shader';
 import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
 import { DEG2RAD } from '@fexel/core/math/util';
@@ -38,90 +44,113 @@ const uvDebugTex = new Texture({ data: document.getElementById('uvdebug')! as HT
 const uvDebugMat = new UnlitSampledMaterial();
 uvDebugMat.uniforms.Texture0 = uvDebugTex;
 
-const shadeMat = new Material(
-	new VertexShader(`
-		precision mediump int;
-		precision highp float;
-		const int maxLightCount = 4;
-		struct light {
-			int type;
-			vec3 position;
-			vec3 direction;
-			float intensity;
-			vec3 color;
-			mat4 shadowtransform;
-		};
-		attribute vec3 Position0;
-		attribute vec3 Normal0;
-		attribute vec2 UV0;
-		uniform mat4 ProjectionMatrix;
-		uniform mat4 WorldMatrix;
-		uniform mat4 ModelMatrix;
-		uniform int LightCount;
-		uniform light Lights[maxLightCount];
-		uniform sampler2D ShadowTextures[maxLightCount];
-		varying vec3 v_Normal;
-		varying vec2 v_UV;
-		varying vec4 v_ShadowPosition[maxLightCount];
+const lightPartial = new PartialShader(
+	ShaderType.Vertex,
+	`
+	const int MAX_NUM_LIGHT = 4;
 
-		const mat4 texUnitConverter = mat4(0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.5, 1.0);
+	struct Light {
+		vec3 Position;
+		vec3 Direction;
+		vec3 Color;
+		float Intensity;
+	}
 
-		void main(void) {
-			for (int i = 0; i < maxLightCount; ++i) {
-				if (i < LightCount) {
-					// v_ShadowPosition[i] = texUnitConverter * Lights[i].shadowtransform * ModelMatrix * vec4(Position0, 1.0);
-					v_ShadowPosition[i] = Lights[i].shadowtransform * ModelMatrix * vec4(Position0, 1.0);
-				}
-			}
-
-			v_UV = UV0;
-			v_Normal = mat3(WorldMatrix) * mat3(ModelMatrix) * Normal0;
-			gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
-		}
-	`),
-	new FragmentShader(`
-		precision mediump int;
-		precision highp float;
-		const int maxLightCount = 4;
-		struct light {
-			int type;
-			vec3 position;
-			vec3 direction;
-			float intensity;
-			vec3 color;
-			mat4 shadowtransform;
-		};
-		uniform int LightCount;
-		uniform light Lights[maxLightCount];
-		uniform sampler2D ShadowTextures[maxLightCount];
-		uniform vec3 Ambient;
-		uniform sampler2D Texture0;
-		varying vec3 v_Normal;
-		varying vec2 v_UV;
-		varying vec4 v_ShadowPosition[maxLightCount];
-
-		void main(void) {
-			vec4 color = vec4(texture2D(Texture0, v_UV).xyz, 1.0);
-
-			vec3 shadowUV = v_ShadowPosition[0].xyz / v_ShadowPosition[0].w;
-			shadowUV = shadowUV * 0.5 + 0.5;
-			float depth = texture2D(ShadowTextures[0], shadowUV.xy).r;
-
-			// gl_FragColor = vec4(shadowUV.xyz, 1.0);
-
-			// cosTheta is dot( n,l ), clamped between 0 and 1
-			// float bias = 0.001 * tan(acos(cosTheta));
-			float bias = 0.001;
-			bias = clamp(bias, 0.0, 0.01);
-
-			if (shadowUV.z < depth + bias) {
-				gl_FragColor = color;
-			} else {
-				gl_FragColor = vec4(color.xyz * 0.4, 1.0);
-			}
-		}
-	`)
+	uniform Light uLights[MAX_NUM_LIGHT];
+`
 );
+
+const shadowDirVertPartial = new PartialShader(
+	ShaderType.Vertex,
+	`
+	precision mediump int;
+	precision highp float;
+	const int MAX_NUM_DIR_SHADOW = 4;
+	uniform mat4 uDirectionalShadowTransform[MAX_NUM_DIR_SHADOW];
+	varying vec4 vDirectionalShadowPosition[MAX_NUM_DIR_SHADOW];
+`,
+	`
+	void CalcDirectionalShadowPosition(vec4 position) {
+		for (int i = 0; i < MAX_NUM_DIR_SHADOW; ++i) {
+			vDirectionalShadowPosition[i] = uDirectionalShadowTransform[i] * position;
+		}
+	}
+`
+);
+
+const shadowDirFragPartial = new PartialShader(
+	ShaderType.Fragment,
+	`
+	precision mediump int;
+	precision highp float;
+	const int MAX_NUM_DIR_SHADOW = 4;
+	uniform sampler2D uDirectionalShadowMap[MAX_NUM_DIR_SHADOW];
+	varying vec4 vDirectionalShadowPosition[MAX_NUM_DIR_SHADOW];
+`,
+	`
+	bool InShadow(vec4 position_in_shadow, sampler2D shadowmap) {
+		vec3 shadowUV = position_in_shadow.xyz / position_in_shadow.w;
+		shadowUV = shadowUV * 0.5 + 0.5;
+		float depth = texture2D(shadowmap, shadowUV.xy).r;
+
+		// cosTheta is dot( n,l ), clamped between 0 and 1
+		// float bias = 0.001 * tan(acos(cosTheta));
+		float bias = 0.001;
+		bias = clamp(bias, 0.0, 0.01);
+
+		return shadowUV.z >= depth + bias;
+	}
+`
+);
+
+const lightingVertPartial = new PartialShader(
+	ShaderType.Vertex,
+	`
+	attribute vec3 Position0;
+	attribute vec3 Normal0;
+	attribute vec2 UV0;
+	uniform mat4 ProjectionMatrix;
+	uniform mat4 WorldMatrix;
+	uniform mat4 ModelMatrix;
+	varying vec3 vNormal;
+	varying vec2 vUV;
+`,
+	`
+	void main(void) {
+		CalcDirectionalShadowPosition(ModelMatrix * vec4(Position0, 1.0));
+
+		vUV = UV0;
+		vNormal = mat3(WorldMatrix) * mat3(ModelMatrix) * Normal0;
+		gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
+	}
+`
+);
+
+const lightingFragPartial = new PartialShader(
+	ShaderType.Fragment,
+	`
+	uniform sampler2D Texture0;
+	varying vec3 vNormal;
+	varying vec2 vUV;
+`,
+	`
+	void main(void) {
+		vec4 color = vec4(texture2D(Texture0, vUV).xyz, 1.0);
+		
+		if (InShadow(vDirectionalShadowPosition[0], uDirectionalShadowMap[0])) {
+			color.xyz *= 0.4;
+		}
+
+		gl_FragColor = color;
+	}
+`
+);
+
+const shadeMat = new Material(
+	mergeShaderPartials(shadowDirVertPartial, lightingVertPartial),
+	mergeShaderPartials(shadowDirFragPartial, lightingFragPartial)
+);
+
 shadeMat.uniforms.Texture0 = uvDebugTex;
 
 class MoverComponent extends Component {
