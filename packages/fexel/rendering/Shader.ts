@@ -70,7 +70,7 @@ export abstract class Shader implements IDisposable {
 			if (Shader.shaderLibrary.get(include)) {
 				return Shader.processInclude(Shader.shaderLibrary.get(include)!);
 			}
-			return `// failed to locate ${include}`;
+			throw new ReferenceError(`Could not locate ${include}.`);
 		});
 	}
 }
