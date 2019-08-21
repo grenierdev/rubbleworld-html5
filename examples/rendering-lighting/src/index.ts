@@ -13,13 +13,7 @@ import {
 	CameraOrthographicPrefab,
 } from '@fexel/core/components/Camera';
 import { TransformComponent } from '@fexel/core/components/Transform';
-import {
-	VertexShader,
-	FragmentShader,
-	PartialShader,
-	ShaderType,
-	mergeShaderPartials,
-} from '@fexel/core/rendering/Shader';
+import { VertexShader, FragmentShader, ShaderType, Shader } from '@fexel/core/rendering/Shader';
 import { Color } from '@fexel/core/math/Color';
 import { Euler } from '@fexel/core/math/Euler';
 import { DEG2RAD } from '@fexel/core/math/util';
@@ -30,6 +24,7 @@ import { BoxGeometry } from '@fexel/core/geometries/Box';
 import { SphereGeometry } from '@fexel/core/geometries/Sphere';
 import { Vector2 } from '@fexel/core/math/Vector2';
 import { LightComponent, DirectionalLightComponent } from '@fexel/core/components/Light';
+import '@fexel/core/materials/includes/lighting';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
@@ -44,111 +39,43 @@ const uvDebugTex = new Texture({ data: document.getElementById('uvdebug')! as HT
 const uvDebugMat = new UnlitSampledMaterial();
 uvDebugMat.uniforms.Texture0 = uvDebugTex;
 
-const lightPartial = new PartialShader(
-	ShaderType.Vertex,
-	`
-	const int MAX_NUM_LIGHT = 4;
-
-	struct Light {
-		vec3 Position;
-		vec3 Direction;
-		vec3 Color;
-		float Intensity;
-	}
-
-	uniform Light uLights[MAX_NUM_LIGHT];
-`
-);
-
-const shadowDirVertPartial = new PartialShader(
-	ShaderType.Vertex,
-	`
-	precision mediump int;
-	precision highp float;
-	const int MAX_NUM_DIR_SHADOW = 4;
-	uniform mat4 uDirectionalShadowTransform[MAX_NUM_DIR_SHADOW];
-	varying vec4 vDirectionalShadowPosition[MAX_NUM_DIR_SHADOW];
-`,
-	`
-	void CalcDirectionalShadowPosition(vec4 position) {
-		for (int i = 0; i < MAX_NUM_DIR_SHADOW; ++i) {
-			vDirectionalShadowPosition[i] = uDirectionalShadowTransform[i] * position;
-		}
-	}
-`
-);
-
-const shadowDirFragPartial = new PartialShader(
-	ShaderType.Fragment,
-	`
-	precision mediump int;
-	precision highp float;
-	const int MAX_NUM_DIR_SHADOW = 4;
-	uniform sampler2D uDirectionalShadowMap[MAX_NUM_DIR_SHADOW];
-	varying vec4 vDirectionalShadowPosition[MAX_NUM_DIR_SHADOW];
-`,
-	`
-	bool InShadow(vec4 position_in_shadow, sampler2D shadowmap) {
-		vec3 shadowUV = position_in_shadow.xyz / position_in_shadow.w;
-		shadowUV = shadowUV * 0.5 + 0.5;
-		float depth = texture2D(shadowmap, shadowUV.xy).r;
-
-		// cosTheta is dot( n,l ), clamped between 0 and 1
-		// float bias = 0.001 * tan(acos(cosTheta));
-		float bias = 0.001;
-		bias = clamp(bias, 0.0, 0.01);
-
-		return shadowUV.z >= depth + bias;
-	}
-`
-);
-
-const lightingVertPartial = new PartialShader(
-	ShaderType.Vertex,
-	`
-	attribute vec3 Position0;
-	attribute vec3 Normal0;
-	attribute vec2 UV0;
-	uniform mat4 ProjectionMatrix;
-	uniform mat4 WorldMatrix;
-	uniform mat4 ModelMatrix;
-	varying vec3 vNormal;
-	varying vec2 vUV;
-`,
-	`
-	void main(void) {
-		CalcDirectionalShadowPosition(ModelMatrix * vec4(Position0, 1.0));
-
-		vUV = UV0;
-		vNormal = mat3(WorldMatrix) * mat3(ModelMatrix) * Normal0;
-		gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
-	}
-`
-);
-
-const lightingFragPartial = new PartialShader(
-	ShaderType.Fragment,
-	`
-	uniform sampler2D Texture0;
-	varying vec3 vNormal;
-	varying vec2 vUV;
-`,
-	`
-	void main(void) {
-		vec4 color = vec4(texture2D(Texture0, vUV).xyz, 1.0);
-		
-		if (InShadow(vDirectionalShadowPosition[0], uDirectionalShadowMap[0])) {
-			color.xyz *= 0.4;
-		}
-
-		gl_FragColor = color;
-	}
-`
-);
-
 const shadeMat = new Material(
-	mergeShaderPartials(shadowDirVertPartial, lightingVertPartial),
-	mergeShaderPartials(shadowDirFragPartial, lightingFragPartial)
+	new VertexShader(`
+		#include lighting/shadow/directionnal.vert;
+
+		attribute vec3 Position0;
+		attribute vec3 Normal0;
+		attribute vec2 UV0;
+		uniform mat4 ProjectionMatrix;
+		uniform mat4 WorldMatrix;
+		uniform mat4 ModelMatrix;
+		varying vec3 vNormal;
+		varying vec2 vUV;
+
+		void main(void) {
+			CalcDirectionalShadowPosition(ModelMatrix * vec4(Position0, 1.0));
+
+			vUV = UV0;
+			vNormal = mat3(WorldMatrix) * mat3(ModelMatrix) * Normal0;
+			gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
+		}
+	`),
+	new FragmentShader(`
+		#include lighting/shadow/directionnal.frag;
+
+		uniform sampler2D Texture0;
+		varying vec3 vNormal;
+		varying vec2 vUV;
+		void main(void) {
+			vec4 color = vec4(texture2D(Texture0, vUV).xyz, 1.0);
+
+			if (InShadow(vDirectionalShadowPosition[0], uDirectionalShadowMap[0])) {
+				color.xyz *= 0.4;
+			}
+
+			gl_FragColor = color;
+		}
+	`)
 );
 
 shadeMat.uniforms.Texture0 = uvDebugTex;
