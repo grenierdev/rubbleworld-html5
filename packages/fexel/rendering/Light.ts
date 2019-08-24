@@ -2,12 +2,12 @@ import { Color } from '../math/Color';
 import { Vector3 } from '../math/Vector3';
 
 export abstract class Light {
-	constructor(public intensity: number = 0.5, public color: Color = Color.White.clone()) {}
+	constructor(public color: Color = Color.White.clone()) {}
 }
 
 export class DirectionalLight extends Light {
-	constructor(public direction: Vector3, intensity?: number, color?: Color) {
-		super(intensity, color);
+	constructor(public direction: Vector3, color?: Color) {
+		super(color);
 	}
 }
 
@@ -17,15 +17,14 @@ export class SpotLight extends Light {
 		public direction: Vector3,
 		public angle: number,
 		public range: number,
-		intensity?: number,
 		color?: Color
 	) {
-		super(intensity, color);
+		super(color);
 	}
 }
 
 export class PointLight extends Light {
-	constructor(public position: Vector3, public range: number, intensity?: number, color?: Color) {
-		super(intensity, color);
+	constructor(public position: Vector3, public range: number, color?: Color) {
+		super(color);
 	}
 }

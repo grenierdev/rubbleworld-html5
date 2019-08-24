@@ -67,7 +67,6 @@ export abstract class LightComponent extends Component {
 }
 
 export interface DirectionalLightConstructor {
-	intensity?: number;
 	color?: Color;
 	near?: number;
 	far?: number;
@@ -77,24 +76,24 @@ export interface DirectionalLightConstructor {
 export class DirectionalLightComponent extends LightComponent {
 	protected readonly camera: CameraOrthographic;
 
-	private m0 = new Matrix4();
+	private shadowMapMatrix = new Matrix4();
+	private direction = new Vector3();
 
-	constructor({ intensity, color, shadowMap }: DirectionalLightConstructor, public near = 0.01, public far = 2000) {
-		super(new DirectionalLight(Vector3.Zero.clone(), intensity, color), shadowMap);
+	constructor({ color, shadowMap }: DirectionalLightConstructor, public near = 0.01, public far = 2000) {
+		super(new DirectionalLight(Vector3.Zero.clone(), color), shadowMap);
 		this.camera = new CameraOrthographic(-5, 5, 5, -5, near, far, 1.0);
 	}
 
 	getUniform() {
 		const light = this.light as DirectionalLight;
 		const uniform: LightUniform = {
-			type: 0,
-			position: Vector3.Zero,
-			direction: light.direction,
-			intensity: light.intensity,
-			color: light.color,
-			shadowtexture: this.shadowMap || Texture.EmptyDepth,
-			shadowtransform: this.shadowMap
-				? this.m0.multiplyMatrices(
+			Type: 1,
+			Position: this.transform ? this.transform.worldPosition : Vector3.Zero,
+			Direction: this.transform ? this.transform.getForwardVector(this.direction) : Vector3.Zero,
+			Color: light.color,
+			ShadowMap: this.shadowMap || Texture.EmptyDepth,
+			ShadowMapMatrix: this.shadowMap
+				? this.shadowMapMatrix.multiplyMatrices(
 						this.camera.projectionMatrix,
 						this.transform ? this.transform.worldMatrix : Matrix4.Identity
 				  )
@@ -130,7 +129,6 @@ export class DirectionalLightComponent extends LightComponent {
 export interface SpotConstructorLight {
 	angle: number;
 	range: number;
-	intensity?: number;
 	color?: Color;
 	shadowMap?: Texture;
 }
@@ -138,12 +136,8 @@ export interface SpotConstructorLight {
 export class SpotComponentLight extends LightComponent {
 	protected readonly projectionMatrix: Matrix4 = new Matrix4();
 
-	constructor(
-		{ angle, range, intensity, color, shadowMap }: SpotConstructorLight,
-		public near = 0.01,
-		public far = 2000
-	) {
-		super(new SpotLight(Vector3.Zero.clone(), Vector3.Zero.clone(), angle, range, intensity, color), shadowMap);
+	constructor({ angle, range, color, shadowMap }: SpotConstructorLight, public near = 0.01, public far = 2000) {
+		super(new SpotLight(Vector3.Zero.clone(), Vector3.Zero.clone(), angle, range, color), shadowMap);
 	}
 
 	updateProjectionMatrix() {
@@ -170,13 +164,12 @@ export class SpotComponentLight extends LightComponent {
 
 export interface PointConstructorLight {
 	range: number;
-	intensity?: number;
 	color?: Color;
 }
 
 export class PointComponentLight extends LightComponent {
-	constructor({ range, intensity, color }: PointConstructorLight) {
-		super(new PointLight(Vector3.Zero.clone(), range, intensity, color));
+	constructor({ range, color }: PointConstructorLight) {
+		super(new PointLight(Vector3.Zero.clone(), range, color));
 	}
 
 	getUniform() {

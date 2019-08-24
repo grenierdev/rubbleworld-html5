@@ -79,7 +79,6 @@ export abstract class CameraComponent extends Component implements IRenderable {
 				gl.viewport(0, 0, firstEffect.buffer.width, firstEffect.buffer.height);
 				gl.scissor(0, 0, firstEffect.buffer.width, firstEffect.buffer.height);
 				this.drawScene(drawables, context);
-				this.drawDebug(context);
 
 				for (let i = 0, l = this.effects.length; i < l; ++i) {
 					const { buffer, material } = this.effects[i];
@@ -105,7 +104,6 @@ export abstract class CameraComponent extends Component implements IRenderable {
 			} else {
 				this.setupViewport(width, height, context);
 				this.drawScene(drawables, context);
-				this.drawDebug(context);
 			}
 		}
 	}
@@ -141,6 +139,8 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		const projectionMatrix = this.camera.projectionMatrix;
 		const visibilityFlag = this.visibilityFlag;
 
+		Material.globals.uViewPosition = this.transform ? this.transform.worldPosition : Vector3.Zero;
+
 		if (this.clear) {
 			gl.clearColor(this.backgroundColor.r, this.backgroundColor.g, this.backgroundColor.b, this.backgroundColor.a);
 			gl.clearDepth(1.0);
@@ -150,12 +150,6 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		for (const [drawer] of drawables) {
 			drawer.draw(gl, worldMatrix, projectionMatrix, visibilityFlag);
 		}
-	}
-
-	protected drawDebug(context: UpdateContext) {
-		const gl = context.gl!;
-		const worldMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
-		const projectionMatrix = this.camera.projectionMatrix;
 
 		if (this.showDebug && context.debug) {
 			context.debug.draw(worldMatrix, projectionMatrix, gl);

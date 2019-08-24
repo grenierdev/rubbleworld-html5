@@ -68,10 +68,10 @@ export type UniformPrimitive =
 	| Texture;
 
 export type UniformMap = {
-	[key: string]: Uniform;
+	[key: string]: Uniform | undefined;
 };
 
-export type Uniform = UniformPrimitive | UniformPrimitive[] | UniformMap;
+export type Uniform = UniformPrimitive | UniformPrimitive[] | UniformMap | UniformMap[];
 
 function isSampler(type: number): boolean {
 	return type === Type.Sampler || type === Type.Sampler2D || type === Type.SamplerCube;

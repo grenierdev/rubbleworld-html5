@@ -41,7 +41,9 @@ uvDebugMat.uniforms.Texture0 = uvDebugTex;
 
 const shadeMat = new Material(
 	new VertexShader(`
-		#include lighting/shadow/directionnal.vert;
+		#define MAX_NUM_LIGHT 1
+		#define MAX_NUM_DIR_SHADOW 1
+		#include lighting.vert;
 
 		attribute vec3 Position0;
 		attribute vec3 Normal0;
@@ -49,36 +51,43 @@ const shadeMat = new Material(
 		uniform mat4 ProjectionMatrix;
 		uniform mat4 WorldMatrix;
 		uniform mat4 ModelMatrix;
+		varying vec3 vPosition;
 		varying vec3 vNormal;
 		varying vec2 vUV;
 
 		void main(void) {
-			CalcDirectionalShadowPosition(ModelMatrix * vec4(Position0, 1.0));
+			CalcShadowPosition(ModelMatrix * vec4(Position0, 1.0));
 
 			vUV = UV0;
-			vNormal = mat3(WorldMatrix) * mat3(ModelMatrix) * Normal0;
+			vNormal = mat3(ModelMatrix) * Normal0;
+			vPosition = vec3(ModelMatrix * vec4(Position0, 1.0));
 			gl_Position = ProjectionMatrix * WorldMatrix * ModelMatrix * vec4(Position0, 1.0);
 		}
 	`),
 	new FragmentShader(`
-		#include lighting/shadow/directionnal.frag;
+		#define MAX_NUM_LIGHT 1
+		#define MAX_NUM_DIR_SHADOW 1
+		#define SHADOWMAP_TYPE_PCF 1
+		#include lighting.frag;
 
 		uniform sampler2D Texture0;
+		varying vec3 vPosition;
 		varying vec3 vNormal;
 		varying vec2 vUV;
+
 		void main(void) {
-			vec4 color = vec4(texture2D(Texture0, vUV).xyz, 1.0);
+			vec3 color = texture2D(Texture0, vUV).xyz;
+			vec3 ambient = uAmbient * color;
+			vec3 lighting = CalcLighting(color, 512.0, vPosition, vNormal);
+			float shadowed = CalcShadow(0.001);
 
-			if (InShadow(vDirectionalShadowPosition[0], uDirectionalShadowMap[0])) {
-				color.xyz *= 0.4;
-			}
-
-			gl_FragColor = color;
+			gl_FragColor = vec4(ambient + lighting * shadowed, 1.0);
 		}
 	`)
 );
 
 shadeMat.uniforms.Texture0 = uvDebugTex;
+shadeMat.uniforms.uAmbient = new Color(0.1, 0.1, 0.1, 1.0);
 
 class MoverComponent extends Component {
 	public transform: TransformComponent | undefined;

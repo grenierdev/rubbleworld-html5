@@ -1,9 +1,9 @@
 import { Component, Entity } from '../Scene';
 import { Matrix4, ReadonlyMatrix4 } from '../math/Matrix4';
-import { Vector3 } from '../math/Vector3';
+import { Vector3, ReadonlyVector3 } from '../math/Vector3';
 import { Quaternion, ReadonlyQuaternion } from '../math/Quaternion';
 import { Mutable } from '../util/Immutable';
-import { Euler } from '../math/Euler';
+import { Euler, ReadonlyEuler } from '../math/Euler';
 
 export class TransformComponent extends Component {
 	public executionOrder = 1000;
@@ -12,6 +12,10 @@ export class TransformComponent extends Component {
 
 	public readonly localQuaternion: ReadonlyQuaternion = new Quaternion();
 	public readonly localMatrix: ReadonlyMatrix4 = new Matrix4();
+	public readonly worldQuaternion: ReadonlyQuaternion = new Quaternion();
+	public readonly worldPosition: ReadonlyVector3 = new Vector3();
+	public readonly worldRotation: ReadonlyEuler = new Euler();
+	public readonly worldScale: ReadonlyVector3 = new Vector3(1, 1, 1);
 	public readonly worldMatrix: ReadonlyMatrix4 = new Matrix4();
 	public readonly worldMatrixInverse: ReadonlyMatrix4 = new Matrix4();
 	public readonly parentTransform: TransformComponent | undefined;
@@ -53,6 +57,12 @@ export class TransformComponent extends Component {
 				(this.lastLocalMatrix as Matrix4).copy(this.localMatrix);
 				(this.worldMatrix as Matrix4).multiplyMatrices(this.parentTransform.worldMatrix, this.localMatrix);
 				(this.worldMatrixInverse as Matrix4).inverse(this.worldMatrix);
+				this.worldMatrix.decompose(
+					this.worldPosition as Vector3,
+					this.worldQuaternion as Quaternion,
+					this.worldScale as Vector3
+				);
+				(this.worldRotation as Euler).setFromQuaternion(this.worldQuaternion);
 				this.lastParentWorldMatrix = this.lastParentWorldMatrix
 					? (this.lastParentWorldMatrix as Matrix4).copy(this.parentTransform.worldMatrix)
 					: this.parentTransform.worldMatrix.clone();
@@ -61,6 +71,12 @@ export class TransformComponent extends Component {
 			(this.lastLocalMatrix as Matrix4).copy(this.localMatrix);
 			(this.worldMatrix as Matrix4).copy(this.localMatrix);
 			(this.worldMatrixInverse as Matrix4).inverse(this.worldMatrix);
+			this.worldMatrix.decompose(
+				this.worldPosition as Vector3,
+				this.worldQuaternion as Quaternion,
+				this.worldScale as Vector3
+			);
+			(this.worldRotation as Euler).setFromQuaternion(this.worldQuaternion);
 		}
 	}
 
