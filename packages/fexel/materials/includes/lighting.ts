@@ -16,6 +16,10 @@ Shader.registerInclude(
 Shader.registerInclude(
 	'lighting.frag',
 	`
+	#ifndef SHADOWMAP_PCF_SPREAD
+		#define SHADOWMAP_PCF_SPREAD 700.0
+	#endif
+
 	#include lighting/shadow/directionnal.frag;
 
 	struct Light {
@@ -70,11 +74,13 @@ Shader.registerInclude(
 		#if (defined(MAX_NUM_DIR_SHADOW) && MAX_NUM_DIR_SHADOW > 0)
 			for (int i = 0; i < MAX_NUM_DIR_SHADOW; ++i) {
 				#ifdef SHADOWMAP_TYPE_PCF
-					factor += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(-0.94201624, -0.39906216) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? p / 5.0 : 0.0;
-					factor += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(0.94558609, -0.76890725) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? p / 5.0 : 0.0;
-					factor += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(-0.094184101, -0.92938870) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? p / 5.0 : 0.0;
-					factor += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(0.34495938, 0.29387760) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? p / 5.0 : 0.0;
-					factor += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(0.0), uDirectionalShadowMap[i], bias) ? p / 5.0 : 0.0;
+					float acc = 0.0;
+					acc += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(-1.0, -1.0) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? 1.0 : 0.0;
+					acc += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(1.0, -1.0) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? 1.0 : 0.0;
+					acc += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(1.0, 1.0) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? 1.0 : 0.0;
+					acc += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(-1.0, 1.0) / SHADOWMAP_PCF_SPREAD, uDirectionalShadowMap[i], bias) ? 1.0 : 0.0;
+					acc += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(0.0), uDirectionalShadowMap[i], bias) ? 1.0 : 0.0;
+					factor += acc / 5.0 / p;
 				#else
 					factor += InDirectionalShadow(vDirectionalShadowPosition[i], vec2(0.0), uDirectionalShadowMap[i], bias) ? p : 0.0;
 				#endif
@@ -105,10 +111,6 @@ Shader.registerInclude(
 Shader.registerInclude(
 	'lighting/shadow/directionnal.frag',
 	`
-	#ifndef SHADOWMAP_PCF_SPREAD
-		#define SHADOWMAP_PCF_SPREAD 200.0
-	#endif
-
 	#if (defined(MAX_NUM_DIR_SHADOW) && MAX_NUM_DIR_SHADOW > 0)
 		uniform sampler2D uDirectionalShadowMap[MAX_NUM_DIR_SHADOW];
 		varying vec4 vDirectionalShadowPosition[MAX_NUM_DIR_SHADOW];

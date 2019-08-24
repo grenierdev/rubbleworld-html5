@@ -67,7 +67,7 @@ const shadeMat = new Material(
 	new FragmentShader(`
 		#define MAX_NUM_LIGHT 1
 		#define MAX_NUM_DIR_SHADOW 1
-		#define SHADOWMAP_TYPE_PCF 1
+		// #define SHADOWMAP_TYPE_PCF 1
 		#include lighting.frag;
 
 		uniform sampler2D Texture0;
@@ -160,7 +160,6 @@ const topLight = new Entity('Light', [
 	new TransformComponent(new Vector3(0, 0, -10)),
 	new DirectionalLightComponent(
 		{
-			intensity: 1.0,
 			color: new Color().fromRGBA(231, 210, 179),
 			shadowMap: shadowTex,
 		},
