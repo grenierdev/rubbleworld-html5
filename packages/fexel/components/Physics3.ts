@@ -42,7 +42,7 @@ export class Physics3EngineComponent extends Component {
 				const color = type === Body.STATIC ? COLOR_STATIC : COLOR_DYNAMIC;
 				const matrix = m0.compose(
 					v0.set(position.x, position.z, position.y),
-					q0.set(quaternion.x, quaternion.z, -quaternion.y, quaternion.w),
+					q0.set(-quaternion.x, quaternion.z, -quaternion.y, quaternion.w),
 					Vector3.One
 				);
 
@@ -165,7 +165,7 @@ export class Physics3BodyComponent extends Component {
 				this.body!.position.x = lp.x;
 				this.body!.position.y = lp.z;
 				this.body!.position.z = lp.y;
-				this.body!.quaternion.x = lq.x;
+				this.body!.quaternion.x = -lq.x;
 				this.body!.quaternion.y = lq.z;
 				this.body!.quaternion.z = -lq.y;
 				this.body!.quaternion.w = lq.w;
@@ -199,7 +199,7 @@ export class Physics3BodyComponent extends Component {
 					: 1;
 			const position = this.body.position;
 			const quaternion = this.body.quaternion;
-			e0.setFromQuaternion(q0.set(quaternion.x, quaternion.z, -quaternion.y, quaternion.w));
+			e0.setFromQuaternion(q0.set(-quaternion.x, quaternion.z, -quaternion.y, quaternion.w));
 
 			this.transform.localPosition.set(
 				lerp(this.transform.localPosition.x, position.x, alpha),

@@ -27,6 +27,7 @@ import { Quaternion } from '@fexel/core/math/Quaternion';
 import { Euler } from '@fexel/core/math/Euler';
 import { Line3 } from '@fexel/core/math/Line3';
 import { UnlitSampledMaterial } from '@fexel/core/materials/UnlitSampled';
+import { SphereGeometry } from '@fexel/core/geometries/Sphere';
 
 const stats = new Stats();
 stats.graphCanvas.style.opacity = '0.9';
@@ -44,28 +45,19 @@ const tex1 = new Texture({
 const mat = new UnlitSampledMaterial();
 mat.uniforms.Texture0 = tex1;
 
-const mesh = new Mesh({
-	vertices: new Float32Array([20.0, 20.0, 0.0, -20.0, 20.0, 0.0, 20.0, -20.0, 0.0, -20.0, -20.0, 0.0]),
-	indices: new Uint16Array([0, 1, 2, 2, 1, 3]),
-	uvs: [new Float32Array([1, 0, 0, 0, 1, 1, 0, 1])],
-	colors: [new Float32Array([1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1])],
-});
+const mesh = new Mesh(new SphereGeometry(20).meshData);
 
-const objs = new Array(10).fill(1).map(
-	(_, i) =>
-		new Entity('Obj', [
-			new TransformComponent(new Vector3(-100 + 20 * i, 30 * i, -20 * i)),
-			new Physics3BodyComponent(Physics3BodyType.Dynamic),
-			new Physics3SphereColliderComponent(20),
-			// new Physics3BoxColliderComponent(new Vector3(10, 10, 10)),
-			// Math.random() > 0.5
-			// 	? new Physics3SphereColliderComponent(5 + 10 * Math.random())
-			// 	: new Physics3BoxColliderComponent(
-			// 			new Vector3(5 + 10 * Math.random(), 5 + 10 * Math.random(), 5 + 10 * Math.random())
-			// 	  ),
-			// new MeshRendererComponent(mesh, mat),
-		])
-);
+const objs = new Array(10)
+	.fill(1)
+	.map(
+		(_, i) =>
+			new Entity('Obj', [
+				new TransformComponent(new Vector3(-100 + 20 * i, 30 * i, -20 * i)),
+				new Physics3BodyComponent(Physics3BodyType.Dynamic),
+				new Physics3SphereColliderComponent(20),
+				new MeshRendererComponent(mesh, mat),
+			])
+	);
 
 const ground = new Entity('Ground', [
 	new TransformComponent(new Vector3(0, canvasEl.height / -2, 0)),
