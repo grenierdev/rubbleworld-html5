@@ -20,6 +20,20 @@ Shader.registerInclude(
 		#define SHADOWMAP_PCF_SPREAD 700.0
 	#endif
 
+	#ifdef SHADOWMAP_DECODE_DEPTH
+		float decodeFloat(vec4 color) {
+			const vec4 bitShift = vec4(1.0 / (256.0 * 256.0 * 256.0), 1.0 / (256.0 * 256.0), 1.0 / 256.0, 1.0);
+			return dot(color, bitShift);
+		}
+		float texture2DDepth(in sampler2D texture, in vec2 uv) {
+			return decodeFloat(texture2D(texture, uv));
+		}
+	#else
+		float texture2DDepth(in sampler2D texture, in vec2 uv) {
+			return texture2D(texture, uv).r;
+		}
+	#endif
+
 	#include lighting/shadow/directionnal.frag;
 
 	struct Light {
@@ -118,7 +132,7 @@ Shader.registerInclude(
 		bool InDirectionalShadow(in vec4 position_in_shadow, in vec2 offset, in sampler2D shadowmap, in float bias) {
 			vec3 shadowUV = position_in_shadow.xyz / position_in_shadow.w;
 			shadowUV = shadowUV * 0.5 + 0.5;
-			float depth = texture2D(shadowmap, shadowUV.xy + offset).r;
+			float depth = texture2DDepth(shadowmap, shadowUV.xy + offset);
 
 			return shadowUV.z >= depth + bias;
 		}

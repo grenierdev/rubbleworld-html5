@@ -10,7 +10,7 @@ import { RendererComponent, IDrawable, LightUniform } from './Renderer';
 import { PriorityList } from '../util/PriorityList';
 import { Vector2 } from '../math/Vector2';
 import { RenderTarget, RenderTargetAttachment } from '../rendering/RenderTarget';
-import { Texture } from '../rendering/Texture';
+import { Texture, TextureFormat } from '../rendering/Texture';
 import { CameraVisibility } from './Camera';
 import { CameraOrthographic } from '../rendering/Camera';
 
@@ -51,11 +51,12 @@ export abstract class LightComponent extends Component {
 				this.shadowMap.width!,
 				this.shadowMap.height!,
 				new Map([
-					// [
-					// 	RenderTargetAttachment.COLOR0,
-					// 	new Texture({ width: this.shadowMap.width!, height: this.shadowMap.height! }),
-					// ],
-					[RenderTargetAttachment.DEPTH, this.shadowMap],
+					[
+						this.shadowMap.internalFormat === TextureFormat.DEPTH_COMPONENT
+							? RenderTargetAttachment.DEPTH
+							: RenderTargetAttachment.COLOR0,
+						this.shadowMap,
+					],
 				])
 			);
 		}
