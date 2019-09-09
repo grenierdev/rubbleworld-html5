@@ -9,8 +9,6 @@ export interface UpdateContext {
 	frameCount: number;
 	timeScale: number;
 	debug?: Debug;
-	canvas?: HTMLCanvasElement;
-	gl?: WebGLRenderingContext;
 }
 
 export interface FixedUpdateContext {

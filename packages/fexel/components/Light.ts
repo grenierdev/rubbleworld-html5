@@ -6,9 +6,8 @@ import { Color } from '../math/Color';
 import { Vector3 } from '../math/Vector3';
 import { Matrix4 } from '../math/Matrix4';
 import { DEG2RAD } from '../math/util';
-import { RendererComponent, IDrawable, LightUniform } from './Renderer';
+import { RendererComponent, IDrawable, LightUniform, RenderContext } from './Renderer';
 import { PriorityList } from '../util/PriorityList';
-import { Vector2 } from '../math/Vector2';
 import { RenderTarget, RenderTargetAttachment } from '../rendering/RenderTarget';
 import { Texture, TextureFormat } from '../rendering/Texture';
 import { CameraVisibility } from './Camera';
@@ -103,8 +102,8 @@ export class DirectionalLightComponent extends LightComponent {
 		return uniform;
 	}
 
-	renderShadow(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
-		if (context.gl && this.enabled && this.entity!.enabled && this.shadowMap && this.transform) {
+	renderShadow(width: number, height: number, drawables: PriorityList<IDrawable>, context: RenderContext) {
+		if (this.enabled && this.entity!.enabled && this.shadowMap && this.transform) {
 			const gl = context.gl;
 			const worldMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
 			this.camera.updateProjectionMatrix();

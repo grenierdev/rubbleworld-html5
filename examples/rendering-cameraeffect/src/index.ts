@@ -1,5 +1,4 @@
-import { RenderableEngine } from '@fexel/core/Engine';
-import { Stats } from '@fexel/core/Stats';
+import { Engine, EngineStats } from '@fexel/core/Engine';
 import { Material } from '@fexel/core/rendering/Material';
 import { Mesh } from '@fexel/core/rendering/Mesh';
 import { Vector3 } from '@fexel/core/math/Vector3';
@@ -9,7 +8,6 @@ import { Scene, Entity, Component } from '@fexel/core/Scene';
 import { MeshRendererComponent } from '@fexel/core/components/MeshRenderer';
 import {
 	CameraPerspectivePrefab,
-	CameraPerspectiveComponent,
 	CameraComponent,
 	CameraEffect,
 	CameraOrthographicPrefab,
@@ -20,15 +18,17 @@ import { Color } from '@fexel/core/math/Color';
 import { RenderTarget, RenderTargetAttachment } from '@fexel/core/rendering/RenderTarget';
 import { UnlitSampledMaterial } from '@fexel/core/materials/UnlitSampled';
 import { Vector2 } from '@fexel/core/math/Vector2';
+import { RendererComponent } from '@fexel/core/components/Renderer';
 
-const stats = new Stats();
+const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
+const engine = ((window as any).engine = new Engine(1000 / 60, true));
+const renderer = new RendererComponent(canvasEl);
+
+const stats = new EngineStats(engine, renderer);
 stats.graphCanvas.style.opacity = '0.9';
 document.body.appendChild(stats.graphCanvas);
 document.body.appendChild(stats.labelCanvas);
 setInterval(() => stats.update(), 1000 / 30);
-
-const canvasEl = document.getElementById('canvas')! as HTMLCanvasElement;
-const engine = ((window as any).engine = new RenderableEngine(canvasEl, stats));
 
 const uvDebugTex = new Texture({ data: document.getElementById('uvdebug')! as HTMLImageElement });
 const uvDebugMat = new UnlitSampledMaterial();
@@ -217,7 +217,7 @@ mainCam.getComponent(CameraComponent)!.visibilityFlag ^= 4;
 mainCam.getComponent(CameraComponent)!.effects.push(vignetteEffect);
 mainCam.getComponent(CameraComponent)!.effects.push(sepiaEffect);
 
-const scene = new Scene()
+const scene = new Scene([renderer])
 	.addChild(mainCam, planeEnt, virginCam)
 	.addChild(sepiaCam, sepiaEnt)
 	.addChild(vignetteCam, vignetteEnt);
@@ -225,7 +225,7 @@ const scene = new Scene()
 engine.loadScene(scene);
 engine.start();
 
-engine.debug.drawPoint(new Vector3(1, 0, 0), 5, 3600, new Color(1, 0, 0));
-engine.debug.drawPoint(new Vector3(0, 1, 0), 5, 3600, new Color(0, 1, 0));
-engine.debug.drawPoint(new Vector3(0, 0, 1), 5, 3600, new Color(0, 0, 1));
-engine.debug.drawPoint(new Vector3(0, 0, 0), 3, 3600, new Color(1, 1, 1));
+engine.debug!.drawPoint(new Vector3(1, 0, 0), 5, 3600, new Color(1, 0, 0));
+engine.debug!.drawPoint(new Vector3(0, 1, 0), 5, 3600, new Color(0, 1, 0));
+engine.debug!.drawPoint(new Vector3(0, 0, 1), 5, 3600, new Color(0, 0, 1));
+engine.debug!.drawPoint(new Vector3(0, 0, 0), 3, 3600, new Color(1, 1, 1));

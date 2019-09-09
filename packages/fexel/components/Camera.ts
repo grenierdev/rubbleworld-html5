@@ -9,7 +9,7 @@ import { Vector2 } from '../math/Vector2';
 import { Color, ReadonlyColor } from '../math/Color';
 import { Matrix4 } from '../math/Matrix4';
 import { RenderTarget, RenderTargetAttachment } from '../rendering/RenderTarget';
-import { RendererComponent, IRenderable, IDrawable } from './Renderer';
+import { RendererComponent, IRenderable, IDrawable, RenderContext } from './Renderer';
 import { PriorityList } from '../util/PriorityList';
 import { Material } from '../rendering/Material';
 import { Mesh } from '../rendering/Mesh';
@@ -67,7 +67,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		}
 	}
 
-	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
+	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: RenderContext) {
 		if (this.enabled && this.entity && this.entity.enabled) {
 			const gl = context.gl!;
 
@@ -108,7 +108,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		}
 	}
 
-	protected setupViewport(width: number, height: number, context: UpdateContext) {
+	protected setupViewport(width: number, height: number, context: RenderContext) {
 		const gl = context.gl!;
 		gl.enable(gl.SCISSOR_TEST);
 		if (this.renderTarget) {
@@ -133,7 +133,7 @@ export abstract class CameraComponent extends Component implements IRenderable {
 		}
 	}
 
-	protected drawScene(drawables: PriorityList<IDrawable>, context: UpdateContext) {
+	protected drawScene(drawables: PriorityList<IDrawable>, context: RenderContext) {
 		const gl = context.gl!;
 		const worldMatrix = this.transform ? this.transform.worldMatrix : Matrix4.Identity;
 		const projectionMatrix = this.camera.projectionMatrix;
@@ -169,7 +169,7 @@ export class CameraPerspectiveComponent extends CameraComponent {
 		super(new CameraPerspective(fov, 1.0, near, far, zoom));
 	}
 
-	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: UpdateContext) {
+	render(width: number, height: number, drawables: PriorityList<IDrawable>, context: RenderContext) {
 		if (this.enabled && this.entity && this.entity.enabled) {
 			(this.camera as CameraPerspective).aspect =
 				((this.viewport.max.x - this.viewport.min.x) * width) / ((this.viewport.max.y - this.viewport.min.y) * height);

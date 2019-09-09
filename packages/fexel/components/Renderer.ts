@@ -7,8 +7,13 @@ import { Vector3, ReadonlyVector3 } from '../math/Vector3';
 import { Color, ReadonlyColor } from '../math/Color';
 import { ShadowCasterMaterial } from '../materials/ShadowCaster';
 
+export interface RenderContext extends UpdateContext {
+	canvas: HTMLCanvasElement;
+	gl: WebGLRenderingContext;
+}
+
 export interface IRenderable {
-	render(width: number, height: number, meshes: PriorityList<IDrawable>, context: UpdateContext): void;
+	render(width: number, height: number, meshes: PriorityList<IDrawable>, context: RenderContext): void;
 }
 
 export interface IDrawable {
@@ -31,17 +36,56 @@ export interface LightUniform extends UniformMap {
 
 export interface ILight {
 	getUniform(): LightUniform | undefined;
-	renderShadow(width: number, height: number, meshes: PriorityList<IDrawable>, context: UpdateContext): void;
+	renderShadow(width: number, height: number, meshes: PriorityList<IDrawable>, context: RenderContext): void;
 }
 
 export class RendererComponent extends Component {
 	public executionOrder = 2000;
 
+	public readonly gl: WebGLRenderingContext;
 	public readonly drawables: PriorityList<IDrawable> = new PriorityList();
 	public readonly renderables: PriorityList<IRenderable> = new PriorityList();
 	public readonly lights: PriorityList<ILight> = new PriorityList();
 
+	public readonly statsData = {
+		frames: 0,
+		frameCount: 0,
+		framePerSecond: 0,
+		drawCalls: 0,
+		lastFPSUpdate: 0,
+	};
+
 	private shadowMaterial = new ShadowCasterMaterial();
+
+	constructor(public readonly canvas: HTMLCanvasElement) {
+		super();
+		const gl = canvas.getContext('webgl');
+		if (!gl) {
+			throw new ReferenceError(`Could not get WebGL context of ${canvas}.`);
+		}
+
+		this.gl = gl;
+
+		const statsData = this.statsData;
+		gl.clear = (function(fn) {
+			return function(mask: number) {
+				statsData.drawCalls++;
+				return fn.call(gl, mask);
+			};
+		})(gl.clear);
+		gl.drawArrays = (function(fn) {
+			return function(mode: GLenum, first: GLint, count: GLsizei) {
+				statsData.drawCalls++;
+				return fn.call(gl, mode, first, count);
+			};
+		})(gl.drawArrays);
+		gl.drawElements = (function(fn) {
+			return function(mode: GLenum, count: GLsizei, type: GLenum, offset: GLintptr) {
+				statsData.drawCalls++;
+				return fn.call(gl, mode, count, type, offset);
+			};
+		})(gl.drawElements);
+	}
 
 	didMount() {
 		if (!(this.entity instanceof Scene)) {
@@ -50,9 +94,14 @@ export class RendererComponent extends Component {
 	}
 
 	update(context: UpdateContext) {
-		if (context.canvas && context.gl && this.entity instanceof Scene) {
-			const width = context.canvas.width;
-			const height = context.canvas.height;
+		this.statsData.frameCount++;
+		this.statsData.frames++;
+		this.statsData.drawCalls = 0;
+
+		if (this.entity instanceof Scene) {
+			const renderContext = { ...context, canvas: this.canvas, gl: this.gl };
+			const width = this.canvas.width;
+			const height = this.canvas.height;
 			const drawables = this.drawables;
 
 			Material.globals.uLights = [];
@@ -64,7 +113,7 @@ export class RendererComponent extends Component {
 			const lightComponents = this.lights;
 			const lights: LightUniform[] = [];
 			for (const [light] of lightComponents) {
-				light.renderShadow(width, height, drawables, context);
+				light.renderShadow(width, height, drawables, renderContext);
 				const uniform = light.getUniform();
 				if (uniform) {
 					lights.push(uniform);
@@ -82,8 +131,15 @@ export class RendererComponent extends Component {
 			Material.override = prevOverride;
 
 			for (const [renderable] of this.renderables) {
-				renderable.render(width, height, drawables, context);
+				renderable.render(width, height, drawables, renderContext);
 			}
+		}
+
+		const time = (performance || Date).now();
+		if (time >= this.statsData.lastFPSUpdate + 300) {
+			this.statsData.framePerSecond = (this.statsData.frames * 1000) / (time - this.statsData.lastFPSUpdate);
+			this.statsData.lastFPSUpdate = time;
+			this.statsData.frames = 0;
 		}
 	}
 }

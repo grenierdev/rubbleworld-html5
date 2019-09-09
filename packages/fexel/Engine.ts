@@ -10,6 +10,7 @@ export class Engine implements IDisposable {
 	protected fixedUpdateRequestId: number = -1;
 	protected readonly bindedUpdateMethod: (context?: Partial<UpdateContext>) => void;
 	protected readonly bindedFixedUpdateMethod: (context?: Partial<UpdateContext>) => void;
+	public readonly debug?: Debug;
 
 	public readonly statsData = {
 		updates: 0,
@@ -22,9 +23,13 @@ export class Engine implements IDisposable {
 		lastFixedUpdateTime: (performance || Date).now(),
 	};
 
-	constructor(public fixedUpdateRate = 1000 / 60) {
+	constructor(public fixedUpdateRate = 1000 / 60, debug = false) {
 		this.bindedUpdateMethod = this.update.bind(this);
 		this.bindedFixedUpdateMethod = this.fixedUpdate.bind(this);
+
+		if (debug) {
+			this.debug = new Debug();
+		}
 	}
 
 	async dispose() {}
@@ -76,6 +81,7 @@ export class Engine implements IDisposable {
 				fixedDeltaTime: this.statsData.fixedDeltaTime,
 				timeScale: 1,
 				frameCount: 0,
+				debug: this.debug,
 			});
 			while (ticker.next().done !== true) {
 				this.statsData.updates++;
@@ -114,150 +120,37 @@ export class Engine implements IDisposable {
 
 const HAS_MEMORY = !!(performance as any).memory;
 
-export class RenderableEngine extends Engine {
-	protected renderRequestId: number = -1;
+export class EngineStats extends Stats {
+	constructor(public engine: Engine, public renderer: RendererComponent, width?: number, height?: number) {
+		super(width, height);
 
-	public readonly gl: WebGLRenderingContext;
-	public readonly debug: Debug;
-
-	public readonly statsData = {
-		updates: 0,
-		fixedUpdates: 0,
-		time: 0,
-		deltaTime: 0,
-		fixedTime: 0,
-		fixedDeltaTime: 0,
-		lastUpdateTime: (performance || Date).now(),
-		lastFixedUpdateTime: (performance || Date).now(),
-		frames: 0,
-		frameCount: 0,
-		drawCalls: 0,
-		lastFPSUpdate: 0,
-	};
-
-	constructor(protected readonly canvas: HTMLCanvasElement, public readonly stats?: Stats) {
-		super();
-
-		const gl = canvas.getContext('webgl', {
-			alpha: false,
-			antialias: false,
-			depth: true,
-			stencil: false,
-		});
-
-		if (!gl) {
-			throw new ReferenceError(`Could not get WebGL context out of ${canvas}.`);
-		}
-
-		this.gl = gl;
-		this.debug = new Debug();
-
-		const statsData = this.statsData;
-		gl.drawArrays = (function(fn) {
-			return function(mode: GLenum, first: GLint, count: GLsizei) {
-				statsData.drawCalls++;
-				return fn.call(gl, mode, first, count);
-			};
-		})(gl.drawArrays);
-		gl.drawElements = (function(fn) {
-			return function(mode: GLenum, count: GLsizei, type: GLenum, offset: GLintptr) {
-				statsData.drawCalls++;
-				return fn.call(gl, mode, count, type, offset);
-			};
-		})(gl.drawElements);
-
-		if (stats) {
-			stats.addGraph({ id: 'fps', label: 'fps', min: 60, max: 60, color: '#148DD9' });
-			stats.addGraph({ id: 'update', label: 'upd', min: 0, max: 50, color: '#19B39E' });
-			stats.addGraph({ id: 'ums', label: 'ms', min: 0, max: 1000 / 60, color: '#25D967' });
-			stats.addGraph({ id: 'fixedupdate', label: 'fupd', min: 0, max: 50, color: '#C7262B' });
-			stats.addGraph({ id: 'fms', label: 'ms', min: 0, max: 1000 / 30, color: '#EB5C2D' });
-			stats.addGraph({ id: 'draw', label: 'draw', min: 0, max: 20, color: '#C728B7' });
-			if (HAS_MEMORY) {
-				stats.addGraph({
-					id: 'mem',
-					label: 'Mb',
-					min: 0,
-					max: (performance as any).memory.jsHeapSizeLimit / 1048576 / 10,
-					color: '#E3D324',
-				});
-			}
-		}
-	}
-
-	loadScene(scene: Scene) {
-		if (!scene.getComponent(RendererComponent)) {
-			scene.addComponent(new RendererComponent());
-		}
-		super.loadScene(scene);
-	}
-
-	start() {
-		super.start();
-		clearInterval(this.updateRequestId);
-		this.updateRequestId = -1;
-		this.renderRequestId = requestAnimationFrame(this.bindedUpdateMethod as any);
-	}
-
-	stop() {
-		if (this.renderRequestId > -1) {
-			cancelAnimationFrame(this.renderRequestId);
-			this.renderRequestId = -1;
-		}
-		if (this.fixedUpdateRequestId > -1) {
-			clearInterval(this.fixedUpdateRequestId);
-			this.fixedUpdateRequestId = -1;
+		this.addGraph({ id: 'fps', label: 'fps', min: 60, max: 60, color: '#148DD9' });
+		this.addGraph({ id: 'update', label: 'upd', min: 0, max: 50, color: '#19B39E' });
+		this.addGraph({ id: 'ums', label: 'ms', min: 0, max: 1000 / 60, color: '#25D967' });
+		this.addGraph({ id: 'fixedupdate', label: 'fupd', min: 0, max: 50, color: '#C7262B' });
+		this.addGraph({ id: 'fms', label: 'ms', min: 0, max: 1000 / 30, color: '#EB5C2D' });
+		this.addGraph({ id: 'draw', label: 'draw', min: 0, max: 20, color: '#C728B7' });
+		if (HAS_MEMORY) {
+			this.addGraph({
+				id: 'mem',
+				label: 'Mb',
+				min: 0,
+				max: (performance as any).memory.jsHeapSizeLimit / 1048576 / 10,
+				color: '#E3D324',
+			});
 		}
 	}
 
 	update() {
-		this.renderRequestId = requestAnimationFrame(this.bindedUpdateMethod as any);
-
-		this.statsData.frameCount++;
-		this.statsData.frames++;
-		this.statsData.drawCalls = this.statsData.updates = 0;
-
-		const startTime = (performance || Date).now();
-		const deltaTime = startTime - this.statsData.lastUpdateTime;
-
-		super.update({
-			canvas: this.canvas,
-			gl: this.gl,
-			debug: this.debug,
-		});
-
-		if (this.debug) {
-			this.debug.update(deltaTime / 1000);
+		this.updateGraph('fps', this.renderer.statsData.framePerSecond);
+		this.updateGraph('update', this.engine.statsData.updates);
+		this.updateGraph('ums', this.engine.statsData.deltaTime);
+		this.updateGraph('fixedupdate', this.engine.statsData.fixedUpdates);
+		this.updateGraph('fms', this.engine.statsData.fixedDeltaTime);
+		this.updateGraph('draw', this.renderer.statsData.drawCalls);
+		if (HAS_MEMORY) {
+			this.updateGraph('mem', +((performance as any).memory.usedJSHeapSize / 1048576).toFixed(1));
 		}
-
-		if (this.stats) {
-			const time = (performance || Date).now();
-			if (time >= this.statsData.lastFPSUpdate + 300) {
-				this.stats.updateGraph(
-					'fps',
-					+((this.statsData.frames * 1000) / (time - this.statsData.lastFPSUpdate)).toFixed(0)
-				);
-				this.statsData.lastFPSUpdate = time;
-				this.statsData.frames = 0;
-			}
-			this.stats.updateGraph('ums', +(time - startTime).toFixed(1));
-			if (HAS_MEMORY) {
-				this.stats.updateGraph('mem', +((performance as any).memory.usedJSHeapSize / 1048576).toFixed(1));
-			}
-			this.stats.updateGraph('update', this.statsData.updates);
-			this.stats.updateGraph('draw', this.statsData.drawCalls);
-		}
-	}
-
-	fixedUpdate() {
-		const startTime = (performance || Date).now();
-
-		super.fixedUpdate();
-
-		if (this.stats) {
-			const time = (performance || Date).now();
-			this.stats.updateGraph('fms', +(time - startTime).toFixed(1));
-			this.stats.updateGraph('fixedupdate', this.statsData.fixedUpdates);
-		}
+		super.update();
 	}
 }
